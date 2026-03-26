@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, AlertCircle, Check } from 'lucide-react';
+import { User, Lock, AlertCircle, Check, Music } from 'lucide-react';
 import { authAPI } from '../api/auth';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -16,6 +17,28 @@ export const RegisterPage: React.FC = () => {
   const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Handle mouse movement for 3D tilt effect
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setMousePosition({ x, y });
+  };
+
+  const handleMouseLeave = () => {
+    setMousePosition({ x: 0, y: 0 });
+  };
+
+  // Entrance animation
+  useEffect(() => {
+    setIsLoaded(true);
+  }, []);
 
   // Client-side validation
   const validateForm = (): boolean => {
@@ -25,19 +48,16 @@ export const RegisterPage: React.FC = () => {
     setConfirmPasswordError(null);
     setApiError(null);
 
-    // Username validation
     if (username.length < 3) {
       setUsernameError('Username must be at least 3 characters');
       isValid = false;
     }
 
-    // Password validation
     if (password.length < 6) {
       setPasswordError('Password must be at least 6 characters');
       isValid = false;
     }
 
-    // Confirm password validation
     if (password !== confirmPassword) {
       setConfirmPasswordError('Passwords do not match');
       isValid = false;
@@ -47,10 +67,8 @@ export const RegisterPage: React.FC = () => {
   };
 
   const handleRegister = async () => {
-    // Clear previous errors
     setApiError(null);
 
-    // Validate
     if (!validateForm()) {
       return;
     }
@@ -59,7 +77,6 @@ export const RegisterPage: React.FC = () => {
 
     try {
       await authAPI.register(username, password);
-      // On success, navigate to login (do NOT auto-login)
       navigate('/login');
     } catch (err) {
       console.error('Registration error:', err);
@@ -76,136 +93,469 @@ export const RegisterPage: React.FC = () => {
     }
   };
 
+  const passwordRequirements = [
+    { test: password.length >= 6, text: 'At least 6 characters' },
+    { test: password === confirmPassword && password.length > 0, text: 'Passwords match' },
+  ];
+
+  // Calculate 3D tilt transform
+  const getTiltTransform = () => {
+    if (!cardRef.current || mousePosition.x === 0 && mousePosition.y === 0) {
+      return {};
+    }
+
+    const rect = cardRef.current.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((mousePosition.y - centerY) / centerY) * -3;
+    const rotateY = ((mousePosition.x - centerX) / centerX) * 3;
+
+    return {
+      transform: `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`,
+    };
+  };
+
+  // Calculate spotlight position
+  const getSpotlightStyle = () => {
+    if (!cardRef.current || mousePosition.x === 0 && mousePosition.y === 0) {
+      return { opacity: 0 };
+    }
+
+    return {
+      opacity: 1,
+      background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(236, 72, 153, 0.15), transparent 40%)`,
+    };
+  };
+
   return (
-    <div className="min-h-screen bg-spotify-black flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        {/* Logo and Title */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            {/* Spotify Logo - Green Circle */}
-            <div className="w-16 h-16 bg-spotify-green rounded-full flex items-center justify-center shadow-2xl">
-              <svg
-                viewBox="0 0 24 24"
-                fill="black"
-                className="w-10 h-10"
-              >
-                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.261 9.899-.599 13.561 1.74.42.24.6.899.3 1.32zm.12-3.36c-3.84-2.28-10.14-2.461-13.8-1.38-.54.18-1.14-.12-1.32-.66-.18-.54.12-1.14.66-1.32 4.2-1.26 11.16-1.02 15.54 1.62.48.3.6.96.3 1.44-.3.48-.96.6-1.44.3z" />
-              </svg>
+    <div className="h-screen w-screen relative overflow-hidden flex items-center justify-center p-4">
+      {/* Animated gradient mesh background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black">
+        {/* Moving gradient orbs */}
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-pink-500/30 rounded-full blur-[120px] animate-blob" />
+        <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-purple-500/30 rounded-full blur-[100px] animate-blob animation-delay-2000" />
+        <div className="absolute bottom-1/4 right-1/3 w-[450px] h-[450px] bg-spotify-green/20 rounded-full blur-[110px] animate-blob animation-delay-4000" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-[120px] animate-blob animation-delay-6000" />
+      </div>
+
+      {/* Floating music particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute text-pink-500/20 animate-float"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 10}s`,
+              animationDuration: `${15 + Math.random() * 10}s`,
+            }}
+          >
+            <Music size={24} />
+          </div>
+        ))}
+      </div>
+
+      {/* Animated wave at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 overflow-hidden opacity-20">
+        <div className="absolute bottom-0 w-[200%] h-full bg-gradient-to-t from-pink-500 to-transparent animate-wave" />
+      </div>
+
+      {/* Grid pattern */}
+      <div
+        className="absolute inset-0 opacity-5"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)
+          `,
+          backgroundSize: '60px 60px'
+        }}
+      />
+
+      {/* Main Content */}
+      <div className="w-full max-w-md relative z-10">
+        <div
+          ref={cardRef}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          className={`
+            relative backdrop-blur-2xl bg-black/40 rounded-3xl p-10
+            border border-white/10 overflow-hidden transition-all duration-300
+            ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}
+          `}
+          style={getTiltTransform()}
+        >
+          {/* Spotlight effect */}
+          <div
+            className="absolute inset-0 pointer-events-none transition-opacity duration-300 rounded-3xl"
+            style={getSpotlightStyle()}
+          />
+
+          {/* Animated gradient border */}
+          <div className="absolute inset-0 rounded-3xl">
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-pink-500 via-purple-500 to-spotify-green opacity-20 animate-gradient-rotate blur-xl" />
+          </div>
+
+          {/* Noise texture overlay */}
+          <div className="absolute inset-0 rounded-3xl opacity-[0.03]" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
+          }} />
+
+          {/* Content */}
+          <div className="relative z-10">
+            {/* Logo with animated ring */}
+            <div className="text-center mb-10">
+              <div className="flex items-center justify-center mb-6 relative">
+                {/* Rotating glow ring */}
+                <div className="absolute w-32 h-32 rounded-full animate-spin-slow">
+                  <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-pink-500/50 border-r-purple-500/50" />
+                  <div className="absolute inset-2 rounded-full border-2 border-transparent border-b-spotify-green/50 border-l-blue-500/50" style={{ animationDirection: 'reverse' }} />
+                </div>
+
+                {/* Pulsing glow */}
+                <div className="absolute w-28 h-28 bg-gradient-to-r from-pink-500/30 to-purple-500/30 rounded-full blur-2xl animate-pulse-glow" />
+
+                {/* Logo */}
+                <div className="relative w-20 h-20 bg-gradient-to-br from-spotify-green to-emerald-600 rounded-full flex items-center justify-center shadow-2xl transform transition-transform duration-300 hover:scale-110 active:scale-95 cursor-pointer z-10">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="black"
+                    className="w-12 h-12"
+                  >
+                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.261 9.899-.599 13.561 1.74.42.24.6.899.36 1.32zm.12-3.36c-3.84-2.28-10.14-2.461-13.8-1.38-.54.18-1.14-.12-1.32-.66-.18-.54.12-1.14.66-1.32 4.2-1.26 11.16-1.02 15.54 1.62.48.3.6.96.3 1.44-.3.48-.96.6-1.44.3z" />
+                  </svg>
+                </div>
+
+                {/* Visualizer bars */}
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-1 bg-pink-500/50 rounded-full animate-visualizer"
+                      style={{
+                        height: '20px',
+                        animationDelay: `${i * 0.1}s`,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <h1 className="text-white text-4xl font-bold mb-3 tracking-tight">
+                Sign up for free
+              </h1>
+              <p className="text-gray-400 text-base">
+                Start listening with a Spotify account
+              </p>
+            </div>
+
+            {/* Register Form */}
+            <div className="space-y-5">
+              {/* Username Input */}
+              <div>
+                <Input
+                  label="Username"
+                  placeholder="Choose a username"
+                  value={username}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    setUsernameError(null);
+                  }}
+                  error={usernameError}
+                  autoComplete="username"
+                  icon={<User size={18} className="text-gray-400" />}
+                  disabled={isLoading}
+                  className="bg-white/5 border-white/10 focus:border-pink-500/50 focus:bg-white/10 transition-all duration-300"
+                />
+              </div>
+
+              {/* Password Input */}
+              <div>
+                <Input
+                  label="Password"
+                  type="password"
+                  placeholder="Choose a password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setPasswordError(null);
+                  }}
+                  error={passwordError}
+                  autoComplete="new-password"
+                  icon={<Lock size={18} className="text-gray-400" />}
+                  disabled={isLoading}
+                  className="bg-white/5 border-white/10 focus:border-pink-500/50 focus:bg-white/10 transition-all duration-300"
+                />
+              </div>
+
+              {/* Confirm Password Input */}
+              <div>
+                <Input
+                  label="Confirm Password"
+                  type="password"
+                  placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setConfirmPasswordError(null);
+                  }}
+                  error={confirmPasswordError}
+                  autoComplete="new-password"
+                  icon={<Lock size={18} className="text-gray-400" />}
+                  disabled={isLoading}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleRegister();
+                    }
+                  }}
+                  className="bg-white/5 border-white/10 focus:border-pink-500/50 focus:bg-white/10 transition-all duration-300"
+                />
+              </div>
+
+              {/* API Error Message */}
+              {apiError && (
+                <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-xl animate-shake">
+                  <AlertCircle size={20} className="text-red-500 shrink-0" />
+                  <span className="text-sm text-red-400 font-medium">{apiError}</span>
+                </div>
+              )}
+
+              {/* Register Button */}
+              <div>
+                <Button
+                  onClick={handleRegister}
+                  disabled={isLoading}
+                  className="w-full py-4 text-lg font-semibold bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 shadow-lg shadow-pink-500/20 hover:shadow-pink-500/40 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden group"
+                >
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12a8 8 0 00-8-8V0H0a12 12 0 0012 12h4z" />
+                      </svg>
+                      Signing up...
+                    </span>
+                  ) : (
+                    <>
+                      <span className="relative z-10">Sign Up</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Log In Link */}
+            <div className="mt-8 text-center">
+              <p className="text-gray-400 text-sm">
+                Already have an account?{' '}
+                <button
+                  onClick={() => navigate('/login')}
+                  className="text-spotify-green hover:text-emerald-400 font-semibold underline underline-offset-4 hover:underline-offset-8 transition-all duration-200"
+                >
+                  Log in here
+                </button>
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-8 text-center">
+              <p className="text-gray-500/60 text-xs">
+                By signing up, you agree to Spotify's{' '}
+                <a href="#" className="hover:text-gray-400 underline underline-offset-2">
+                  Terms of Service
+                </a>
+                {' '}and{' '}
+                <a href="#" className="hover:text-gray-400 underline underline-offset-2">
+                  Privacy Policy
+                </a>
+              </p>
             </div>
           </div>
-          <h1 className="text-white text-3xl font-bold mb-2">Spotify</h1>
-          <p className="text-spotify-subtext text-sm">Create your account</p>
         </div>
 
-        {/* Register Form Card */}
-        <div className="bg-spotify-surface rounded-xl p-8 shadow-2xl">
-          <div className="space-y-4">
-            {/* Username Input */}
-            <Input
-              label="Username"
-              placeholder="Choose a username"
-              value={username}
-              onChange={(e) => {
-                setUsername(e.target.value);
-                setUsernameError(null);
-              }}
-              error={usernameError}
-              autoComplete="username"
-              icon={<User size={18} className="text-spotify-subtext" />}
-              disabled={isLoading}
-            />
-
-            {/* Password Input */}
-            <Input
-              label="Password"
-              type="password"
-              placeholder="Choose a password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setPasswordError(null);
-              }}
-              error={passwordError}
-              autoComplete="new-password"
-              icon={<Lock size={18} className="text-spotify-subtext" />}
-              disabled={isLoading}
-            />
-
-            {/* Confirm Password Input */}
-            <Input
-              label="Confirm Password"
-              type="password"
-              placeholder="Confirm your password"
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                setConfirmPasswordError(null);
-              }}
-              error={confirmPasswordError}
-              autoComplete="new-password"
-              icon={<Lock size={18} className="text-spotify-subtext" />}
-              disabled={isLoading}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleRegister();
-                }
-              }}
-            />
-
-            {/* API Error Message */}
-            {apiError && (
-              <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-md">
-                <AlertCircle size={16} className="text-red-500 shrink-0" />
-                <span className="text-sm text-red-500">{apiError}</span>
-              </div>
-            )}
-
-            {/* Register Button */}
-            <Button
-              onClick={handleRegister}
-              disabled={isLoading}
-              className="w-full py-3 text-base"
-            >
-              {isLoading ? 'Signing up...' : 'Sign up'}
-            </Button>
-          </div>
-
-          {/* Log In Link */}
-          <div className="mt-6 text-center">
-            <p className="text-spotify-subtext text-sm">
-              Already have an account?{' '}
-              <button
-                onClick={() => navigate('/login')}
-                className="text-spotify-green hover:text-spotify-green-hover font-semibold underline"
+        {/* Password Requirements */}
+        <div className="mt-8 p-6 bg-black/40 backdrop-blur-sm rounded-2xl border border-white/5">
+          <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+            <Lock size={16} className="text-spotify-green" />
+            Password requirements:
+          </h3>
+          <ul className="space-y-2">
+            {passwordRequirements.map((req, index) => (
+              <li
+                key={index}
+                className="flex items-center gap-3 text-xs"
               >
-                Log in
-              </button>
-            </p>
-          </div>
-        </div>
-
-        {/* Password Requirements Info */}
-        <div className="mt-6 bg-spotify-surface/50 rounded-lg p-4">
-          <h3 className="text-white text-sm font-semibold mb-2">Password requirements:</h3>
-          <ul className="space-y-1">
-            <li className="flex items-center gap-2 text-xs text-spotify-subtext">
-              <Check size={14} className={password.length >= 6 ? 'text-spotify-green' : 'text-spotify-border'} />
-              At least 6 characters
-            </li>
-            <li className="flex items-center gap-2 text-xs text-spotify-subtext">
-              <Check size={14} className={password === confirmPassword && password.length > 0 ? 'text-spotify-green' : 'text-spotify-border'} />
-              Passwords match
-            </li>
+                <Check
+                  size={16}
+                  className={`shrink-0 transition-colors duration-200 ${
+                    req.test ? 'text-spotify-green' : 'text-gray-600'
+                  }`}
+                />
+                <span className={req.test ? 'text-white' : 'text-gray-500'}>
+                  {req.text}
+                </span>
+              </li>
+            ))}
           </ul>
         </div>
 
-        {/* Footer */}
+        {/* Trust indicator */}
         <div className="mt-8 text-center">
-          <p className="text-spotify-subtext text-xs">
-            By signing up, you agree to Spotify's Terms of Service and Privacy Policy
+          <p className="text-gray-500/40 text-xs flex items-center justify-center gap-2">
+            <Lock size={14} />
+            🔒 Your data is secure with us
           </p>
         </div>
       </div>
+
+      <style>{`
+        @keyframes blob {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+          }
+          25% {
+            transform: translate(20px, -50px) scale(1.1);
+          }
+          50% {
+            transform: translate(-20px, 20px) scale(0.9);
+          }
+          75% {
+            transform: translate(50px, 50px) scale(1.05);
+          }
+        }
+
+        .animate-blob {
+          animation: blob 20s infinite ease-in-out;
+        }
+
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+
+        .animation-delay-6000 {
+          animation-delay: 6s;
+        }
+
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0) rotate(0deg);
+            opacity: 0;
+          }
+          10% {
+            opacity: 0.4;
+          }
+          90% {
+            opacity: 0.4;
+          }
+          100% {
+            transform: translateY(-100vh) rotate(360deg);
+            opacity: 0;
+          }
+        }
+
+        .animate-float {
+          animation: float linear infinite;
+        }
+
+        @keyframes wave {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+
+        .animate-wave {
+          animation: wave 15s linear infinite;
+        }
+
+        @keyframes gradient-rotate {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+
+        .animate-gradient-rotate {
+          animation: gradient-rotate 8s linear infinite;
+        }
+
+        @keyframes spin-slow {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        .animate-spin-slow {
+          animation: spin-slow 8s linear infinite;
+        }
+
+        @keyframes pulse-glow {
+          0%, 100% {
+            opacity: 0.3;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.6;
+            transform: scale(1.1);
+          }
+        }
+
+        .animate-pulse-glow {
+          animation: pulse-glow 3s ease-in-out infinite;
+        }
+
+        @keyframes visualizer {
+          0%, 100% {
+            height: 8px;
+          }
+          50% {
+            height: 20px;
+          }
+        }
+
+        .animate-visualizer {
+          animation: visualizer 0.8s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+          100% {
+            transform: translateX(100%);
+          }
+        }
+
+        .animate-shimmer {
+          animation: shimmer 2s infinite;
+        }
+
+        @keyframes shake {
+          0%, 100% {
+            transform: translateX(0);
+          }
+          25% {
+            transform: translateX(-5px);
+          }
+          75% {
+            transform: translateX(5px);
+          }
+        }
+
+        .animate-shake {
+          animation: shake 0.5s ease-in-out;
+        }
+      `}</style>
     </div>
   );
 };
