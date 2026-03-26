@@ -2,32 +2,76 @@ import { useEffect } from 'react';
 import { usePlayerStore } from '../store/playerStore';
 
 export const useKeyboardShortcuts = () => {
-  const { togglePlay, setVolume, volume } = usePlayerStore();
+  const {
+    togglePlay,
+    nextTrack,
+    prevTrack,
+    setVolume,
+    toggleMute,
+    toggleShuffle,
+    cycleRepeat,
+    volume,
+  } = usePlayerStore();
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      ) return;
+    const handler = (e: KeyboardEvent) => {
+      // Don't fire when typing in inputs
+      const tag = (e.target as HTMLElement).tagName.toLowerCase();
+      if (tag === 'input' || tag === 'textarea') return;
 
       switch (e.code) {
         case 'Space':
           e.preventDefault();
           togglePlay();
           break;
+        case 'ArrowRight':
+          if (e.altKey) {
+            e.preventDefault();
+            nextTrack();
+          }
+          break;
+        case 'ArrowLeft':
+          if (e.altKey) {
+            e.preventDefault();
+            prevTrack();
+          }
+          break;
         case 'ArrowUp':
           e.preventDefault();
-          setVolume(Math.min(1, volume + 0.1));
+          setVolume(volume + 0.1);
           break;
         case 'ArrowDown':
           e.preventDefault();
-          setVolume(Math.max(0, volume - 0.1));
+          setVolume(volume - 0.1);
+          break;
+        case 'KeyM':
+          e.preventDefault();
+          toggleMute();
+          break;
+        case 'KeyS':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            toggleShuffle();
+          }
+          break;
+        case 'KeyR':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            cycleRepeat();
+          }
           break;
       }
     };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePlay, setVolume, volume]);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [
+    togglePlay,
+    nextTrack,
+    prevTrack,
+    setVolume,
+    toggleMute,
+    toggleShuffle,
+    cycleRepeat,
+    volume,
+  ]);
 };
