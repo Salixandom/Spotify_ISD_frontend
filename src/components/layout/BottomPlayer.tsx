@@ -8,10 +8,12 @@ export const BottomPlayer: React.FC = () => {
     isPlaying,
     volume,
     progress,
+    duration,
     togglePlay,
     setVolume,
     setProgress,
     setDuration,
+    onTrackEnd,
   } = usePlayerStore();
 
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -26,8 +28,8 @@ export const BottomPlayer: React.FC = () => {
   }, [isPlaying]);
 
   useEffect(() => {
-    if (audioRef.current && currentTrack?.audio_url) {
-      audioRef.current.src = currentTrack.audio_url;
+    if (audioRef.current && currentTrack?.song.audio_url) {
+      audioRef.current.src = currentTrack.song.audio_url;
       audioRef.current.play().catch(() => {});
     }
   }, [currentTrack]);
@@ -60,15 +62,15 @@ export const BottomPlayer: React.FC = () => {
         ref={audioRef}
         onTimeUpdate={(e) => setProgress(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-        onEnded={() => togglePlay()}
+        onEnded={() => onTrackEnd()}
       />
 
       {/* Track info */}
       <div className="flex items-center gap-3 w-60 shrink-0">
-        {currentTrack.cover_url ? (
+        {currentTrack.song.cover_url ? (
           <img
-            src={currentTrack.cover_url}
-            alt={currentTrack.title}
+            src={currentTrack.song.cover_url}
+            alt={currentTrack.song.title}
             className="w-14 h-14 rounded"
           />
         ) : (
@@ -76,10 +78,10 @@ export const BottomPlayer: React.FC = () => {
         )}
         <div className="overflow-hidden">
           <p className="text-white text-sm font-semibold truncate">
-            {currentTrack.title}
+            {currentTrack.song.title}
           </p>
           <p className="text-spotify-subtext text-xs truncate">
-            {currentTrack.artist}
+            {currentTrack.song.artist}
           </p>
         </div>
       </div>
@@ -101,7 +103,7 @@ export const BottomPlayer: React.FC = () => {
           <input
             type="range"
             min={0}
-            max={usePlayerStore.getState().duration || 100}
+            max={duration || 100}
             value={progress}
             onChange={(e) => {
               if (audioRef.current) {
@@ -111,7 +113,7 @@ export const BottomPlayer: React.FC = () => {
             className="flex-1 h-1 accent-spotify-green cursor-pointer"
           />
           <span className="text-xs text-spotify-subtext w-8">
-            {formatTime(usePlayerStore.getState().duration)}
+            {formatTime(duration)}
           </span>
         </div>
       </div>

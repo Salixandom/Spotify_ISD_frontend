@@ -1,14 +1,14 @@
 import api from './axios';
-import type { Track } from '../types';
+import type { PlaylistTrack } from '../types';
 
 export const trackAPI = {
-  list: async (playlistId: number): Promise<Track[]> => {
+  list: async (playlistId: number): Promise<PlaylistTrack[]> => {
     const res = await api.get(`/tracks/${playlistId}/`);
     return res.data;
   },
 
-  add: async (playlistId: number, data: Partial<Track>): Promise<Track> => {
-    const res = await api.post(`/tracks/${playlistId}/`, data);
+  add: async (playlistId: number, songId: number): Promise<PlaylistTrack> => {
+    const res = await api.post(`/tracks/${playlistId}/`, { song_id: songId });
     return res.data;
   },
 
