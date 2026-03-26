@@ -10,6 +10,7 @@ export const useAuth = () => {
     if (token && !user) {
       authAPI.me().then(setUser).catch(logout);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { user, isAuthenticated, logout };
