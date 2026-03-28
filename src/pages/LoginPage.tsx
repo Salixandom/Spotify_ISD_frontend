@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, AlertCircle, Music } from 'lucide-react';
+import { User, Lock, AlertCircle, Music, Check } from 'lucide-react';
 import { authAPI } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
@@ -17,6 +17,10 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isLoaded, setIsLoaded] = useState(false);
+
+  const passwordRequirements = [
+    { test: true, text: 'At least 6 characters' },
+  ];
 
   // Handle mouse movement for 3D tilt effect
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -254,6 +258,25 @@ export const LoginPage: React.FC = () => {
                   autoComplete="current-password"
                   icon={<Lock size={18} className="text-gray-400" />}
                   disabled={isLoading}
+                  showPasswordToggle={true}
+                  infoTooltip={
+                    <ul className="space-y-2">
+                      {passwordRequirements.map((req, index) => (
+                        <li
+                          key={index}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <Check
+                            size={14}
+                            className="shrink-0 text-spotify-green"
+                          />
+                          <span className="text-white">
+                            {req.text}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  }
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handleLogin();
