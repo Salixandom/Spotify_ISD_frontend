@@ -1,40 +1,87 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
-import { Sidebar } from './Sidebar';
-import { Navbar } from './Navbar';
-import { BottomPlayer } from './BottomPlayer';
-import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
-import { Toaster } from 'react-hot-toast';
+import React from "react";
+import { Outlet } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
+import { Sidebar } from "./Sidebar";
+import { Navbar } from "./Navbar";
+import { RightSidebar } from "./RightSidebar";
+import { BottomPlayer } from "./BottomPlayer";
+import { DynamicMusicBackground } from "../ui/DynamicMusicBackground";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 
+/**
+ * Glassmorphism app shell with persistent Spotify-like regions:
+ * - Top bar
+ * - Left library panel
+ * - Center route outlet
+ * - Right now-playing/info panel
+ * - Bottom player
+ */
 export const AppLayout: React.FC = () => {
-  useKeyboardShortcuts();
+    useKeyboardShortcuts();
 
-  return (
-    <div className="h-screen flex flex-col bg-spotify-black overflow-hidden">
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: '#333',
-            color: '#fff',
-          },
-        }}
-      />
+    return (
+        <div className="relative h-screen w-screen overflow-hidden text-white">
+            {/* Reusable dynamic music background (same visual language as auth pages) */}
+            <DynamicMusicBackground
+                variant="mixed"
+                density="medium"
+                showGrid={true}
+                showWave={false}
+                iconClassName="text-white/20"
+                orbOpacityClassName="opacity-90"
+            />
 
-      <div className="flex flex-1 gap-2 p-2 overflow-hidden">
-        <Sidebar />
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    style: {
+                        background: "rgba(20, 20, 28, 0.9)",
+                        color: "#fff",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        backdropFilter: "blur(10px)",
+                    },
+                }}
+            />
 
-        {/* Main content area */}
-        <main className="flex-1 bg-spotify-surface rounded-lg overflow-hidden
-                          flex flex-col">
-          <Navbar />
-          <div className="flex-1 overflow-y-auto">
-            <Outlet />
-          </div>
-        </main>
-      </div>
+            <div className="relative z-10 h-full p-2 md:p-3 flex flex-col gap-2 md:gap-3">
+                {/* Top navigation */}
+                <div className="rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden">
+                    <Navbar />
+                </div>
 
-      <BottomPlayer />
-    </div>
-  );
+                {/* Main shell body */}
+                <div className="flex-1 min-h-0 flex gap-2 md:gap-3">
+                    {/* Left column */}
+                    <div className="w-[320px] xl:w-[340px] min-w-[300px]">
+                        <div className="h-full rounded-2xl border border-white/12 bg-white/[0.05] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
+                            <Sidebar />
+                        </div>
+                    </div>
+
+                    {/* Center content */}
+                    <main className="flex-1 min-w-0">
+                        <div className="h-full rounded-2xl border border-white/12 bg-white/[0.05] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
+                            <div className="h-full overflow-y-auto">
+                                <Outlet />
+                            </div>
+                        </div>
+                    </main>
+
+                    {/* Right column */}
+                    <div className="w-[340px] xl:w-[360px] min-w-[320px] hidden lg:block">
+                        <div className="h-full rounded-2xl border border-white/12 bg-white/[0.05] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
+                            <RightSidebar />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bottom player */}
+                <div className="rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden">
+                    <BottomPlayer />
+                </div>
+            </div>
+        </div>
+    );
 };
+
+export default AppLayout;
