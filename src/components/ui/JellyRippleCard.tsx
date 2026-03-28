@@ -36,6 +36,7 @@ export const JellyRippleCard: React.FC<JellyRippleCardProps> = ({
     edgeShimmer = true,
 }) => {
     const ref = React.useRef<HTMLDivElement>(null);
+    const rafRef = React.useRef<number | null>(null);
 
     // Raw cursor position (0..1)
     const targetRef = React.useRef({ x: 0.5, y: 0.5 });
@@ -43,77 +44,118 @@ export const JellyRippleCard: React.FC<JellyRippleCardProps> = ({
     const smoothRef = React.useRef({ x: 0.5, y: 0.5 });
     const velocityRef = React.useRef({ x: 0, y: 0 });
 
+    // Hover state mirrored into ref for RAF loop reads
+    const isHoveringRef = React.useRef(false);
+
     const [renderPos, setRenderPos] = React.useState({ x: 50, y: 50 });
     const [isHovering, setIsHovering] = React.useState(false);
 
-    const rafRef = React.useRef<number | null>(null);
-
-    const animate = React.useCallback(() => {
-        // Critically damped-ish spring smoothing for fluid lag
-        const spring = 0.11;
-        const friction = 0.78;
-
-        const tx = targetRef.current.x;
-        const ty = targetRef.current.y;
-
-        const dx = tx - smoothRef.current.x;
-        const dy = ty - smoothRef.current.y;
-
-        velocityRef.current.x =
-            (velocityRef.current.x + dx * spring) * friction;
-        velocityRef.current.y =
-            (velocityRef.current.y + dy * spring) * friction;
-
-        smoothRef.current.x += velocityRef.current.x;
-        smoothRef.current.y += velocityRef.current.y;
-
-        const px = Math.max(0, Math.min(1, smoothRef.current.x)) * 100;
-        const py = Math.max(0, Math.min(1, smoothRef.current.y)) * 100;
-
-        setRenderPos({ x: px, y: py });
-
-        if (isHovering) {
-            rafRef.current = window.requestAnimationFrame(animate);
-        } else {
-            // continue a little while to settle nicely
-            const moving =
-                Math.abs(velocityRef.current.x) > 0.0004 ||
-                Math.abs(velocityRef.current.y) > 0.0004;
-            if (moving) {
-                rafRef.current = window.requestAnimationFrame(animate);
-            } else {
-                rafRef.current = null;
-            }
-        }
-    }, [isHovering]);
-
-    const startAnim = React.useCallback(() => {
-        if (rafRef.current == null) {
-            rafRef.current = window.requestAnimationFrame(animate);
-        }
-    }, [animate]);
-
     const stopAnim = React.useCallback(() => {
-        if (rafRef.current != null) {
+        if (rafRef.current !== null) {
             window.cancelAnimationFrame(rafRef.current);
             rafRef.current = null;
         }
     }, []);
 
     React.useEffect(() => {
-        if (isHovering) startAnim();
-        return () => stopAnim();
-    }, [isHovering, startAnim, stopAnim]);
+        isHoveringRef.current = isHovering;
+    }, [isHovering]);
 
     React.useEffect(() => {
-        return () => stopAnim();
+        const step = () => {
+            const spring = 0.11;
+            const friction = 0.78;
+
+            const tx = targetRef.current.x;
+            const ty = targetRef.current.y;
+
+            const dx = tx - smoothRef.current.x;
+            const dy = ty - smoothRef.current.y;
+
+            velocityRef.current.x =
+                (velocityRef.current.x + dx * spring) * friction;
+            velocityRef.current.y =
+                (velocityRef.current.y + dy * spring) * friction;
+
+            smoothRef.current.x += velocityRef.current.x;
+            smoothRef.current.y += velocityRef.current.y;
+
+            const px = Math.max(0, Math.min(1, smoothRef.current.x)) * 100;
+            const py = Math.max(0, Math.min(1, smoothRef.current.y)) * 100;
+
+            setRenderPos({ x: px, y: py });
+
+            const moving =
+                Math.abs(velocityRef.current.x) > 0.0004 ||
+                Math.abs(velocityRef.current.y) > 0.0004;
+
+            if (isHoveringRef.current || moving) {
+                rafRef.current = window.requestAnimationFrame(step);
+            } else {
+                rafRef.current = null;
+            }
+        };
+
+        if (isHovering && rafRef.current === null) {
+            rafRef.current = window.requestAnimationFrame(step);
+        }
+
+        return () => {
+            stopAnim();
+        };
+    }, [isHovering, stopAnim]);
+
+    React.useEffect(() => {
+        return () => {
+            stopAnim();
+        };
     }, [stopAnim]);
+
+    const startAnim = React.useCallback(() => {
+        if (rafRef.current !== null) return;
+
+        const step = () => {
+            const spring = 0.11;
+            const friction = 0.78;
+
+            const tx = targetRef.current.x;
+            const ty = targetRef.current.y;
+
+            const dx = tx - smoothRef.current.x;
+            const dy = ty - smoothRef.current.y;
+
+            velocityRef.current.x =
+                (velocityRef.current.x + dx * spring) * friction;
+            velocityRef.current.y =
+                (velocityRef.current.y + dy * spring) * friction;
+
+            smoothRef.current.x += velocityRef.current.x;
+            smoothRef.current.y += velocityRef.current.y;
+
+            const px = Math.max(0, Math.min(1, smoothRef.current.x)) * 100;
+            const py = Math.max(0, Math.min(1, smoothRef.current.y)) * 100;
+
+            setRenderPos({ x: px, y: py });
+
+            const moving =
+                Math.abs(velocityRef.current.x) > 0.0004 ||
+                Math.abs(velocityRef.current.y) > 0.0004;
+
+            if (isHoveringRef.current || moving) {
+                rafRef.current = window.requestAnimationFrame(step);
+            } else {
+                rafRef.current = null;
+            }
+        };
+
+        rafRef.current = window.requestAnimationFrame(step);
+    }, []);
 
     const handleMove = (e: React.MouseEvent<HTMLDivElement>) => {
         const el = ref.current;
         if (!el) return;
-        const rect = el.getBoundingClientRect();
 
+        const rect = el.getBoundingClientRect();
         const nx = (e.clientX - rect.left) / rect.width;
         const ny = (e.clientY - rect.top) / rect.height;
 
@@ -130,8 +172,7 @@ export const JellyRippleCard: React.FC<JellyRippleCardProps> = ({
 
     const handleLeave = () => {
         setIsHovering(false);
-        // target stays where it was; smoothing decays naturally
-        startAnim();
+        startAnim(); // settle smoothly
     };
 
     const i = Math.max(0.4, Math.min(1.8, intensity));
@@ -160,9 +201,7 @@ export const JellyRippleCard: React.FC<JellyRippleCardProps> = ({
                 style={{
                     opacity: isHovering ? 0.95 : 0.45,
                     background: `
-            radial-gradient(${Math.round(
-                460 * i,
-            )}px ${Math.round(360 * i)}px at ${renderPos.x}% ${renderPos.y}%,
+            radial-gradient(${Math.round(460 * i)}px ${Math.round(360 * i)}px at ${renderPos.x}% ${renderPos.y}%,
               rgba(52, 211, 153, ${0.17 * i}) 0%,
               rgba(59, 130, 246, ${0.13 * i}) 28%,
               rgba(168, 85, 247, ${0.12 * i}) 48%,
@@ -174,27 +213,18 @@ export const JellyRippleCard: React.FC<JellyRippleCardProps> = ({
                 }}
             />
 
-            {/* Metaball cluster - feels like liquid color pockets */}
+            {/* Metaball cluster */}
             <div
                 aria-hidden
                 className="pointer-events-none absolute inset-0 transition-opacity duration-300"
                 style={{
                     opacity: isHovering ? 0.9 : 0.35,
                     background: `
-            radial-gradient(180px 150px at ${Math.max(
-                0,
-                renderPos.x - 11,
-            )}% ${Math.max(0, renderPos.y - 7)}%,
+            radial-gradient(180px 150px at ${Math.max(0, renderPos.x - 11)}% ${Math.max(0, renderPos.y - 7)}%,
               rgba(16, 185, 129, 0.22), transparent 70%),
-            radial-gradient(170px 140px at ${Math.min(
-                100,
-                renderPos.x + 12,
-            )}% ${Math.min(100, renderPos.y + 8)}%,
+            radial-gradient(170px 140px at ${Math.min(100, renderPos.x + 12)}% ${Math.min(100, renderPos.y + 8)}%,
               rgba(99, 102, 241, 0.20), transparent 72%),
-            radial-gradient(155px 135px at ${Math.min(
-                100,
-                renderPos.x + 3,
-            )}% ${Math.max(0, renderPos.y - 13)}%,
+            radial-gradient(155px 135px at ${Math.min(100, renderPos.x + 3)}% ${Math.max(0, renderPos.y - 13)}%,
               rgba(236, 72, 153, 0.16), transparent 74%)
           `,
                     filter: `blur(${Math.round(26 * i)}px)`,
@@ -202,7 +232,7 @@ export const JellyRippleCard: React.FC<JellyRippleCardProps> = ({
                 }}
             />
 
-            {/* Caustic-style specular sheen following cursor */}
+            {/* Caustic sheen */}
             <div
                 aria-hidden
                 className="pointer-events-none absolute inset-0 transition-opacity duration-200"
@@ -217,7 +247,7 @@ export const JellyRippleCard: React.FC<JellyRippleCardProps> = ({
                 }}
             />
 
-            {/* Soft concentric ripple */}
+            {/* Soft ripple */}
             <div
                 aria-hidden
                 className="pointer-events-none absolute inset-0 transition-opacity duration-250"
@@ -233,7 +263,7 @@ export const JellyRippleCard: React.FC<JellyRippleCardProps> = ({
                 }}
             />
 
-            {/* Animated ambient blobs for richness */}
+            {/* Ambient blobs */}
             <div
                 aria-hidden
                 className="pointer-events-none absolute -inset-[18%] jelly-liquid-ambient"
@@ -243,7 +273,7 @@ export const JellyRippleCard: React.FC<JellyRippleCardProps> = ({
                 }}
             />
 
-            {/* Optional edge shimmer */}
+            {/* Edge shimmer */}
             {edgeShimmer && (
                 <div
                     aria-hidden
@@ -252,7 +282,7 @@ export const JellyRippleCard: React.FC<JellyRippleCardProps> = ({
                 />
             )}
 
-            {/* Content layer */}
+            {/* Content */}
             <div className={["relative z-10", contentClassName].join(" ")}>
                 {children}
             </div>

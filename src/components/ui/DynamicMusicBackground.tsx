@@ -88,6 +88,69 @@ const ORB_CONFIG: Record<
     },
 };
 
+/**
+ * Deterministic hash-based PRNG helpers.
+ * These avoid Math.random() during render and keep output stable for a given seed.
+ */
+const hashString = (input: string): number => {
+    let h = 2166136261 >>> 0; // FNV-1a basis
+    for (let i = 0; i < input.length; i++) {
+        h ^= input.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+};
+
+const randomFromSeed = (seed: string): number => {
+    // xorshift32 from hashed seed
+    let x = hashString(seed) || 1;
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    return (x >>> 0) / 4294967296; // 0..1
+};
+
+const pickInRange = (seed: string, min: number, max: number): number => {
+    return min + randomFromSeed(seed) * (max - min);
+};
+
+const createParticles = (
+    density: DynamicMusicBackgroundDensity,
+): FloatingParticle[] => {
+    const count = DENSITY_COUNTS[density];
+
+    return Array.from({ length: count }, (_, i) => {
+        const base = `dynamic-bg:${density}:particle:${i}`;
+
+        const left = `${pickInRange(`${base}:left`, 0, 100)}%`;
+        const top = `${pickInRange(`${base}:top`, 0, 100)}%`;
+        const size = Math.round(pickInRange(`${base}:size`, 16, 32));
+        const delay = `${pickInRange(`${base}:delay`, 0, 12)}s`;
+        const duration = `${pickInRange(`${base}:duration`, 12, 22)}s`;
+        const driftX = `${pickInRange(`${base}:driftX`, -35, 35)}px`;
+        const rotation = `${pickInRange(`${base}:rotation`, 0, 360)}deg`;
+        const opacity = pickInRange(`${base}:opacity`, 0.14, 0.34);
+
+        const iconIndex =
+            Math.floor(pickInRange(`${base}:iconIndex`, 0, ICON_POOL.length)) %
+            ICON_POOL.length;
+        const icon = ICON_POOL[iconIndex];
+
+        return {
+            id: i,
+            left,
+            top,
+            size,
+            animationDelay: delay,
+            animationDuration: duration,
+            driftX,
+            rotation,
+            icon,
+            opacity,
+        };
+    });
+};
+
 export const DynamicMusicBackground: React.FC<DynamicMusicBackgroundProps> = ({
     className = "",
     variant = "mixed",
@@ -98,21 +161,10 @@ export const DynamicMusicBackground: React.FC<DynamicMusicBackgroundProps> = ({
     iconClassName,
     orbOpacityClassName,
 }) => {
-    const particles = useMemo<FloatingParticle[]>(() => {
-        const count = DENSITY_COUNTS[density];
-        return Array.from({ length: count }, (_, i) => ({
-            id: i,
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            size: 16 + Math.round(Math.random() * 16),
-            animationDelay: `${Math.random() * 12}s`,
-            animationDuration: `${12 + Math.random() * 10}s`,
-            driftX: `${-35 + Math.random() * 70}px`,
-            rotation: `${Math.random() * 360}deg`,
-            icon: ICON_POOL[Math.floor(Math.random() * ICON_POOL.length)],
-            opacity: 0.14 + Math.random() * 0.20,
-        }));
-    }, [density]);
+    const particles = useMemo<FloatingParticle[]>(
+        () => createParticles(density),
+        [density],
+    );
 
     const orb = ORB_CONFIG[variant];
     const computedIconClassName =
@@ -145,7 +197,7 @@ export const DynamicMusicBackground: React.FC<DynamicMusicBackgroundProps> = ({
                 className={`absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-[120px] animate-blob animation-delay-6000 ${orb.orb4} ${orbOpacityClassName ?? ""}`}
             />
 
-            {/* Floating music particles (stable positions via useMemo) */}
+            {/* Floating music particles */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 {particles.map((particle) => {
                     const Icon = particle.icon;
@@ -158,10 +210,9 @@ export const DynamicMusicBackground: React.FC<DynamicMusicBackgroundProps> = ({
                                 {
                                     left: particle.left,
                                     top: particle.top,
-                                    animationDelay: `-${parseFloat(
-                                        particle.animationDelay,
-                                    )}s`,
-                                    animationDuration: particle.animationDuration,
+                                    animationDelay: `-${parseFloat(particle.animationDelay)}s`,
+                                    animationDuration:
+                                        particle.animationDuration,
                                     animationFillMode: "both",
                                     willChange: "transform, opacity",
                                     opacity: particle.opacity,

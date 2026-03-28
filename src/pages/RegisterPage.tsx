@@ -18,6 +18,16 @@ import { authAPI } from "../api/auth";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 
+const PARTICLE_ICONS: LucideIcon[] = [
+    Music,
+    Disc3,
+    Headphones,
+    Radio,
+    Mic2,
+    Guitar,
+    Piano,
+];
+
 interface FloatingParticle {
     id: number;
     left: string;
@@ -45,16 +55,6 @@ export const RegisterPage: React.FC = () => {
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
     const [isLoaded, setIsLoaded] = useState(false);
 
-    const particleIcons: LucideIcon[] = [
-        Music,
-        Disc3,
-        Headphones,
-        Radio,
-        Mic2,
-        Guitar,
-        Piano,
-    ];
-
     const floatingParticles = useMemo<FloatingParticle[]>(
         () =>
             Array.from({ length: 24 }, (_, i) => ({
@@ -64,8 +64,8 @@ export const RegisterPage: React.FC = () => {
                 animationDelay: `${Math.random() * 12}s`,
                 animationDuration: `${12 + Math.random() * 10}s`,
                 size: 16 + Math.round(Math.random() * 16),
-                icon: particleIcons[
-                    Math.floor(Math.random() * particleIcons.length)
+                icon: PARTICLE_ICONS[
+                    Math.floor(Math.random() * PARTICLE_ICONS.length)
                 ],
             })),
         [],
