@@ -560,8 +560,8 @@ export const HomePage: React.FC = () => {
             <div className="relative z-10 p-6 md:p-8 space-y-8">
                 {/* Header */}
                 <header
-                    className="space-y-2 rounded-2xl border border-white/12 bg-white/[0.05] backdrop-blur-2xl
-                    shadow-[0_8px_28px_rgba(0,0,0,0.28)] px-5 py-4"
+                    className="space-y-2 rounded-2xl border border-white/12 bg-white/[0.055] backdrop-blur-2xl
+                    shadow-[0_10px_30px_rgba(0,0,0,0.28)] px-5 py-4"
                 >
                     <h1 className="text-white text-3xl md:text-4xl font-bold tracking-tight">
                         {greeting}

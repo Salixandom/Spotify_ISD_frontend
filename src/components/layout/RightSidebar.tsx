@@ -24,24 +24,6 @@ const PLACEHOLDER_ARTIST: ArtistInfo = {
     bio: "Ayub Bachchu (16 August 1962 – 18 October 2018) was a Bangladeshi rock guitarist, composer, singer, and songwriter. He was one of the most influential rock figures in South Asian music.",
 };
 
-const GlassPanel: React.FC<{
-    title: string;
-    children: React.ReactNode;
-    className?: string;
-}> = ({ title, children, className = "" }) => {
-    return (
-        <section
-            className={`rounded-2xl border border-white/14 bg-white/[0.06] backdrop-blur-2xl
-            shadow-[0_8px_28px_rgba(0,0,0,0.35)] overflow-hidden ${className}`}
-        >
-            <header className="px-4 py-3 border-b border-white/12">
-                <h3 className="text-sm font-semibold text-white">{title}</h3>
-            </header>
-            {children}
-        </section>
-    );
-};
-
 export const RightSidebar: React.FC = () => {
     const { currentTrack } = usePlayerStore();
 
@@ -58,90 +40,95 @@ export const RightSidebar: React.FC = () => {
 
     return (
         <aside
-            className="h-full w-full p-2 md:p-3 bg-transparent flex flex-col gap-3"
+            className="h-full w-full p-3 bg-transparent flex flex-col"
             aria-label="Now playing info panel"
         >
-            {/* Now Playing block */}
-            <GlassPanel title="Now playing">
-                <div className="p-4">
-                    <div className="aspect-square rounded-xl overflow-hidden mb-4 bg-black/25 border border-white/10">
-                        <img
-                            src={songCover}
-                            alt={songTitle}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                        />
-                    </div>
+            {/* Content directly on outer panel (no inner rectangle) */}
+            <div className="px-1 pt-1 pb-2">
+                <h3 className="text-sm font-semibold text-white">
+                    Now playing
+                </h3>
+            </div>
 
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                            <h4 className="text-white text-[30px] leading-tight font-extrabold truncate">
-                                {songTitle}
-                            </h4>
-                            <p className="text-white/70 text-sm mt-1 truncate">
-                                {songArtist}
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            className="text-white/60 hover:text-white transition-colors mt-1"
-                            aria-label="Add current song to library"
-                            title="Add to library"
-                        >
-                            <PlusCircle size={18} />
-                        </button>
-                    </div>
-                </div>
-            </GlassPanel>
-
-            {/* Artist block */}
-            <GlassPanel
-                title="About the artist"
-                className="flex-1 flex flex-col min-h-0"
-            >
-                <div className="relative h-44 bg-black/20">
+            <div className="px-1 pb-4">
+                <div className="aspect-square rounded-xl overflow-hidden mb-4 border border-white/12 bg-transparent">
                     <img
-                        src={artistInfo.imageUrl}
-                        alt={artistInfo.name}
+                        src={songCover}
+                        alt={songTitle}
                         className="w-full h-full object-cover"
                         loading="lazy"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
-                    <div className="absolute bottom-3 left-3 right-3">
-                        <h4 className="text-white font-bold text-3xl leading-tight truncate">
-                            {artistInfo.name}
-                        </h4>
-                    </div>
                 </div>
 
-                <div className="p-4 flex-1 min-h-0 flex flex-col">
-                    <div className="flex items-center justify-between gap-3 mb-3">
-                        <p className="text-white/70 text-sm">
-                            {artistInfo.monthlyListeners}
-                        </p>
-                        <button
-                            type="button"
-                            className="px-3.5 py-1.5 rounded-full border border-white/30
-                            text-white text-xs font-semibold hover:border-white/55 hover:bg-white/10 transition-colors"
-                        >
-                            Follow
-                        </button>
-                    </div>
-
-                    <div className="rounded-xl border border-white/10 bg-black/20 p-3 overflow-y-auto max-h-[220px]">
-                        <p className="text-white/70 text-sm leading-relaxed">
-                            {artistInfo.bio}
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <h4 className="text-white text-[30px] leading-tight font-extrabold truncate">
+                            {songTitle}
+                        </h4>
+                        <p className="text-white/70 text-sm mt-1 truncate">
+                            {songArtist}
                         </p>
                     </div>
-
                     <button
                         type="button"
-                        className="mt-auto pt-4 text-xs text-white/60 hover:text-white transition-colors inline-flex items-center gap-1"
+                        className="text-white/60 hover:text-white transition-colors mt-1"
+                        aria-label="Add current song to library"
+                        title="Add to library"
                     >
-                        View full profile <ExternalLink size={12} />
+                        <PlusCircle size={18} />
                     </button>
                 </div>
-            </GlassPanel>
+            </div>
+
+            <div className="h-px bg-white/12 my-1" />
+
+            <div className="px-1 pt-2 pb-2">
+                <h3 className="text-sm font-semibold text-white">
+                    About the artist
+                </h3>
+            </div>
+
+            <div className="relative h-44 rounded-xl overflow-hidden">
+                <img
+                    src={artistInfo.imageUrl}
+                    alt={artistInfo.name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
+                <div className="absolute bottom-3 left-3 right-3">
+                    <h4 className="text-white font-bold text-3xl leading-tight truncate">
+                        {artistInfo.name}
+                    </h4>
+                </div>
+            </div>
+
+            <div className="pt-4 flex-1 min-h-0 flex flex-col">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                    <p className="text-white/70 text-sm">
+                        {artistInfo.monthlyListeners}
+                    </p>
+                    <button
+                        type="button"
+                        className="px-3.5 py-1.5 rounded-full border border-white/30 text-white text-xs font-semibold hover:border-white/55 hover:bg-white/10 transition-colors"
+                    >
+                        Follow
+                    </button>
+                </div>
+
+                <div className="overflow-y-auto max-h-[220px] pr-1">
+                    <p className="text-white/70 text-sm leading-relaxed">
+                        {artistInfo.bio}
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    className="mt-auto pt-4 text-xs text-white/60 hover:text-white transition-colors inline-flex items-center gap-1"
+                >
+                    View full profile <ExternalLink size={12} />
+                </button>
+            </div>
         </aside>
     );
 };

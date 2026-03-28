@@ -6,6 +6,7 @@ import { Navbar } from "./Navbar";
 import { RightSidebar } from "./RightSidebar";
 import { BottomPlayer } from "./BottomPlayer";
 import { DynamicMusicBackground } from "../ui/DynamicMusicBackground";
+import { PageFooter } from "./PageFooter";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 
 /**
@@ -53,23 +54,24 @@ export const AppLayout: React.FC = () => {
                 <div className="flex-1 min-h-0 flex gap-2 md:gap-3">
                     {/* Left column */}
                     <div className="w-[320px] xl:w-[340px] min-w-[300px]">
-                        <div className="h-full rounded-2xl border border-white/12 bg-white/[0.05] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
+                        <div className="h-full rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
                             <Sidebar />
                         </div>
                     </div>
 
                     {/* Center content */}
                     <main className="flex-1 min-w-0">
-                        <div className="h-full rounded-2xl border border-white/12 bg-white/[0.05] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
+                        <div className="h-full rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
                             <div className="h-full overflow-y-auto">
                                 <Outlet />
+                                <PageFooter />
                             </div>
                         </div>
                     </main>
 
                     {/* Right column */}
                     <div className="w-[340px] xl:w-[360px] min-w-[320px] hidden lg:block">
-                        <div className="h-full rounded-2xl border border-white/12 bg-white/[0.05] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
+                        <div className="h-full rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
                             <RightSidebar />
                         </div>
                     </div>

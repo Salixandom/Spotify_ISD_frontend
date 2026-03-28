@@ -1,5 +1,5 @@
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
     ChevronLeft,
     ChevronRight,
@@ -10,18 +10,15 @@ import {
     Download,
     LogOut,
     User,
+    FolderOpen,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 
 export const Navbar: React.FC = () => {
     const navigate = useNavigate();
-    const location = useLocation();
     const { user, logout } = useAuthStore();
 
     const [searchValue, setSearchValue] = React.useState("");
-
-    const isHome = location.pathname === "/";
-    const isSearch = location.pathname.startsWith("/search");
 
     const handleLogout = () => {
         logout();
@@ -30,7 +27,11 @@ export const Navbar: React.FC = () => {
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!isSearch) navigate("/search");
+        navigate("/search");
+    };
+
+    const handleBrowseClick = () => {
+        navigate("/browse");
     };
 
     return (
@@ -38,11 +39,11 @@ export const Navbar: React.FC = () => {
             className="h-16 px-3 md:px-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 bg-transparent"
             aria-label="Top navigation"
         >
-            {/* LEFT: Logo + arrows */}
+            {/* LEFT: logo + history */}
             <div className="justify-self-start flex items-center gap-3 min-w-0">
                 <button
                     onClick={() => navigate("/")}
-                    className="w-10 h-10 rounded-full bg-white/90 text-black
+                    className="w-10 h-10 rounded-full bg-white/92 text-black
                      flex items-center justify-center shadow-md shadow-black/30
                      hover:scale-105 transition-transform shrink-0"
                     aria-label="Spotify Home"
@@ -77,45 +78,69 @@ export const Navbar: React.FC = () => {
                 </div>
             </div>
 
-            {/* CENTER: Home + search (hard-centered via middle grid column) */}
-            <div className="justify-self-center w-[min(100%,700px)] min-w-[280px] flex items-center gap-2">
+            {/* CENTER: Spotify-style Home + Search + Browse (glassmorphism) */}
+            <div className="justify-self-center w-[min(100%,920px)] min-w-[380px] flex items-center gap-2">
+                {/* Home button: fixed visual state on all pages */}
                 <button
                     onClick={() => navigate("/")}
-                    className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all shrink-0
-            ${
-                isHome
-                    ? "bg-white text-black border-white"
-                    : "bg-white/[0.08] text-white border-white/15 hover:bg-white/[0.14]"
-            }`}
+                    className="w-10 h-10 rounded-full border border-white/20
+                    bg-white/[0.10] backdrop-blur-xl text-white
+                    flex items-center justify-center shrink-0
+                    hover:bg-white/[0.15] transition-colors"
                     aria-label="Home"
                     title="Home"
                 >
-                    <Home size={18} fill={isHome ? "currentColor" : "none"} />
+                    <Home size={18} />
                 </button>
 
                 <form onSubmit={handleSearchSubmit} className="flex-1 min-w-0">
                     <div
-                        className="h-11 rounded-full border border-white/24 flex items-center gap-3 px-4
-                        bg-white/[0.08] backdrop-blur-xl
-                        transition-[background-color] duration-200 hover:bg-white/[0.10]"
+                        className="h-11 rounded-full border border-white/26
+                        bg-white/[0.10] backdrop-blur-2xl
+                        flex items-center gap-3 px-4
+                        shadow-[0_8px_20px_rgba(0,0,0,0.20)]
+                        transition-[background-color,border-color] duration-200
+                        hover:bg-white/[0.13] hover:border-white/34"
                     >
-                        <Search size={18} className="text-white/70 shrink-0" />
+                        <Search size={21} className="text-white/75 shrink-0" />
+
                         <input
                             type="text"
                             value={searchValue}
                             onChange={(e) => setSearchValue(e.target.value)}
-                            onFocus={() => {
-                                if (!isSearch) navigate("/search");
-                            }}
+                            onFocus={() => navigate("/search")}
                             placeholder="What do you want to play?"
-                            className="w-full bg-transparent outline-none text-sm text-white placeholder:text-white/55"
+                            className="flex-1 min-w-0 bg-transparent outline-none
+                            text-[28px] md:text-[18px] leading-none font-medium
+                            text-white placeholder:text-white/65"
                             aria-label="Search"
+                        />
+
+                        {/* Divider + Browse button on far right */}
+                        <div className="h-6 w-px bg-white/25 shrink-0" />
+                        <button
+                            type="button"
+                            onClick={handleBrowseClick}
+                            className="shrink-0 inline-flex items-center justify-center
+                            w-9 h-9 rounded-full
+                            text-white/80 hover:text-white
+                            hover:bg-white/[0.14] transition-colors"
+                            aria-label="Browse"
+                            title="Browse"
+                        >
+                            <FolderOpen size={18} />
+                        </button>
+
+                        {/* tiny twist: subtle live glow dot next to browse */}
+                        <span
+                            className="hidden md:inline-block w-1.5 h-1.5 rounded-full bg-spotify-green/80 animate-pulse"
+                            aria-hidden
                         />
                     </div>
                 </form>
             </div>
 
-            {/* RIGHT: utilities + user */}
+            {/* RIGHT: utility + account */}
             <div className="justify-self-end flex items-center gap-1 md:gap-2 min-w-0">
                 <button
                     className="hidden lg:inline-flex items-center gap-2 px-3 py-2 rounded-full
