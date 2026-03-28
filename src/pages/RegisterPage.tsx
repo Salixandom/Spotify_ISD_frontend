@@ -285,6 +285,27 @@ export const RegisterPage: React.FC = () => {
                   autoComplete="new-password"
                   icon={<Lock size={18} className="text-gray-400" />}
                   disabled={isLoading}
+                  showPasswordToggle={true}
+                  infoTooltip={
+                    <ul className="space-y-2">
+                      {passwordRequirements.map((req, index) => (
+                        <li
+                          key={index}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <Check
+                            size={14}
+                            className={`shrink-0 transition-colors duration-200 ${
+                              req.test ? 'text-spotify-green' : 'text-gray-600'
+                            }`}
+                          />
+                          <span className={req.test ? 'text-white' : 'text-gray-500'}>
+                            {req.text}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  }
                   className="bg-white/5 border-white/10 focus:border-pink-500/50 focus:bg-white/10 transition-all duration-300"
                 />
               </div>
@@ -304,6 +325,27 @@ export const RegisterPage: React.FC = () => {
                   autoComplete="new-password"
                   icon={<Lock size={18} className="text-gray-400" />}
                   disabled={isLoading}
+                  showPasswordToggle={true}
+                  infoTooltip={
+                    <ul className="space-y-2">
+                      {passwordRequirements.map((req, index) => (
+                        <li
+                          key={index}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <Check
+                            size={14}
+                            className={`shrink-0 transition-colors duration-200 ${
+                              req.test ? 'text-spotify-green' : 'text-gray-600'
+                            }`}
+                          />
+                          <span className={req.test ? 'text-white' : 'text-gray-500'}>
+                            {req.text}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  }
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handleRegister();
@@ -373,32 +415,6 @@ export const RegisterPage: React.FC = () => {
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Password Requirements */}
-        <div className="mt-8 p-6 bg-black/40 backdrop-blur-sm rounded-2xl border border-white/5">
-          <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
-            <Lock size={16} className="text-spotify-green" />
-            Password requirements:
-          </h3>
-          <ul className="space-y-2">
-            {passwordRequirements.map((req, index) => (
-              <li
-                key={index}
-                className="flex items-center gap-3 text-xs"
-              >
-                <Check
-                  size={16}
-                  className={`shrink-0 transition-colors duration-200 ${
-                    req.test ? 'text-spotify-green' : 'text-gray-600'
-                  }`}
-                />
-                <span className={req.test ? 'text-white' : 'text-gray-500'}>
-                  {req.text}
-                </span>
-              </li>
-            ))}
-          </ul>
         </div>
 
         {/* Trust indicator */}
