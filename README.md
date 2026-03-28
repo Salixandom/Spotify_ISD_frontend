@@ -66,7 +66,12 @@ cp .env.example .env
 ```bash
 VITE_API_BASE_URL=http://localhost/api
 VITE_APP_NAME=Spotify Collab
+VITE_AUTH_MODE=normal
 ```
+
+**Auth Mode Options:**
+- `VITE_AUTH_MODE=normal` → Normal mode (JWT authentication enforced)
+- `VITE_AUTH_MODE=dev_no_jwt` → Development mode (no JWT required for frontend navigation)
 
 **⚠️ Important:**
 - All env vars MUST start with `VITE_` prefix
