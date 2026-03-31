@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Play,
     Sparkles,
@@ -10,6 +11,7 @@ import {
 import { playlistAPI } from "../api/playlists";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
 import type { Playlist } from "../types";
+import { getDemoPlaylistRoute } from "../utils/playlistRoutes";
 
 /**
  * Spotify-inspired homepage:
@@ -354,11 +356,12 @@ const SectionTitle: React.FC<{
     );
 };
 
-const QuickTile: React.FC<{ item: HomeCard }> = ({ item }) => {
+const QuickTile: React.FC<{ item: HomeCard; onClick?: () => void }> = ({ item, onClick }) => {
     const Icon = kindIcon[item.kind];
 
     return (
         <button
+            onClick={onClick}
             className="group relative h-[72px] rounded-xl overflow-hidden
                  border border-white/14 bg-white/[0.06] backdrop-blur-2xl
                  shadow-[0_6px_20px_rgba(0,0,0,0.25)]
@@ -403,11 +406,12 @@ const QuickTile: React.FC<{ item: HomeCard }> = ({ item }) => {
     );
 };
 
-const ShelfCard: React.FC<{ item: HomeCard }> = ({ item }) => {
+const ShelfCard: React.FC<{ item: HomeCard; onClick?: () => void }> = ({ item, onClick }) => {
     const Icon = kindIcon[item.kind];
 
     return (
         <button
+            onClick={onClick}
             className="group w-[196px] shrink-0 rounded-2xl p-3.5
                  border border-white/14 bg-white/[0.06] backdrop-blur-2xl
                  shadow-[0_8px_24px_rgba(0,0,0,0.25)]
@@ -450,12 +454,12 @@ const ShelfCard: React.FC<{ item: HomeCard }> = ({ item }) => {
     );
 };
 
-const HorizontalShelf: React.FC<{ items: HomeCard[] }> = ({ items }) => {
+const HorizontalShelf: React.FC<{ items: HomeCard[]; onCardClick?: () => void }> = ({ items, onCardClick }) => {
     return (
         <div className="overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex gap-3 w-max">
                 {items.map((item) => (
-                    <ShelfCard key={item.id} item={item} />
+                    <ShelfCard key={item.id} item={item} onClick={onCardClick} />
                 ))}
             </div>
         </div>
@@ -490,16 +494,61 @@ const HomeSkeleton: React.FC = () => {
 };
 
 export const HomePage: React.FC = () => {
+    const navigate = useNavigate();
     const [playlists, setPlaylists] = React.useState<Playlist[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
-    const [hasApiError, setHasApiError] = React.useState(false);
+    //const [hasApiError, setHasApiError] = React.useState(false);
+    
+    const [displayName, setDisplayName] = React.useState("Buddy");
+    
+    React.useEffect(() => {
+        try {
+            // Adjust based on how you store user data
+            const user = JSON.parse(localStorage.getItem("user") || "null");
+    
+            if (user?.name) {
+                setDisplayName(user.name + "!");
+            } else if (user?.displayName) {
+                setDisplayName(user.displayName + "!");
+            } else {
+                setDisplayName("Buddy!");
+            }
+        } catch {
+            setDisplayName("Buddy!");
+        }
+    }, []);
+    
+    const messages = [
+        "Ready to liven up your day?",
+        "Let the music set your mood 🎧",
+        "Your vibe starts here.",
+        "Hit play and escape the noise.",
+        "Fresh beats waiting for you.",
+        "Turn up the volume on life.",
+        "Discover something new today.",
+        "Your soundtrack begins now.",
+        "Feel the rhythm, feel alive.",
+        "Music that matches your mood.",
+        "Press play. Everything else can wait.",
+        "Find your next favorite track.",
+        "Let the beats carry you.",
+        "Good vibes only from here.",
+        "Where your music journey begins.",
+        "Soundtrack your moment.",
+        "Every day deserves great music.",
+        "Dive into your vibe.",
+    ];
+    
+    const randomMessage = React.useMemo(() => {
+        return messages[Math.floor(Math.random() * messages.length)];
+    }, []);
 
     React.useEffect(() => {
         let isMounted = true;
 
         const load = async () => {
             setIsLoading(true);
-            setHasApiError(false);
+            //setHasApiError(false);
 
             try {
                 const data = await playlistAPI.list();
@@ -508,7 +557,7 @@ export const HomePage: React.FC = () => {
             } catch (error) {
                 console.error("Failed to load home playlists:", error);
                 if (!isMounted) return;
-                setHasApiError(true);
+                //setHasApiError(true);
                 setPlaylists([]);
             } finally {
                 if (isMounted) setIsLoading(false);
@@ -528,6 +577,10 @@ export const HomePage: React.FC = () => {
         [playlists],
     );
     const hasRealData = apiCards.length > 0;
+
+    const openDemoPlaylist = React.useCallback(() => {
+        navigate(getDemoPlaylistRoute());
+    }, [navigate]);
 
     const quickAccess = hasRealData
         ? apiCards.slice(0, 8)
@@ -564,19 +617,20 @@ export const HomePage: React.FC = () => {
                     shadow-[0_10px_30px_rgba(0,0,0,0.28)] px-5 py-4"
                 >
                     <h1 className="text-white text-3xl md:text-4xl font-bold tracking-tight">
-                        {greeting}
+                        {greeting}, {displayName}
                     </h1>
                     <p className="text-white/70 text-sm md:text-base">
-                        {hasRealData
+                        {/*{hasRealData
                             ? "Your latest playlists are ready."
-                            : "Backend unavailable — showing curated placeholders for now."}
+                            : "Backend unavailable — showing curated placeholders for now."}*/}
+                        {randomMessage}
                     </p>
-                    {hasApiError && (
+                    
                         <div className="inline-flex items-center gap-2 mt-1 px-3 py-1.5 rounded-full text-xs border border-amber-300/35 bg-amber-300/12 text-amber-100 backdrop-blur-xl">
                             <TrendingUp size={14} />
-                            Live API data is temporarily unavailable
+                            Your Tunes are ready
                         </div>
-                    )}
+                    
                 </header>
 
                 {isLoading ? (
@@ -596,7 +650,7 @@ export const HomePage: React.FC = () => {
                             />
                             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
                                 {quickAccess.map((item) => (
-                                    <QuickTile key={item.id} item={item} />
+                                    <QuickTile key={item.id} item={item} onClick={openDemoPlaylist} />
                                 ))}
                             </div>
                         </section>
@@ -613,7 +667,7 @@ export const HomePage: React.FC = () => {
                                     />
                                 }
                             />
-                            <HorizontalShelf items={madeForYou} />
+                            <HorizontalShelf items={madeForYou} onCardClick={openDemoPlaylist} />
                         </section>
 
                         <section>
@@ -627,7 +681,7 @@ export const HomePage: React.FC = () => {
                                     />
                                 }
                             />
-                            <HorizontalShelf items={trendingNow} />
+                            <HorizontalShelf items={trendingNow} onCardClick={openDemoPlaylist} />
                         </section>
 
                         <section>
@@ -641,7 +695,7 @@ export const HomePage: React.FC = () => {
                                     />
                                 }
                             />
-                            <HorizontalShelf items={recentlyAdded} />
+                            <HorizontalShelf items={recentlyAdded} onCardClick={openDemoPlaylist} />
                         </section>
                     </>
                 )}

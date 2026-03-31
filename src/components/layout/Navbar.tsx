@@ -27,6 +27,15 @@ import {
     ListPlus,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
+import { getDemoPlaylistRoute } from "../../utils/playlistRoutes";
+
+type SearchResult = {
+    id: string;
+    type: "track" | "artist" | "album" | "playlist";
+    title: string;
+    subtitle: string;
+    imageUrl: string;
+};
 
 export const Navbar: React.FC = () => {
     const navigate = useNavigate();
@@ -42,7 +51,12 @@ export const Navbar: React.FC = () => {
     const [searchValue, setSearchValue] = React.useState("");
     const [showSearchDropdown, setShowSearchDropdown] = React.useState(false);
     const [recentSearches, setRecentSearches] = React.useState<string[]>([]);
-    const [searchResults, setSearchResults] = React.useState<any[]>([]);
+    const [searchResults, setSearchResults] = React.useState<SearchResult[]>([]);
+    const [searchDropdownStyle, setSearchDropdownStyle] = React.useState<React.CSSProperties>({
+        top: 0,
+        left: 0,
+        width: 0,
+    });
     const [openContextMenuId, setOpenContextMenuId] = React.useState<string | null>(null);
     const [contextMenuPos, setContextMenuPos] = React.useState({ top: 0, left: 0 });
     const [showPlaylistSubmenu, setShowPlaylistSubmenu] = React.useState(false);
@@ -61,6 +75,9 @@ export const Navbar: React.FC = () => {
         setShowArtistSubmenu(false);
     };
 
+    const toArtistRouteId = (artistName: string) =>
+        artistName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
     const getArtistsForResult = (result: SearchResult): string[] => {
         if (result.type === "artist") return [result.title];
         if (result.type === "album") {
@@ -77,14 +94,6 @@ export const Navbar: React.FC = () => {
         { id: "p4", name: "Chill Vibes" },
         { id: "p5", name: "Late Night Drive" },
     ];
-
-    type SearchResult = {
-        id: string;
-        type: "track" | "artist" | "album" | "playlist";
-        title: string;
-        subtitle: string;
-        imageUrl: string;
-    };
 
     const HARDCODED_SEARCH_RESULTS: SearchResult[] = [
         {
@@ -174,6 +183,44 @@ export const Navbar: React.FC = () => {
         });
     };
 
+    const runSearch = (rawSearch: string) => {
+        const trimmed = rawSearch.trim();
+        if (!trimmed) return;
+
+        saveRecentSearch(trimmed);
+        setSearchValue(trimmed);
+        setShowSearchDropdown(false);
+        setOpenContextMenuId(null);
+        navigate(`/search?q=${encodeURIComponent(trimmed)}`);
+    };
+
+    const updateSearchDropdownPosition = React.useCallback(() => {
+        const searchElement = searchRef.current;
+        if (!searchElement) return;
+
+        const rect = searchElement.getBoundingClientRect();
+        setSearchDropdownStyle({
+            top: rect.bottom + 8,
+            left: rect.left,
+            width: rect.width,
+        });
+    }, []);
+
+    // Keep input synced with route/history.
+    // - On /search, show the query from URL so browser back restores it.
+    // - On other pages, clear the search box.
+    React.useEffect(() => {
+        if (location.pathname === "/search") {
+            const routeQuery = new URLSearchParams(location.search).get("q") || "";
+            setSearchValue(routeQuery);
+        } else {
+            setSearchValue("");
+        }
+
+        setShowSearchDropdown(false);
+        setOpenContextMenuId(null);
+    }, [location.pathname, location.search]);
+
     // Close dropdown when clicking outside (portals stop propagation internally)
     React.useEffect(() => {
         const handleClickOutside = () => {
@@ -185,6 +232,20 @@ export const Navbar: React.FC = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    React.useEffect(() => {
+        if (!showSearchDropdown) return;
+
+        updateSearchDropdownPosition();
+
+        window.addEventListener("resize", updateSearchDropdownPosition);
+        window.addEventListener("scroll", updateSearchDropdownPosition, true);
+
+        return () => {
+            window.removeEventListener("resize", updateSearchDropdownPosition);
+            window.removeEventListener("scroll", updateSearchDropdownPosition, true);
+        };
+    }, [showSearchDropdown, updateSearchDropdownPosition]);
+
     const handleLogout = () => {
         logout();
         navigate("/login");
@@ -192,11 +253,7 @@ export const Navbar: React.FC = () => {
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (searchValue.trim()) {
-            saveRecentSearch(searchValue);
-            setShowSearchDropdown(false);
-            navigate(`/search?q=${encodeURIComponent(searchValue)}`);
-        }
+        runSearch(searchValue);
     };
 
     const handleBrowseClick = () => {
@@ -301,9 +358,9 @@ export const Navbar: React.FC = () => {
                                 value={searchValue}
                                 onChange={(e) => {
                                     setSearchValue(e.target.value);
-                                    setShowSearchDropdown(e.target.value.length > 0);
+                                    setShowSearchDropdown(true);
                                 }}
-                                onFocus={() => setShowSearchDropdown(searchValue.length > 0)}
+                                onFocus={() => setShowSearchDropdown(true)}
                                 placeholder="What do you want to play?"
                                 className="flex-1 min-w-0 bg-transparent outline-none
                                 text-[28px] md:text-[18px] leading-none font-medium
@@ -342,11 +399,7 @@ export const Navbar: React.FC = () => {
                             shadow-[0_8px_30px_rgba(0,0,0,0.50)]
                             overflow-hidden z-[99999] animate-in slide-in-from-top-2
                             duration-200"
-                            style={{
-                                top: searchRef.current?.getBoundingClientRect().bottom ? searchRef.current.getBoundingClientRect().bottom + 8 : 0,
-                                left: searchRef.current?.getBoundingClientRect().left,
-                                width: searchRef.current?.offsetWidth,
-                            }}
+                            style={searchDropdownStyle}
                         >
                             {/* Search Results - only show when there's a query */}
                             {searchValue.trim() && searchResults.length > 0 && (
@@ -371,9 +424,13 @@ export const Navbar: React.FC = () => {
                                             {/* Info */}
                                             <button
                                                 onClick={() => {
-                                                    setSearchValue(result.title);
-                                                    setShowSearchDropdown(false);
-                                                    navigate(`/search?q=${encodeURIComponent(result.title)}`);
+                                                    if (result.type === "playlist") {
+                                                        setShowSearchDropdown(false);
+                                                        setOpenContextMenuId(null);
+                                                        navigate(getDemoPlaylistRoute());
+                                                        return;
+                                                    }
+                                                    runSearch(result.title);
                                                 }}
                                                 className="flex-1 text-left"
                                             >
@@ -445,9 +502,7 @@ export const Navbar: React.FC = () => {
                                         >
                                             <button
                                                 onClick={() => {
-                                                    setSearchValue(search);
-                                                    setShowSearchDropdown(false);
-                                                    navigate(`/search?q=${encodeURIComponent(search)}`);
+                                                    runSearch(search);
                                                 }}
                                                 className="flex-1 flex items-center gap-3 text-left"
                                             >
@@ -473,6 +528,12 @@ export const Navbar: React.FC = () => {
                                             </button>
                                         </div>
                                     ))}
+
+                                    {recentSearches.length === 0 && (
+                                        <div className="px-3 py-5 text-sm text-white/45 text-center">
+                                            Start typing to discover songs, artists, albums, and playlists.
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -481,9 +542,7 @@ export const Navbar: React.FC = () => {
                                 <div className="border-t border-white/10 p-2">
                                     <button
                                         onClick={() => {
-                                            saveRecentSearch(searchValue);
-                                            setShowSearchDropdown(false);
-                                            navigate(`/search?q=${encodeURIComponent(searchValue)}`);
+                                            runSearch(searchValue);
                                         }}
                                         className="w-full px-3 py-2 rounded-md
                                           flex items-center gap-3 text-left
@@ -722,8 +781,7 @@ export const Navbar: React.FC = () => {
                                             onClick={() => {
                                                 setOpenContextMenuId(null);
                                                 closeAllSubmenus();
-                                                setSearchValue(artist);
-                                                navigate(`/search?q=${encodeURIComponent(artist)}`);
+                                                navigate(`/artist/${toArtistRouteId(artist)}`);
                                             }}
                                             className="w-full flex items-center px-4 py-2.5
                                             text-sm text-white/80 hover:text-white hover:bg-white/10

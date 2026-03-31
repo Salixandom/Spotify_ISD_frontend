@@ -1,12 +1,12 @@
 import React from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { createPortal } from "react-dom";
 import {
-    Play, Plus, MoreHorizontal, Heart, Ban, Radio,
-    Mic2, Disc3, FileText, Share2, Monitor, ListPlus,
-    ChevronRight, Music2, Sparkles, Search as SearchIcon, Clock,
+    Play, Plus, MoreHorizontal,
+    Mic2, Disc3, Music2, Sparkles, Clock,
 } from "lucide-react";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
+import { SearchTrackContextMenuModal } from "../components/modals/SearchTrackContextMenuModal";
+import { getDemoPlaylistRoute } from "../utils/playlistRoutes";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,6 +83,9 @@ const MY_PLAYLISTS = [
 
 const FILTERS = ["All", "Songs", "Albums", "Playlists", "Artists"];
 
+const toArtistRouteId = (artistName: string) =>
+    artistName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const SectionTitle: React.FC<{
@@ -111,14 +114,21 @@ const SectionTitle: React.FC<{
 );
 
 // Artist card: play button lives OUTSIDE the overflow-hidden image so it never clips
-const ArtistCard: React.FC<{ imageUrl: string; name: string; followers: string; className?: string }> = ({
-    imageUrl, name, followers, className = "",
+const ArtistCard: React.FC<{
+    imageUrl: string;
+    name: string;
+    followers: string;
+    className?: string;
+    onClick?: () => void;
+}> = ({
+    imageUrl, name, followers, className = "", onClick,
 }) => (
     <button className={`group relative shrink-0 rounded-2xl p-3.5 ${className}
         border border-white/14 bg-white/[0.06] backdrop-blur-2xl
         shadow-[0_8px_24px_rgba(0,0,0,0.25)]
         hover:bg-white/[0.10] hover:border-white/24
         transition-all duration-300 text-left`}
+        onClick={onClick}
     >
         {/* Circular image — overflow-hidden clips only the img */}
         <div className="relative mb-3 aspect-square rounded-full overflow-hidden
@@ -153,9 +163,9 @@ const ArtistCard: React.FC<{ imageUrl: string; name: string; followers: string; 
 );
 
 const MediaCard: React.FC<{
-    imageUrl: string; title: string; subtitle: string; rounded?: boolean;
-}> = ({ imageUrl, title, subtitle, rounded = false }) => (
-    <button className="group relative w-[160px] shrink-0 rounded-2xl p-3.5
+    imageUrl: string; title: string; subtitle: string; rounded?: boolean; onClick?: () => void;
+}> = ({ imageUrl, title, subtitle, rounded = false, onClick }) => (
+    <button onClick={onClick} className="group relative w-[160px] shrink-0 rounded-2xl p-3.5
         border border-white/14 bg-white/[0.06] backdrop-blur-2xl
         shadow-[0_8px_24px_rgba(0,0,0,0.25)]
         hover:bg-white/[0.10] hover:border-white/24
@@ -208,9 +218,9 @@ const MediaGrid: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 // MediaCard but wider for grid layout
 const GridCard: React.FC<{
-    imageUrl: string; title: string; subtitle: string; rounded?: boolean;
-}> = ({ imageUrl, title, subtitle, rounded = false }) => (
-    <button className="group relative w-full rounded-2xl p-3.5
+    imageUrl: string; title: string; subtitle: string; rounded?: boolean; onClick?: () => void;
+}> = ({ imageUrl, title, subtitle, rounded = false, onClick }) => (
+    <button onClick={onClick} className="group relative w-full rounded-2xl p-3.5
         border border-white/14 bg-white/[0.06] backdrop-blur-2xl
         shadow-[0_8px_24px_rgba(0,0,0,0.25)]
         hover:bg-white/[0.10] hover:border-white/24
@@ -253,8 +263,9 @@ const SongRow: React.FC<{
     song: Track;
     index: number;
     showAlbumCol?: boolean;
+    showOrderNumber?: boolean;
     onContextMenu: (e: React.MouseEvent, song: Track) => void;
-}> = ({ song, index, showAlbumCol = false, onContextMenu }) => (
+}> = ({ song, index, showAlbumCol = false, showOrderNumber = false, onContextMenu }) => (
     <div
         className="group flex items-center gap-3 px-3 py-2 rounded-xl
             border border-transparent
@@ -262,6 +273,12 @@ const SongRow: React.FC<{
             transition-all duration-200 cursor-pointer"
         onMouseDown={(e) => e.stopPropagation()}
     >
+        {showOrderNumber && (
+            <span className="w-9 text-center text-sm font-semibold text-white/45 shrink-0 tabular-nums">
+                {index + 1}
+            </span>
+        )}
+
         {/* Index / play */}
         <div className="relative w-9 h-9 rounded-lg overflow-hidden shrink-0 border border-white/10">
             <img src={song.imageUrl} alt={song.title} className="w-full h-full object-cover" />
@@ -269,10 +286,12 @@ const SongRow: React.FC<{
                 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Play size={13} className="text-white fill-white" />
             </div>
-            <span className="absolute inset-0 flex items-center justify-center
-                text-white/50 text-sm font-medium group-hover:opacity-0 transition-opacity">
-                {index + 1}
-            </span>
+            {!showOrderNumber && (
+                <span className="absolute inset-0 flex items-center justify-center
+                    text-white/50 text-sm font-medium group-hover:opacity-0 transition-opacity">
+                    {index + 1}
+                </span>
+            )}
         </div>
 
         {/* Title + artist */}
@@ -333,23 +352,9 @@ export const SearchPage: React.FC = () => {
     const [contextMenu, setContextMenu] = React.useState<{
         id: string; top: number; left: number; songArtist?: string;
     } | null>(null);
-    const contextMenuRef = React.useRef<HTMLDivElement>(null);
-
-    // Playlist submenu
-    const [showPlaylistSubmenu, setShowPlaylistSubmenu] = React.useState(false);
-    const [playlistSubmenuPos, setPlaylistSubmenuPos] = React.useState({ top: 0, left: 0 });
-    const [playlistSearch, setPlaylistSearch] = React.useState("");
-    const playlistSubmenuRef = React.useRef<HTMLDivElement>(null);
-
-    // Artist submenu
-    const [showArtistSubmenu, setShowArtistSubmenu] = React.useState(false);
-    const [artistSubmenuPos, setArtistSubmenuPos] = React.useState({ top: 0, left: 0 });
-    const artistSubmenuRef = React.useRef<HTMLDivElement>(null);
 
     const closeAll = React.useCallback(() => {
         setContextMenu(null);
-        setShowPlaylistSubmenu(false);
-        setShowArtistSubmenu(false);
     }, []);
 
     React.useEffect(() => {
@@ -368,212 +373,9 @@ export const SearchPage: React.FC = () => {
             left: Math.min(rect.right - 224, window.innerWidth - 240),
             songArtist: song.artist,
         });
-        setShowPlaylistSubmenu(false);
-        setShowArtistSubmenu(false);
     };
 
     const artistList = contextMenu?.songArtist?.split(", ").filter(Boolean) ?? [];
-
-    // ── Helpers ─────────────────────────────────────────────────────────────
-
-    const renderContextMenuPortal = () => contextMenu && createPortal(
-        <div
-            ref={contextMenuRef}
-            className="fixed z-[999999] w-56 py-1
-                bg-white/5 backdrop-blur-xl rounded-lg
-                shadow-[0_8px_30px_rgba(0,0,0,0.50)]
-                border border-white/15
-                animate-in fade-in zoom-in-95 duration-100"
-            style={{ top: contextMenu.top, left: contextMenu.left }}
-            onMouseDown={(e) => e.stopPropagation()}
-            onMouseLeave={() => {
-                setShowPlaylistSubmenu(false);
-                setShowArtistSubmenu(false);
-            }}
-        >
-            <button
-                className="w-full flex items-center gap-3 px-3 py-2
-                    text-sm text-white/80 hover:text-white hover:bg-white/10
-                    transition-colors text-left"
-                onMouseEnter={(e) => {
-                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                    setPlaylistSubmenuPos({ top: rect.top, left: rect.right + 4 });
-                    setPlaylistSearch("");
-                    setShowPlaylistSubmenu(true);
-                    setShowArtistSubmenu(false);
-                }}
-            >
-                <ListPlus size={16} className="text-white/60 shrink-0" />
-                <span className="flex-1">Add to playlist</span>
-                <ChevronRight size={14} className="text-white/40" />
-            </button>
-
-            <div className="my-1 mx-3 border-t border-white/10" />
-
-            {[
-                { icon: Heart, label: "Save to your Liked Songs" },
-                { icon: Ban,   label: "Exclude from your taste profile" },
-            ].map((item, i) => (
-                <button key={i}
-                    onMouseEnter={() => { setShowPlaylistSubmenu(false); setShowArtistSubmenu(false); }}
-                    onClick={() => closeAll()}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm
-                        text-white/80 hover:text-white hover:bg-white/10 transition-colors text-left">
-                    <item.icon size={16} className="text-white/60 shrink-0" />
-                    <span className="flex-1">{item.label}</span>
-                </button>
-            ))}
-
-            <div className="my-1 mx-3 border-t border-white/10" />
-
-            <button
-                onMouseEnter={() => { setShowPlaylistSubmenu(false); setShowArtistSubmenu(false); }}
-                onClick={() => closeAll()}
-                className="w-full flex items-center gap-3 px-3 py-2 text-sm
-                    text-white/80 hover:text-white hover:bg-white/10 transition-colors text-left">
-                <Radio size={16} className="text-white/60 shrink-0" />
-                <span className="flex-1">Go to song radio</span>
-            </button>
-
-            <button
-                className="w-full flex items-center gap-3 px-3 py-2
-                    text-sm text-white/80 hover:text-white hover:bg-white/10
-                    transition-colors text-left"
-                onMouseEnter={(e) => {
-                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                    setArtistSubmenuPos({ top: rect.top, left: rect.right + 4 });
-                    setShowArtistSubmenu(true);
-                    setShowPlaylistSubmenu(false);
-                }}
-            >
-                <Mic2 size={16} className="text-white/60 shrink-0" />
-                <span className="flex-1">Go to artist</span>
-                <ChevronRight size={14} className="text-white/40" />
-            </button>
-
-            {[
-                { icon: Disc3,    label: "Go to album" },
-                { icon: FileText, label: "View credits" },
-            ].map((item, i) => (
-                <button key={i}
-                    onMouseEnter={() => { setShowPlaylistSubmenu(false); setShowArtistSubmenu(false); }}
-                    onClick={() => closeAll()}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm
-                        text-white/80 hover:text-white hover:bg-white/10 transition-colors text-left">
-                    <item.icon size={16} className="text-white/60 shrink-0" />
-                    <span className="flex-1">{item.label}</span>
-                </button>
-            ))}
-
-            <div className="my-1 mx-3 border-t border-white/10" />
-
-            {[
-                { icon: Share2,  label: "Share",              hasArrow: true },
-                { icon: Monitor, label: "Open in Desktop app" },
-            ].map((item, i) => (
-                <button key={i}
-                    onMouseEnter={() => { setShowPlaylistSubmenu(false); setShowArtistSubmenu(false); }}
-                    onClick={() => closeAll()}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm
-                        text-white/80 hover:text-white hover:bg-white/10 transition-colors text-left">
-                    <item.icon size={16} className="text-white/60 shrink-0" />
-                    <span className="flex-1">{item.label}</span>
-                    {item.hasArrow && <ChevronRight size={14} className="text-white/40" />}
-                </button>
-            ))}
-        </div>,
-        document.body
-    );
-
-    const renderPlaylistSubmenuPortal = () => showPlaylistSubmenu && contextMenu && createPortal(
-        <div
-            ref={playlistSubmenuRef}
-            className="fixed z-[9999999] w-64 py-2
-                bg-white/5 backdrop-blur-xl rounded-lg
-                shadow-[0_8px_30px_rgba(0,0,0,0.50)]
-                border border-white/15
-                animate-in fade-in slide-in-from-left-1 duration-150"
-            style={{ top: playlistSubmenuPos.top, left: playlistSubmenuPos.left }}
-            onMouseDown={(e) => e.stopPropagation()}
-            onMouseEnter={() => setShowPlaylistSubmenu(true)}
-        >
-            <div className="px-2 pb-2">
-                <div className="flex items-center gap-2 px-3 py-2
-                    bg-white/10 border border-white/15 rounded-lg">
-                    <SearchIcon size={14} className="text-white/50 shrink-0" />
-                    <input
-                        type="text"
-                        value={playlistSearch}
-                        onChange={(e) => setPlaylistSearch(e.target.value)}
-                        placeholder="Find a playlist"
-                        autoFocus
-                        className="flex-1 bg-transparent outline-none text-sm
-                            text-white placeholder:text-white/40"
-                    />
-                </div>
-            </div>
-            <div className="mx-3 mb-1 border-t border-white/10" />
-            <button onClick={closeAll}
-                className="w-full flex items-center gap-3 px-3 py-2
-                    text-sm text-white/80 hover:text-white hover:bg-white/10
-                    transition-colors text-left">
-                <span className="w-6 h-6 rounded-sm bg-white/15 border border-white/20
-                    flex items-center justify-center shrink-0">
-                    <Plus size={14} />
-                </span>
-                New playlist
-            </button>
-            <div className="mx-3 my-1 border-t border-white/10" />
-            <div className="max-h-48 overflow-y-auto">
-                {MY_PLAYLISTS
-                    .filter(p => p.name.toLowerCase().includes(playlistSearch.toLowerCase()))
-                    .map(p => (
-                        <button key={p.id} onClick={closeAll}
-                            className="w-full flex items-center px-3 py-2 text-sm
-                                text-white/80 hover:text-white hover:bg-white/10
-                                transition-colors text-left">
-                            {p.name}
-                        </button>
-                    ))}
-                {MY_PLAYLISTS.filter(p =>
-                    p.name.toLowerCase().includes(playlistSearch.toLowerCase())
-                ).length === 0 && (
-                    <div className="px-3 py-3 text-sm text-white/40 text-center">
-                        No playlists found
-                    </div>
-                )}
-            </div>
-        </div>,
-        document.body
-    );
-
-    const renderArtistSubmenuPortal = () => showArtistSubmenu && contextMenu && createPortal(
-        <div
-            ref={artistSubmenuRef}
-            className="fixed z-[9999999] w-52 py-1
-                bg-white/5 backdrop-blur-xl rounded-lg
-                shadow-[0_8px_30px_rgba(0,0,0,0.50)]
-                border border-white/15
-                animate-in fade-in slide-in-from-left-1 duration-150"
-            style={{ top: artistSubmenuPos.top, left: artistSubmenuPos.left }}
-            onMouseDown={(e) => e.stopPropagation()}
-            onMouseEnter={() => setShowArtistSubmenu(true)}
-        >
-            {artistList.map((artist, i) => (
-                <button key={i}
-                    onClick={() => {
-                        closeAll();
-                        navigate(`/search?q=${encodeURIComponent(artist)}`);
-                    }}
-                    className="w-full flex items-center px-4 py-2.5 text-sm
-                        text-white/80 hover:text-white hover:bg-white/10
-                        transition-colors text-left">
-                    {artist}
-                </button>
-            ))}
-        </div>,
-        document.body
-    );
 
     // ── "All" view ──────────────────────────────────────────────────────────
 
@@ -686,7 +488,14 @@ export const SearchPage: React.FC = () => {
                 />
                 <HorizontalShelf>
                     {ARTISTS.map((a) => (
-                        <ArtistCard key={a.id} imageUrl={a.imageUrl} name={a.name} followers={a.followers} className="w-[160px] shrink-0" />
+                        <ArtistCard
+                            key={a.id}
+                            imageUrl={a.imageUrl}
+                            name={a.name}
+                            followers={a.followers}
+                            className="w-[160px] shrink-0"
+                            onClick={() => navigate(`/artist/${toArtistRouteId(a.name)}`)}
+                        />
                     ))}
                 </HorizontalShelf>
             </section>
@@ -726,6 +535,7 @@ export const SearchPage: React.FC = () => {
                             imageUrl={pl.imageUrl}
                             title={pl.title}
                             subtitle={pl.description}
+                            onClick={() => navigate(getDemoPlaylistRoute())}
                         />
                     ))}
                 </HorizontalShelf>
@@ -756,6 +566,7 @@ export const SearchPage: React.FC = () => {
                         song={song}
                         index={idx}
                         showAlbumCol
+                        showOrderNumber
                         onContextMenu={openContextMenu}
                     />
                 ))}
@@ -768,7 +579,14 @@ export const SearchPage: React.FC = () => {
     const renderArtists = () => (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
             {ARTISTS.map((a) => (
-                <ArtistCard key={a.id} imageUrl={a.imageUrl} name={a.name} followers={a.followers} className="w-full" />
+                <ArtistCard
+                    key={a.id}
+                    imageUrl={a.imageUrl}
+                    name={a.name}
+                    followers={a.followers}
+                    className="w-full"
+                    onClick={() => navigate(`/artist/${toArtistRouteId(a.name)}`)}
+                />
             ))}
         </div>
     );
@@ -798,6 +616,7 @@ export const SearchPage: React.FC = () => {
                     imageUrl={pl.imageUrl}
                     title={pl.title}
                     subtitle={pl.description}
+                    onClick={() => navigate(getDemoPlaylistRoute())}
                 />
             ))}
         </MediaGrid>
@@ -859,9 +678,16 @@ export const SearchPage: React.FC = () => {
                 {activeFilter === "Playlists" && renderPlaylists()}
             </div>
 
-            {renderContextMenuPortal()}
-            {renderPlaylistSubmenuPortal()}
-            {renderArtistSubmenuPortal()}
+            <SearchTrackContextMenuModal
+                isOpen={Boolean(contextMenu)}
+                contextPos={contextMenu ? { top: contextMenu.top, left: contextMenu.left } : { top: 0, left: 0 }}
+                artists={artistList}
+                playlists={MY_PLAYLISTS}
+                onClose={closeAll}
+                onArtistSelect={(artist) => {
+                    navigate(`/artist/${toArtistRouteId(artist)}`);
+                }}
+            />
         </div>
     );
 };

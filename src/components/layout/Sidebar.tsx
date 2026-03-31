@@ -5,6 +5,11 @@ import { playlistAPI } from "../../api/playlists";
 import type { Playlist } from "../../types";
 import { TrackRowSkeleton } from "../ui/LoadingSkeleton";
 import { CreatePlaylistModal } from "../modals/CreatePlaylistModal";
+import {
+    getLocalDraftPlaylists,
+    LOCAL_PLAYLISTS_UPDATED_EVENT,
+} from "../../utils/localPlaylists";
+import { getDemoPlaylistRoute } from "../../utils/playlistRoutes";
 
 type PlaceholderLibraryItemType = "playlist" | "artist" | "album";
 
@@ -117,9 +122,15 @@ const PLACEHOLDER_LIBRARY_ITEMS: PlaceholderLibraryItem[] = [
 
 export const Sidebar: React.FC = () => {
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
+    const [localDraftPlaylists, setLocalDraftPlaylists] = useState(
+        getLocalDraftPlaylists()
+    );
     const [isLoading, setIsLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isLibrarySearchOpen, setIsLibrarySearchOpen] = useState(false);
+    const [librarySearchQuery, setLibrarySearchQuery] = useState("");
     const [hasApiError, setHasApiError] = useState(false);
+    const librarySearchInputRef = React.useRef<HTMLInputElement>(null);
 
     const fetchPlaylists = async () => {
         setIsLoading(true);
@@ -145,20 +156,83 @@ export const Sidebar: React.FC = () => {
     };
 
     const showPlaceholderItems =
-        !isLoading && (hasApiError || playlists.length === 0);
+        !isLoading && (hasApiError || playlists.length === 0) && localDraftPlaylists.length === 0;
 
     const playlistItems = useMemo(() => {
-        return playlists.map((playlist) => ({
+        const draftItems = localDraftPlaylists.map((playlist) => ({
+            id: playlist.id,
+            title: playlist.name,
+            subtitle: `Playlist • You${playlist.visibility === "private" ? " • Private" : ""}`,
+            imageUrl: undefined,
+            isCollaborative: false,
+            isPrivate: playlist.visibility === "private",
+        }));
+
+        const apiItems = playlists.map((playlist) => ({
             id: String(playlist.id),
             title: playlist.name,
-            subtitle:
-                playlist.description?.trim() ||
-                `Playlist • ${playlist.playlist_type === "collaborative" ? "Collaborative" : "Created by you"}`,
+            subtitle: `Playlist • ${playlist.playlist_type === "collaborative" ? "Collaborative" : "You"}`,
             imageUrl: playlist.cover_url || undefined,
             isCollaborative: playlist.playlist_type === "collaborative",
             isPrivate: playlist.visibility === "private",
         }));
-    }, [playlists]);
+
+        return [
+            {
+                id: "demo-main",
+                title: "Neon Faultline",
+                subtitle: "Playlist • Placeholder demo",
+                imageUrl:
+                    "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200&h=200&fit=crop",
+                isCollaborative: true,
+                isPrivate: false,
+            },
+            ...draftItems,
+            ...apiItems,
+        ];
+    }, [playlists, localDraftPlaylists]);
+
+    const normalizedQuery = librarySearchQuery.trim().toLowerCase();
+
+    const filteredPlaylistItems = useMemo(() => {
+        if (!normalizedQuery) return playlistItems;
+
+        return playlistItems.filter((playlist) =>
+            playlist.title.toLowerCase().includes(normalizedQuery) ||
+            playlist.subtitle.toLowerCase().includes(normalizedQuery)
+        );
+    }, [playlistItems, normalizedQuery]);
+
+    const filteredPlaceholderItems = useMemo(() => {
+        if (!normalizedQuery) return PLACEHOLDER_LIBRARY_ITEMS;
+
+        return PLACEHOLDER_LIBRARY_ITEMS.filter((item) =>
+            item.title.toLowerCase().includes(normalizedQuery) ||
+            item.subtitle.toLowerCase().includes(normalizedQuery)
+        );
+    }, [normalizedQuery]);
+
+    useEffect(() => {
+        if (isLibrarySearchOpen) {
+            librarySearchInputRef.current?.focus();
+        } else {
+            setLibrarySearchQuery("");
+        }
+    }, [isLibrarySearchOpen]);
+
+    useEffect(() => {
+        const syncDrafts = () => {
+            setLocalDraftPlaylists(getLocalDraftPlaylists());
+        };
+
+        window.addEventListener(LOCAL_PLAYLISTS_UPDATED_EVENT, syncDrafts);
+        window.addEventListener("storage", syncDrafts);
+
+        return () => {
+            window.removeEventListener(LOCAL_PLAYLISTS_UPDATED_EVENT, syncDrafts);
+            window.removeEventListener("storage", syncDrafts);
+        };
+    }, []);
 
     return (
         <>
@@ -200,13 +274,39 @@ export const Sidebar: React.FC = () => {
 
                 {/* Search + sort row (visual-only for now) */}
                 <div className="flex items-center justify-between mb-3 px-1">
-                    <button
-                        className="text-white/60 hover:text-white transition-colors p-1 rounded"
-                        title="Search in your library"
-                        aria-label="Search in your library"
-                    >
-                        <Search size={16} />
-                    </button>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <button
+                            onClick={() => setIsLibrarySearchOpen((prev) => !prev)}
+                            className={`transition-colors p-1 rounded ${
+                                isLibrarySearchOpen
+                                    ? "text-white bg-white/[0.08]"
+                                    : "text-white/60 hover:text-white"
+                            }`}
+                            title="Search in your library"
+                            aria-label="Search in your library"
+                        >
+                            <Search size={16} />
+                        </button>
+
+                        <div
+                            className={`overflow-hidden transition-all duration-300 ease-out ${
+                                isLibrarySearchOpen
+                                    ? "max-w-[184px] opacity-100"
+                                    : "max-w-0 opacity-0"
+                            }`}
+                        >
+                            <div className="w-[170px] h-8 rounded-full border border-white/16 bg-white/[0.08] backdrop-blur-xl px-3 flex items-center">
+                                <input
+                                    ref={librarySearchInputRef}
+                                    type="text"
+                                    value={librarySearchQuery}
+                                    onChange={(e) => setLibrarySearchQuery(e.target.value)}
+                                    placeholder="Search playlists"
+                                    className="w-full bg-transparent text-xs text-white placeholder:text-white/45 outline-none"
+                                />
+                            </div>
+                        </div>
+                    </div>
                     <button
                         className="inline-flex items-center gap-1 text-white/60 hover:text-white transition-colors text-xs font-medium"
                         title="Sort"
@@ -227,58 +327,86 @@ export const Sidebar: React.FC = () => {
                         </>
                     ) : showPlaceholderItems ? (
                         <div className="space-y-1.5">
-                            {PLACEHOLDER_LIBRARY_ITEMS.map((item) => (
-                                <button
-                                    key={item.id}
-                                    className="w-full text-left flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all duration-200
-                                    text-white/80 hover:text-white hover:bg-white/[0.06]"
-                                    title={item.title}
-                                >
-                                    {/* Artwork / icon */}
-                                    <div className="w-12 h-12 rounded-md shrink-0 overflow-hidden border border-white/10 bg-white/[0.04]">
-                                        {item.isLikedSongs ? (
-                                            <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-400 flex items-center justify-center">
-                                                <Heart
-                                                    size={18}
-                                                    className="text-white"
-                                                    fill="currentColor"
+                            {filteredPlaceholderItems.map((item) => {
+                                const itemCore = (
+                                    <>
+                                        {/* Artwork / icon */}
+                                        <div className="w-12 h-12 rounded-md shrink-0 overflow-hidden border border-white/10 bg-white/[0.04]">
+                                            {item.isLikedSongs ? (
+                                                <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-400 flex items-center justify-center">
+                                                    <Heart
+                                                        size={18}
+                                                        className="text-white"
+                                                        fill="currentColor"
+                                                    />
+                                                </div>
+                                            ) : item.imageUrl ? (
+                                                <img
+                                                    src={item.imageUrl}
+                                                    alt={item.title}
+                                                    className="w-full h-full object-cover"
+                                                    loading="lazy"
                                                 />
-                                            </div>
-                                        ) : item.imageUrl ? (
-                                            <img
-                                                src={item.imageUrl}
-                                                alt={item.title}
-                                                className="w-full h-full object-cover"
-                                                loading="lazy"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center">
-                                                <Music
-                                                    size={18}
-                                                    className="text-white/55"
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <Music
+                                                        size={18}
+                                                        className="text-white/55"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
 
-                                    {/* Text */}
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[15px] font-semibold text-white truncate">
-                                            {item.title}
-                                        </p>
-                                        <p className="text-sm text-white/65 truncate">
-                                            {item.subtitle}
-                                        </p>
-                                    </div>
-                                </button>
-                            ))}
+                                        {/* Text */}
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[15px] font-semibold text-white truncate">
+                                                {item.title}
+                                            </p>
+                                            <p className="text-sm text-white/65 truncate">
+                                                {item.subtitle}
+                                            </p>
+                                        </div>
+                                    </>
+                                );
+
+                                if (item.type === "playlist") {
+                                    return (
+                                        <NavLink
+                                            key={item.id}
+                                            to={getDemoPlaylistRoute()}
+                                            className="w-full text-left flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all duration-200
+                                            text-white/80 hover:text-white hover:bg-white/[0.06]"
+                                            title={item.title}
+                                        >
+                                            {itemCore}
+                                        </NavLink>
+                                    );
+                                }
+
+                                return (
+                                    <button
+                                        key={item.id}
+                                        className="w-full text-left flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all duration-200
+                                        text-white/80 hover:text-white hover:bg-white/[0.06]"
+                                        title={item.title}
+                                    >
+                                        {itemCore}
+                                    </button>
+                                );
+                            })}
+
+                            {filteredPlaceholderItems.length === 0 && (
+                                <div className="px-2 py-6 text-center text-sm text-white/45">
+                                    No matching items in your library.
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="space-y-1.5">
-                            {playlistItems.map((playlist) => (
+                            {filteredPlaylistItems.map((playlist) => (
                                 <NavLink
                                     key={playlist.id}
-                                    to={`/playlist/${playlist.id}`}
+                                    to={playlist.id.startsWith("local-") ? `/playlist/${playlist.id}` : getDemoPlaylistRoute()}
                                     className={({ isActive }) =>
                                         `flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all duration-200 ${
                                             isActive
@@ -330,6 +458,12 @@ export const Sidebar: React.FC = () => {
                                     )}
                                 </NavLink>
                             ))}
+
+                            {filteredPlaylistItems.length === 0 && (
+                                <div className="px-2 py-6 text-center text-sm text-white/45">
+                                    No matching playlists found.
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
