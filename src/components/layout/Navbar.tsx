@@ -29,6 +29,14 @@ import {
 import { useAuthStore } from "../../store/authStore";
 import { getDemoPlaylistRoute } from "../../utils/playlistRoutes";
 
+type SearchResult = {
+    id: string;
+    type: "track" | "artist" | "album" | "playlist";
+    title: string;
+    subtitle: string;
+    imageUrl: string;
+};
+
 export const Navbar: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -43,7 +51,12 @@ export const Navbar: React.FC = () => {
     const [searchValue, setSearchValue] = React.useState("");
     const [showSearchDropdown, setShowSearchDropdown] = React.useState(false);
     const [recentSearches, setRecentSearches] = React.useState<string[]>([]);
-    const [searchResults, setSearchResults] = React.useState<any[]>([]);
+    const [searchResults, setSearchResults] = React.useState<SearchResult[]>([]);
+    const [searchDropdownStyle, setSearchDropdownStyle] = React.useState<React.CSSProperties>({
+        top: 0,
+        left: 0,
+        width: 0,
+    });
     const [openContextMenuId, setOpenContextMenuId] = React.useState<string | null>(null);
     const [contextMenuPos, setContextMenuPos] = React.useState({ top: 0, left: 0 });
     const [showPlaylistSubmenu, setShowPlaylistSubmenu] = React.useState(false);
@@ -81,14 +94,6 @@ export const Navbar: React.FC = () => {
         { id: "p4", name: "Chill Vibes" },
         { id: "p5", name: "Late Night Drive" },
     ];
-
-    type SearchResult = {
-        id: string;
-        type: "track" | "artist" | "album" | "playlist";
-        title: string;
-        subtitle: string;
-        imageUrl: string;
-    };
 
     const HARDCODED_SEARCH_RESULTS: SearchResult[] = [
         {
@@ -189,6 +194,18 @@ export const Navbar: React.FC = () => {
         navigate(`/search?q=${encodeURIComponent(trimmed)}`);
     };
 
+    const updateSearchDropdownPosition = React.useCallback(() => {
+        const searchElement = searchRef.current;
+        if (!searchElement) return;
+
+        const rect = searchElement.getBoundingClientRect();
+        setSearchDropdownStyle({
+            top: rect.bottom + 8,
+            left: rect.left,
+            width: rect.width,
+        });
+    }, []);
+
     // Keep input synced with route/history.
     // - On /search, show the query from URL so browser back restores it.
     // - On other pages, clear the search box.
@@ -214,6 +231,20 @@ export const Navbar: React.FC = () => {
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    React.useEffect(() => {
+        if (!showSearchDropdown) return;
+
+        updateSearchDropdownPosition();
+
+        window.addEventListener("resize", updateSearchDropdownPosition);
+        window.addEventListener("scroll", updateSearchDropdownPosition, true);
+
+        return () => {
+            window.removeEventListener("resize", updateSearchDropdownPosition);
+            window.removeEventListener("scroll", updateSearchDropdownPosition, true);
+        };
+    }, [showSearchDropdown, updateSearchDropdownPosition]);
 
     const handleLogout = () => {
         logout();
@@ -368,11 +399,7 @@ export const Navbar: React.FC = () => {
                             shadow-[0_8px_30px_rgba(0,0,0,0.50)]
                             overflow-hidden z-[99999] animate-in slide-in-from-top-2
                             duration-200"
-                            style={{
-                                top: searchRef.current?.getBoundingClientRect().bottom ? searchRef.current.getBoundingClientRect().bottom + 8 : 0,
-                                left: searchRef.current?.getBoundingClientRect().left,
-                                width: searchRef.current?.offsetWidth,
-                            }}
+                            style={searchDropdownStyle}
                         >
                             {/* Search Results - only show when there's a query */}
                             {searchValue.trim() && searchResults.length > 0 && (
