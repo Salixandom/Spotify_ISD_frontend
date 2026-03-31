@@ -14,7 +14,6 @@ type Track   = { id: string; title: string; artist: string; album: string; durat
 type Artist  = { id: string; name: string; followers: string; imageUrl: string };
 type Album   = { id: string; title: string; year: string; artist: string; imageUrl: string };
 type Playlist = { id: string; title: string; description: string; imageUrl: string };
-type BrowseCategory = { id: string; name: string; colorFrom: string; colorTo: string };
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -81,20 +80,6 @@ const MY_PLAYLISTS = [
     { id: "p5", name: "Late Night Drive" },
 ];
 
-const BROWSE_CATEGORIES: BrowseCategory[] = [
-    { id: "podcasts",     name: "Podcasts",      colorFrom: "#e13300", colorTo: "#ff8a00" },
-    { id: "live-events",  name: "Live Events",   colorFrom: "#7c3aed", colorTo: "#ec4899" },
-    { id: "made-for-you", name: "Made For You",  colorFrom: "#1e3264", colorTo: "#7c3aed" },
-    { id: "new-releases", name: "New Releases",  colorFrom: "#e8115b", colorTo: "#fd5c93" },
-    { id: "pop",          name: "Pop",           colorFrom: "#8c67ab", colorTo: "#e91e63" },
-    { id: "hip-hop",      name: "Hip-Hop",       colorFrom: "#ba5d07", colorTo: "#ff6b6b" },
-    { id: "rock",         name: "Rock",          colorFrom: "#e61e32", colorTo: "#dc148c" },
-    { id: "latin",        name: "Latin",         colorFrom: "#27856a", colorTo: "#61de7b" },
-    { id: "mood",         name: "Mood",          colorFrom: "#1e3264", colorTo: "#8d67ab" },
-    { id: "educational",  name: "Educational",   colorFrom: "#148a08", colorTo: "#50c878" },
-    { id: "discover",     name: "Discover",      colorFrom: "#0d73ec", colorTo: "#2d77eb" },
-    { id: "charts",       name: "Charts",        colorFrom: "#e13300", colorTo: "#ff8a00" },
-];
 
 const FILTERS = ["All", "Songs", "Albums", "Playlists", "Artists"];
 
@@ -388,55 +373,6 @@ export const SearchPage: React.FC = () => {
     };
 
     const artistList = contextMenu?.songArtist?.split(", ").filter(Boolean) ?? [];
-
-    // ── No query → Browse ───────────────────────────────────────────────────
-
-    if (!query) {
-        return (
-            <div className="relative min-h-full p-6 md:p-8">
-                <DynamicMusicBackground />
-                <div className="relative z-10">
-                    <div className="mb-8 rounded-2xl border border-white/12
-                        bg-white/[0.055] backdrop-blur-2xl
-                        shadow-[0_10px_30px_rgba(0,0,0,0.28)] px-5 py-4">
-                        <h1 className="text-white text-3xl font-bold tracking-tight flex items-center gap-3">
-                            <SearchIcon size={26} className="text-white/60" />
-                            Browse all
-                        </h1>
-                        <p className="text-white/60 text-sm mt-1">
-                            What do you want to listen to today?
-                        </p>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                        {BROWSE_CATEGORIES.map((cat) => (
-                            <button
-                                key={cat.id}
-                                onClick={() => navigate(`/search?q=${encodeURIComponent(cat.name)}`)}
-                                className="relative group h-40 rounded-xl p-4 overflow-hidden text-left
-                                    border border-white/12 bg-white/[0.06] backdrop-blur-xl
-                                    shadow-[0_4px_20px_rgba(0,0,0,0.25)]
-                                    hover:scale-[1.03] hover:border-white/20 hover:bg-white/[0.10]
-                                    hover:shadow-[0_8px_32px_rgba(0,0,0,0.4)]
-                                    transition-all duration-300"
-                            >
-                                {/* Subtle color tint — lets the dynamic background show through */}
-                                <div
-                                    className="absolute inset-0 opacity-30 group-hover:opacity-45 transition-opacity duration-300"
-                                    style={{ background: `linear-gradient(135deg, ${cat.colorFrom} 0%, ${cat.colorTo} 100%)` }}
-                                />
-                                <h3 className="relative text-lg font-bold text-white drop-shadow-md z-10">{cat.name}</h3>
-                                {/* Decorative shape */}
-                                <div className="absolute bottom-0 right-0 w-20 h-20
-                                    bg-white/10 rounded-lg transform rotate-12
-                                    translate-x-4 translate-y-4 z-10
-                                    group-hover:scale-110 group-hover:rotate-6 transition-all duration-300" />
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -870,10 +806,10 @@ export const SearchPage: React.FC = () => {
     // ── Section header for non-All tabs ────────────────────────────────────
 
     const TAB_META: Record<string, { title: string; icon: React.ReactNode; subtitle: string }> = {
-        Songs:     { title: "Songs",     icon: <Music2   size={22} className="text-spotify-green" />, subtitle: `Songs matching "${query}"` },
-        Artists:   { title: "Artists",   icon: <Mic2     size={22} className="text-purple-300"    />, subtitle: `Artists matching "${query}"` },
-        Albums:    { title: "Albums",    icon: <Disc3    size={22} className="text-pink-300"       />, subtitle: `Albums matching "${query}"` },
-        Playlists: { title: "Playlists", icon: <Sparkles size={22} className="text-cyan-300"      />, subtitle: `Playlists featuring "${query}"` },
+        Songs:     { title: "Songs",     icon: <Music2   size={22} className="text-spotify-green" />, subtitle: query ? `Songs matching "${query}"` : "All songs" },
+        Artists:   { title: "Artists",   icon: <Mic2     size={22} className="text-purple-300"    />, subtitle: query ? `Artists matching "${query}"` : "All artists" },
+        Albums:    { title: "Albums",    icon: <Disc3    size={22} className="text-pink-300"       />, subtitle: query ? `Albums matching "${query}"` : "All albums" },
+        Playlists: { title: "Playlists", icon: <Sparkles size={22} className="text-cyan-300"      />, subtitle: query ? `Playlists featuring "${query}"` : "All playlists" },
     };
 
     return (
