@@ -47,7 +47,7 @@ export const AppLayout: React.FC = () => {
 
             <div className="relative z-10 h-full p-2 md:p-3 flex flex-col gap-2 md:gap-3">
                 {/* Top navigation */}
-                <div className="rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden">
+                <div className="rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-visible">
                     <Navbar />
                 </div>
 

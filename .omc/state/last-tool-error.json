@@ -1,7 +1,7 @@
 {
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"cd /home/sakib/Projects/Spotify_ISD/Spotify_ISD_backend/services/auth && python -c \\\"\\nfrom django.contrib.auth.models import User\\nfrom authapp.models import UserProfile\\nimport os\\nimpor...",
-  "error": "Exit code 127\nCommand 'python' not found, did you mean:\n  command 'python3' from deb python3\n  command 'python' from deb python-is-python3",
-  "timestamp": "2026-03-30T14:11:59.894Z",
+  "tool_name": "Grep",
+  "tool_input_preview": "{\"pattern\":\"text-3xl font-bold text-white mb-1\",\"path\":\"/home/sakib/Projects/Spotify_ISD/spotify-collab-frontend/src/pages/SearchPage.tsx\",\"output_mode\":\"content\",\"context\":10}",
+  "error": "spawn /home/linuxbrew/.linuxbrew/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg EACCES",
+  "timestamp": "2026-03-31T15:59:41.823Z",
   "retry_count": 1
 }

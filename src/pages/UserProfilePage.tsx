@@ -11,7 +11,6 @@ import {
   X,
   Heart,
   Sparkles,
-  Camera,
   Globe,
   Mail,
   Settings,
