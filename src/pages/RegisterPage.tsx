@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { authAPI } from "../api/auth";
+import { useAuthStore } from "../store/authStore";
+import { getErrorMessage, isErrorType } from "../utils/apiResponse";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 
@@ -40,6 +42,7 @@ interface FloatingParticle {
 
 export const RegisterPage: React.FC = () => {
     const navigate = useNavigate();
+    const { setUser } = useAuthStore();
     const cardRef = useRef<HTMLDivElement>(null);
 
     const [username, setUsername] = useState("");
@@ -127,19 +130,26 @@ export const RegisterPage: React.FC = () => {
         setIsLoading(true);
 
         try {
+            // Register the user
             await authAPI.register(username, password);
-            navigate("/login");
+
+            // Automatically log in after successful registration
+            await authAPI.login(username, password);
+
+            // Fetch user data and update store
+            const user = await authAPI.me();
+            setUser(user);
+
+            // Navigate to home
+            navigate("/");
         } catch (err) {
             console.error("Registration error:", err);
-            const error = err as {
-                response?: { status?: number; data?: { detail?: string } };
-            };
-            if (error.response?.status === 400) {
+
+            // Check for conflict (username already taken)
+            if (isErrorType(err, 'conflict')) {
                 setApiError("Username already taken. Please choose another.");
-            } else if (error.response?.data?.detail) {
-                setApiError(error.response.data.detail);
             } else {
-                setApiError("Failed to create account. Please try again.");
+                setApiError(getErrorMessage(err));
             }
         } finally {
             setIsLoading(false);

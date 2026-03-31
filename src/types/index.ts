@@ -9,6 +9,30 @@ export interface AuthTokens {
   refresh: string;
 }
 
+// ─── User Profile ─────────────────────────────────────────
+export interface UserProfile {
+  user_id: number;
+  display_name: string;
+  bio: string;
+  avatar_url: string;
+  profile_visibility: 'public' | 'followers' | 'private';
+  show_activity: boolean;
+  allow_messages: boolean;
+  preferences: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  followers_count?: number;
+  following_count?: number;
+}
+
+export interface UserStats {
+  total_playlists: number;
+  total_songs: number;
+  total_followers: number;
+  total_following: number;
+  joined_date: string;
+}
+
 // ─── Song (master catalog) ───────────────────────────────
 export interface Song {
   id: number;

@@ -1,5 +1,5 @@
 import React from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { Sidebar } from "./Sidebar";
 import { Navbar } from "./Navbar";
@@ -19,6 +19,7 @@ import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
  */
 export const AppLayout: React.FC = () => {
     useKeyboardShortcuts();
+    const location = useLocation();
 
     return (
         <div className="relative h-screen w-screen overflow-hidden text-white">
@@ -46,7 +47,7 @@ export const AppLayout: React.FC = () => {
 
             <div className="relative z-10 h-full p-2 md:p-3 flex flex-col gap-2 md:gap-3">
                 {/* Top navigation */}
-                <div className="rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden">
+                <div className="rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-visible">
                     <Navbar />
                 </div>
 
@@ -64,7 +65,7 @@ export const AppLayout: React.FC = () => {
                         <div className="h-full rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
                             <div className="h-full overflow-y-auto">
                                 <Outlet />
-                                <PageFooter />
+                                {location.pathname !== "/profile" && <PageFooter />}
                             </div>
                         </div>
                     </main>
