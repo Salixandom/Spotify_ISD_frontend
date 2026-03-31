@@ -61,6 +61,9 @@ export const Navbar: React.FC = () => {
         setShowArtistSubmenu(false);
     };
 
+    const toArtistRouteId = (artistName: string) =>
+        artistName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
     const getArtistsForResult = (result: SearchResult): string[] => {
         if (result.type === "artist") return [result.title];
         if (result.type === "album") {
@@ -744,7 +747,7 @@ export const Navbar: React.FC = () => {
                                             onClick={() => {
                                                 setOpenContextMenuId(null);
                                                 closeAllSubmenus();
-                                                runSearch(artist);
+                                                navigate(`/artist/${toArtistRouteId(artist)}`);
                                             }}
                                             className="w-full flex items-center px-4 py-2.5
                                             text-sm text-white/80 hover:text-white hover:bg-white/10

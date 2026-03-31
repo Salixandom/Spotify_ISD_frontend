@@ -82,6 +82,9 @@ const MY_PLAYLISTS = [
 
 const FILTERS = ["All", "Songs", "Albums", "Playlists", "Artists"];
 
+const toArtistRouteId = (artistName: string) =>
+    artistName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const SectionTitle: React.FC<{
@@ -110,14 +113,21 @@ const SectionTitle: React.FC<{
 );
 
 // Artist card: play button lives OUTSIDE the overflow-hidden image so it never clips
-const ArtistCard: React.FC<{ imageUrl: string; name: string; followers: string; className?: string }> = ({
-    imageUrl, name, followers, className = "",
+const ArtistCard: React.FC<{
+    imageUrl: string;
+    name: string;
+    followers: string;
+    className?: string;
+    onClick?: () => void;
+}> = ({
+    imageUrl, name, followers, className = "", onClick,
 }) => (
     <button className={`group relative shrink-0 rounded-2xl p-3.5 ${className}
         border border-white/14 bg-white/[0.06] backdrop-blur-2xl
         shadow-[0_8px_24px_rgba(0,0,0,0.25)]
         hover:bg-white/[0.10] hover:border-white/24
         transition-all duration-300 text-left`}
+        onClick={onClick}
     >
         {/* Circular image — overflow-hidden clips only the img */}
         <div className="relative mb-3 aspect-square rounded-full overflow-hidden
@@ -477,7 +487,14 @@ export const SearchPage: React.FC = () => {
                 />
                 <HorizontalShelf>
                     {ARTISTS.map((a) => (
-                        <ArtistCard key={a.id} imageUrl={a.imageUrl} name={a.name} followers={a.followers} className="w-[160px] shrink-0" />
+                        <ArtistCard
+                            key={a.id}
+                            imageUrl={a.imageUrl}
+                            name={a.name}
+                            followers={a.followers}
+                            className="w-[160px] shrink-0"
+                            onClick={() => navigate(`/artist/${toArtistRouteId(a.name)}`)}
+                        />
                     ))}
                 </HorizontalShelf>
             </section>
@@ -560,7 +577,14 @@ export const SearchPage: React.FC = () => {
     const renderArtists = () => (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
             {ARTISTS.map((a) => (
-                <ArtistCard key={a.id} imageUrl={a.imageUrl} name={a.name} followers={a.followers} className="w-full" />
+                <ArtistCard
+                    key={a.id}
+                    imageUrl={a.imageUrl}
+                    name={a.name}
+                    followers={a.followers}
+                    className="w-full"
+                    onClick={() => navigate(`/artist/${toArtistRouteId(a.name)}`)}
+                />
             ))}
         </div>
     );
@@ -658,7 +682,7 @@ export const SearchPage: React.FC = () => {
                 playlists={MY_PLAYLISTS}
                 onClose={closeAll}
                 onArtistSelect={(artist) => {
-                    navigate(`/search?q=${encodeURIComponent(artist)}`);
+                    navigate(`/artist/${toArtistRouteId(artist)}`);
                 }}
             />
         </div>
