@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Play,
     Sparkles,
@@ -10,6 +11,7 @@ import {
 import { playlistAPI } from "../api/playlists";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
 import type { Playlist } from "../types";
+import { getDemoPlaylistRoute } from "../utils/playlistRoutes";
 
 /**
  * Spotify-inspired homepage:
@@ -354,11 +356,12 @@ const SectionTitle: React.FC<{
     );
 };
 
-const QuickTile: React.FC<{ item: HomeCard }> = ({ item }) => {
+const QuickTile: React.FC<{ item: HomeCard; onClick?: () => void }> = ({ item, onClick }) => {
     const Icon = kindIcon[item.kind];
 
     return (
         <button
+            onClick={onClick}
             className="group relative h-[72px] rounded-xl overflow-hidden
                  border border-white/14 bg-white/[0.06] backdrop-blur-2xl
                  shadow-[0_6px_20px_rgba(0,0,0,0.25)]
@@ -403,11 +406,12 @@ const QuickTile: React.FC<{ item: HomeCard }> = ({ item }) => {
     );
 };
 
-const ShelfCard: React.FC<{ item: HomeCard }> = ({ item }) => {
+const ShelfCard: React.FC<{ item: HomeCard; onClick?: () => void }> = ({ item, onClick }) => {
     const Icon = kindIcon[item.kind];
 
     return (
         <button
+            onClick={onClick}
             className="group w-[196px] shrink-0 rounded-2xl p-3.5
                  border border-white/14 bg-white/[0.06] backdrop-blur-2xl
                  shadow-[0_8px_24px_rgba(0,0,0,0.25)]
@@ -450,12 +454,12 @@ const ShelfCard: React.FC<{ item: HomeCard }> = ({ item }) => {
     );
 };
 
-const HorizontalShelf: React.FC<{ items: HomeCard[] }> = ({ items }) => {
+const HorizontalShelf: React.FC<{ items: HomeCard[]; onCardClick?: () => void }> = ({ items, onCardClick }) => {
     return (
         <div className="overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex gap-3 w-max">
                 {items.map((item) => (
-                    <ShelfCard key={item.id} item={item} />
+                    <ShelfCard key={item.id} item={item} onClick={onCardClick} />
                 ))}
             </div>
         </div>
@@ -490,6 +494,7 @@ const HomeSkeleton: React.FC = () => {
 };
 
 export const HomePage: React.FC = () => {
+    const navigate = useNavigate();
     const [playlists, setPlaylists] = React.useState<Playlist[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     //const [hasApiError, setHasApiError] = React.useState(false);
@@ -573,6 +578,10 @@ export const HomePage: React.FC = () => {
     );
     const hasRealData = apiCards.length > 0;
 
+    const openDemoPlaylist = React.useCallback(() => {
+        navigate(getDemoPlaylistRoute());
+    }, [navigate]);
+
     const quickAccess = hasRealData
         ? apiCards.slice(0, 8)
         : PLACEHOLDER_QUICK_ACCESS;
@@ -641,7 +650,7 @@ export const HomePage: React.FC = () => {
                             />
                             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
                                 {quickAccess.map((item) => (
-                                    <QuickTile key={item.id} item={item} />
+                                    <QuickTile key={item.id} item={item} onClick={openDemoPlaylist} />
                                 ))}
                             </div>
                         </section>
@@ -658,7 +667,7 @@ export const HomePage: React.FC = () => {
                                     />
                                 }
                             />
-                            <HorizontalShelf items={madeForYou} />
+                            <HorizontalShelf items={madeForYou} onCardClick={openDemoPlaylist} />
                         </section>
 
                         <section>
@@ -672,7 +681,7 @@ export const HomePage: React.FC = () => {
                                     />
                                 }
                             />
-                            <HorizontalShelf items={trendingNow} />
+                            <HorizontalShelf items={trendingNow} onCardClick={openDemoPlaylist} />
                         </section>
 
                         <section>
@@ -686,7 +695,7 @@ export const HomePage: React.FC = () => {
                                     />
                                 }
                             />
-                            <HorizontalShelf items={recentlyAdded} />
+                            <HorizontalShelf items={recentlyAdded} onCardClick={openDemoPlaylist} />
                         </section>
                     </>
                 )}

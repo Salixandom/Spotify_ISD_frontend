@@ -1,6 +1,8 @@
 import React from "react";
 import { Globe, Lock, Music2, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Modal } from "../ui/Modal";
+import { createLocalDraftPlaylist } from "../../utils/localPlaylists";
 
 interface Props {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface Props {
 type Visibility = "public" | "private";
 
 export const CreatePlaylistModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
+  const navigate = useNavigate();
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [visibility, setVisibility] = React.useState<Visibility>("public");
@@ -24,10 +27,18 @@ export const CreatePlaylistModal: React.FC<Props> = ({ isOpen, onClose, onSucces
   }, [isOpen]);
 
   const handleCreate = () => {
+    const created = createLocalDraftPlaylist({
+      name,
+      description,
+      visibility,
+    });
+
     if (onSuccess) {
       onSuccess();
     }
+
     onClose();
+    navigate(`/playlist/${created.id}`);
   };
 
   return (
@@ -102,7 +113,7 @@ export const CreatePlaylistModal: React.FC<Props> = ({ isOpen, onClose, onSucces
 
         <div className="rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-xs text-white/60 flex items-center gap-2">
           <Music2 size={13} className="text-spotify-green" />
-          Endpoint hookup to playlist page is intentionally left open for the next task.
+          This currently creates a local demo playlist shell. API creation will be connected next.
         </div>
 
         <div className="pt-1 flex items-center justify-end gap-2">

@@ -27,6 +27,7 @@ import {
     ListPlus,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
+import { getDemoPlaylistRoute } from "../../utils/playlistRoutes";
 
 export const Navbar: React.FC = () => {
     const navigate = useNavigate();
@@ -396,6 +397,12 @@ export const Navbar: React.FC = () => {
                                             {/* Info */}
                                             <button
                                                 onClick={() => {
+                                                    if (result.type === "playlist") {
+                                                        setShowSearchDropdown(false);
+                                                        setOpenContextMenuId(null);
+                                                        navigate(getDemoPlaylistRoute());
+                                                        return;
+                                                    }
                                                     runSearch(result.title);
                                                 }}
                                                 className="flex-1 text-left"

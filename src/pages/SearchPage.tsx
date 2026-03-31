@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
 import { SearchTrackContextMenuModal } from "../components/modals/SearchTrackContextMenuModal";
+import { getDemoPlaylistRoute } from "../utils/playlistRoutes";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -162,9 +163,9 @@ const ArtistCard: React.FC<{
 );
 
 const MediaCard: React.FC<{
-    imageUrl: string; title: string; subtitle: string; rounded?: boolean;
-}> = ({ imageUrl, title, subtitle, rounded = false }) => (
-    <button className="group relative w-[160px] shrink-0 rounded-2xl p-3.5
+    imageUrl: string; title: string; subtitle: string; rounded?: boolean; onClick?: () => void;
+}> = ({ imageUrl, title, subtitle, rounded = false, onClick }) => (
+    <button onClick={onClick} className="group relative w-[160px] shrink-0 rounded-2xl p-3.5
         border border-white/14 bg-white/[0.06] backdrop-blur-2xl
         shadow-[0_8px_24px_rgba(0,0,0,0.25)]
         hover:bg-white/[0.10] hover:border-white/24
@@ -217,9 +218,9 @@ const MediaGrid: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 // MediaCard but wider for grid layout
 const GridCard: React.FC<{
-    imageUrl: string; title: string; subtitle: string; rounded?: boolean;
-}> = ({ imageUrl, title, subtitle, rounded = false }) => (
-    <button className="group relative w-full rounded-2xl p-3.5
+    imageUrl: string; title: string; subtitle: string; rounded?: boolean; onClick?: () => void;
+}> = ({ imageUrl, title, subtitle, rounded = false, onClick }) => (
+    <button onClick={onClick} className="group relative w-full rounded-2xl p-3.5
         border border-white/14 bg-white/[0.06] backdrop-blur-2xl
         shadow-[0_8px_24px_rgba(0,0,0,0.25)]
         hover:bg-white/[0.10] hover:border-white/24
@@ -534,6 +535,7 @@ export const SearchPage: React.FC = () => {
                             imageUrl={pl.imageUrl}
                             title={pl.title}
                             subtitle={pl.description}
+                            onClick={() => navigate(getDemoPlaylistRoute())}
                         />
                     ))}
                 </HorizontalShelf>
@@ -614,6 +616,7 @@ export const SearchPage: React.FC = () => {
                     imageUrl={pl.imageUrl}
                     title={pl.title}
                     subtitle={pl.description}
+                    onClick={() => navigate(getDemoPlaylistRoute())}
                 />
             ))}
         </MediaGrid>
