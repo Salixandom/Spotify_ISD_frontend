@@ -492,14 +492,58 @@ const HomeSkeleton: React.FC = () => {
 export const HomePage: React.FC = () => {
     const [playlists, setPlaylists] = React.useState<Playlist[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
-    const [hasApiError, setHasApiError] = React.useState(false);
+    //const [hasApiError, setHasApiError] = React.useState(false);
+    
+    const [displayName, setDisplayName] = React.useState("Buddy");
+    
+    React.useEffect(() => {
+        try {
+            // Adjust based on how you store user data
+            const user = JSON.parse(localStorage.getItem("user") || "null");
+    
+            if (user?.name) {
+                setDisplayName(user.name + "!");
+            } else if (user?.displayName) {
+                setDisplayName(user.displayName + "!");
+            } else {
+                setDisplayName("Buddy!");
+            }
+        } catch {
+            setDisplayName("Buddy!");
+        }
+    }, []);
+    
+    const messages = [
+        "Ready to liven up your day?",
+        "Let the music set your mood 🎧",
+        "Your vibe starts here.",
+        "Hit play and escape the noise.",
+        "Fresh beats waiting for you.",
+        "Turn up the volume on life.",
+        "Discover something new today.",
+        "Your soundtrack begins now.",
+        "Feel the rhythm, feel alive.",
+        "Music that matches your mood.",
+        "Press play. Everything else can wait.",
+        "Find your next favorite track.",
+        "Let the beats carry you.",
+        "Good vibes only from here.",
+        "Where your music journey begins.",
+        "Soundtrack your moment.",
+        "Every day deserves great music.",
+        "Dive into your vibe.",
+    ];
+    
+    const randomMessage = React.useMemo(() => {
+        return messages[Math.floor(Math.random() * messages.length)];
+    }, []);
 
     React.useEffect(() => {
         let isMounted = true;
 
         const load = async () => {
             setIsLoading(true);
-            setHasApiError(false);
+            //setHasApiError(false);
 
             try {
                 const data = await playlistAPI.list();
@@ -508,7 +552,7 @@ export const HomePage: React.FC = () => {
             } catch (error) {
                 console.error("Failed to load home playlists:", error);
                 if (!isMounted) return;
-                setHasApiError(true);
+                //setHasApiError(true);
                 setPlaylists([]);
             } finally {
                 if (isMounted) setIsLoading(false);
@@ -564,19 +608,20 @@ export const HomePage: React.FC = () => {
                     shadow-[0_10px_30px_rgba(0,0,0,0.28)] px-5 py-4"
                 >
                     <h1 className="text-white text-3xl md:text-4xl font-bold tracking-tight">
-                        {greeting}
+                        {greeting}, {displayName}
                     </h1>
                     <p className="text-white/70 text-sm md:text-base">
-                        {hasRealData
+                        {/*{hasRealData
                             ? "Your latest playlists are ready."
-                            : "Backend unavailable — showing curated placeholders for now."}
+                            : "Backend unavailable — showing curated placeholders for now."}*/}
+                        {randomMessage}
                     </p>
-                    {hasApiError && (
+                    
                         <div className="inline-flex items-center gap-2 mt-1 px-3 py-1.5 rounded-full text-xs border border-amber-300/35 bg-amber-300/12 text-amber-100 backdrop-blur-xl">
                             <TrendingUp size={14} />
-                            Live API data is temporarily unavailable
+                            Your Tunes are ready
                         </div>
-                    )}
+                    
                 </header>
 
                 {isLoading ? (

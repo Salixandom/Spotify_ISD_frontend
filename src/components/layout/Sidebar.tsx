@@ -119,7 +119,10 @@ export const Sidebar: React.FC = () => {
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isLibrarySearchOpen, setIsLibrarySearchOpen] = useState(false);
+    const [librarySearchQuery, setLibrarySearchQuery] = useState("");
     const [hasApiError, setHasApiError] = useState(false);
+    const librarySearchInputRef = React.useRef<HTMLInputElement>(null);
 
     const fetchPlaylists = async () => {
         setIsLoading(true);
@@ -159,6 +162,34 @@ export const Sidebar: React.FC = () => {
             isPrivate: playlist.visibility === "private",
         }));
     }, [playlists]);
+
+    const normalizedQuery = librarySearchQuery.trim().toLowerCase();
+
+    const filteredPlaylistItems = useMemo(() => {
+        if (!normalizedQuery) return playlistItems;
+
+        return playlistItems.filter((playlist) =>
+            playlist.title.toLowerCase().includes(normalizedQuery) ||
+            playlist.subtitle.toLowerCase().includes(normalizedQuery)
+        );
+    }, [playlistItems, normalizedQuery]);
+
+    const filteredPlaceholderItems = useMemo(() => {
+        if (!normalizedQuery) return PLACEHOLDER_LIBRARY_ITEMS;
+
+        return PLACEHOLDER_LIBRARY_ITEMS.filter((item) =>
+            item.title.toLowerCase().includes(normalizedQuery) ||
+            item.subtitle.toLowerCase().includes(normalizedQuery)
+        );
+    }, [normalizedQuery]);
+
+    useEffect(() => {
+        if (isLibrarySearchOpen) {
+            librarySearchInputRef.current?.focus();
+        } else {
+            setLibrarySearchQuery("");
+        }
+    }, [isLibrarySearchOpen]);
 
     return (
         <>
@@ -200,13 +231,39 @@ export const Sidebar: React.FC = () => {
 
                 {/* Search + sort row (visual-only for now) */}
                 <div className="flex items-center justify-between mb-3 px-1">
-                    <button
-                        className="text-white/60 hover:text-white transition-colors p-1 rounded"
-                        title="Search in your library"
-                        aria-label="Search in your library"
-                    >
-                        <Search size={16} />
-                    </button>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <button
+                            onClick={() => setIsLibrarySearchOpen((prev) => !prev)}
+                            className={`transition-colors p-1 rounded ${
+                                isLibrarySearchOpen
+                                    ? "text-white bg-white/[0.08]"
+                                    : "text-white/60 hover:text-white"
+                            }`}
+                            title="Search in your library"
+                            aria-label="Search in your library"
+                        >
+                            <Search size={16} />
+                        </button>
+
+                        <div
+                            className={`overflow-hidden transition-all duration-300 ease-out ${
+                                isLibrarySearchOpen
+                                    ? "max-w-[184px] opacity-100"
+                                    : "max-w-0 opacity-0"
+                            }`}
+                        >
+                            <div className="w-[170px] h-8 rounded-full border border-white/16 bg-white/[0.08] backdrop-blur-xl px-3 flex items-center">
+                                <input
+                                    ref={librarySearchInputRef}
+                                    type="text"
+                                    value={librarySearchQuery}
+                                    onChange={(e) => setLibrarySearchQuery(e.target.value)}
+                                    placeholder="Search playlists"
+                                    className="w-full bg-transparent text-xs text-white placeholder:text-white/45 outline-none"
+                                />
+                            </div>
+                        </div>
+                    </div>
                     <button
                         className="inline-flex items-center gap-1 text-white/60 hover:text-white transition-colors text-xs font-medium"
                         title="Sort"
@@ -227,7 +284,7 @@ export const Sidebar: React.FC = () => {
                         </>
                     ) : showPlaceholderItems ? (
                         <div className="space-y-1.5">
-                            {PLACEHOLDER_LIBRARY_ITEMS.map((item) => (
+                            {filteredPlaceholderItems.map((item) => (
                                 <button
                                     key={item.id}
                                     className="w-full text-left flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all duration-200
@@ -272,10 +329,16 @@ export const Sidebar: React.FC = () => {
                                     </div>
                                 </button>
                             ))}
+
+                            {filteredPlaceholderItems.length === 0 && (
+                                <div className="px-2 py-6 text-center text-sm text-white/45">
+                                    No matching items in your library.
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="space-y-1.5">
-                            {playlistItems.map((playlist) => (
+                            {filteredPlaylistItems.map((playlist) => (
                                 <NavLink
                                     key={playlist.id}
                                     to={`/playlist/${playlist.id}`}
@@ -330,6 +393,12 @@ export const Sidebar: React.FC = () => {
                                     )}
                                 </NavLink>
                             ))}
+
+                            {filteredPlaylistItems.length === 0 && (
+                                <div className="px-2 py-6 text-center text-sm text-white/45">
+                                    No matching playlists found.
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

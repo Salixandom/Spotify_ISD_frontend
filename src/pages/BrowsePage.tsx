@@ -1,5 +1,5 @@
 import React from "react";
-import { Compass, Sparkles, Flame, Music2 } from "lucide-react";
+import { Compass, Sparkles, Music2 } from "lucide-react";
 import { searchAPI } from "../api/search";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
 
