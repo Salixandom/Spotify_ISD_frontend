@@ -172,8 +172,20 @@
   "hotPaths": [
     {
       "path": "src/pages/SearchPage.tsx",
-      "accessCount": 21,
-      "lastAccessed": 1774973573885,
+      "accessCount": 26,
+      "lastAccessed": 1774974086560,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/BrowsePage.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1774974228490,
+      "type": "file"
+    },
+    {
+      "path": "src/components/layout/Navbar.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1774973963374,
       "type": "file"
     }
   ],

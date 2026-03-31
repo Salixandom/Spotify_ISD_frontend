@@ -1,6 +1,7 @@
 import React from "react";
 import { Compass, Sparkles, Flame, Music2 } from "lucide-react";
 import { searchAPI } from "../api/search";
+import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
 
 type BrowseCard = {
     id: string;
@@ -268,33 +269,38 @@ const BrowseCard: React.FC<{ card: BrowseCard }> = ({ card }) => {
     return (
         <button
             type="button"
-            className="group relative h-[168px] rounded-2xl overflow-hidden border border-white/12
-                 bg-white/[0.06] backdrop-blur-2xl shadow-[0_10px_28px_rgba(0,0,0,0.30)]
-                 hover:scale-[1.02] hover:border-white/22 transition-all duration-300 text-left"
-            style={{
-                backgroundImage: `linear-gradient(130deg, ${card.colorFrom}EE, ${card.colorTo}CC)`,
-            }}
+            className="group relative h-[168px] rounded-2xl overflow-hidden text-left
+                border border-white/12 bg-white/[0.06] backdrop-blur-2xl
+                shadow-[0_4px_20px_rgba(0,0,0,0.25)]
+                hover:scale-[1.02] hover:border-white/22 hover:bg-white/[0.10]
+                hover:shadow-[0_8px_32px_rgba(0,0,0,0.4)]
+                transition-all duration-300"
             title={card.title}
         >
-            {/* gradient sheen */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-black/20 via-transparent to-white/10" />
-            {/* soft blob glow */}
-            <div className="absolute -right-10 -bottom-10 w-40 h-40 rounded-full bg-white/20 blur-2xl group-hover:scale-110 transition-transform duration-500" />
+            {/* Subtle color tint overlay — same as SearchPage */}
+            <div
+                className="absolute inset-0 opacity-30 group-hover:opacity-45 transition-opacity duration-300"
+                style={{ background: `linear-gradient(130deg, ${card.colorFrom}, ${card.colorTo})` }}
+            />
+            {/* Soft sheen */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-black/10 via-transparent to-white/5" />
 
             <div className="relative z-10 p-5 h-full flex flex-col">
-                <h3 className="text-white text-[30px] md:text-[28px] leading-none font-extrabold tracking-tight">
+                <h3 className="text-white text-[26px] md:text-[24px] leading-none font-extrabold tracking-tight drop-shadow-md">
                     {card.title}
                 </h3>
-                <p className="mt-2 text-white/85 text-sm font-medium">
+                <p className="mt-2 text-white/70 text-sm font-medium">
                     {card.subtitle}
                 </p>
 
                 <div className="mt-auto flex justify-end">
-                    <div className="w-24 h-24 rounded-lg overflow-hidden rotate-[22deg] translate-x-5 translate-y-2 shadow-xl border border-white/20">
+                    <div className="w-26 h-26 rounded-lg overflow-hidden rotate-[22deg] translate-x-6 translate-y-3
+                        shadow-xl border border-white/15 opacity-80 group-hover:opacity-100
+                        group-hover:scale-110 transition-all duration-500">
                         <img
                             src={card.imageUrl}
                             alt={card.title}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            className="w-full h-full object-cover"
                             loading="lazy"
                         />
                     </div>
@@ -361,13 +367,7 @@ export const BrowsePage: React.FC = () => {
 
     return (
         <div className="relative min-h-full">
-            {/* Ambient colorful backdrop */}
-            <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                <div className="absolute -top-28 left-10 w-[520px] h-[520px] rounded-full blur-[150px] bg-fuchsia-500/18" />
-                <div className="absolute top-20 right-[-80px] w-[520px] h-[520px] rounded-full blur-[170px] bg-blue-500/18" />
-                <div className="absolute bottom-[-120px] left-1/3 w-[560px] h-[420px] rounded-full blur-[160px] bg-emerald-500/15" />
-                <div className="absolute inset-0 bg-gradient-to-br from-black/25 via-transparent to-black/20" />
-            </div>
+            <DynamicMusicBackground />
 
             <div className="relative z-10 p-6 md:p-8">
                 {/* Header */}
@@ -389,14 +389,6 @@ export const BrowsePage: React.FC = () => {
                             </p>
                         </div>
                     </div>
-
-                    {hasApiError && (
-                        <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs border border-amber-300/35 bg-amber-300/12 text-amber-100 backdrop-blur-xl">
-                            <Flame size={13} />
-                            Backend unavailable — showing curated placeholder
-                            categories
-                        </div>
-                    )}
 
                     {!hasApiError && liveCards.length > 0 && (
                         <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs border border-spotify-green/35 bg-spotify-green/12 text-emerald-100 backdrop-blur-xl">
