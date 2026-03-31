@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import {
     Play,
@@ -8,8 +10,10 @@ import {
     Music2,
 } from "lucide-react";
 import { playlistAPI } from "../api/playlists";
+import { searchAPI } from "../api/search";
+import { historyAPI } from "../api/history";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
-import type { Playlist } from "../types";
+import type { Playlist, Song } from "../types";
 
 /**
  * Spotify-inspired homepage:
@@ -332,7 +336,10 @@ const SectionTitle: React.FC<{
     title: string;
     icon?: React.ReactNode;
     subtitle?: string;
-}> = ({ title, icon, subtitle }) => {
+    onToggle?: () => void;
+    isExpanded?: boolean;
+    showToggleButton?: boolean;
+}> = ({ title, icon, subtitle, onToggle, isExpanded = false, showToggleButton = true }) => {
     return (
         <div className="mb-4 flex items-end justify-between">
             <div>
@@ -344,12 +351,15 @@ const SectionTitle: React.FC<{
                     <p className="text-white/65 text-sm mt-1">{subtitle}</p>
                 )}
             </div>
-            <button
-                className="text-white/60 text-sm font-semibold hover:text-white transition-colors
-                rounded-full border border-white/15 bg-white/[0.04] px-3 py-1"
-            >
-                Show all
-            </button>
+            {showToggleButton && onToggle && (
+                <button
+                    onClick={onToggle}
+                    className="text-white/60 text-sm font-semibold hover:text-white transition-colors
+                    rounded-full border border-white/15 bg-white/[0.04] px-3 py-1"
+                >
+                    {isExpanded ? 'Show less' : 'Show all'}
+                </button>
+            )}
         </div>
     );
 };
@@ -450,13 +460,85 @@ const ShelfCard: React.FC<{ item: HomeCard }> = ({ item }) => {
     );
 };
 
-const HorizontalShelf: React.FC<{ items: HomeCard[] }> = ({ items }) => {
+const HorizontalShelf: React.FC<{
+    items: HomeCard[];
+    totalItems?: number;
+    onShowMore?: () => void;
+    onShowLess?: () => void;
+}> = ({ items, totalItems = 0, onShowMore, onShowLess }) => {
+    const hasMore = totalItems > items.length;
+    const isShowingAll = items.length >= totalItems;
+
     return (
         <div className="overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex gap-3 w-max">
                 {items.map((item) => (
                     <ShelfCard key={item.id} item={item} />
                 ))}
+                {!isShowingAll && hasMore && onShowMore && (
+                    <button
+                        onClick={onShowMore}
+                        className="group w-[196px] shrink-0 rounded-2xl p-3.5
+                             border border-white/14 bg-white/[0.06] backdrop-blur-2xl
+                             hover:bg-white/[0.10] hover:border-white/24 hover:border-spotify-green/50
+                             transition-all duration-300 text-left"
+                    >
+                        <div className="relative rounded-xl overflow-hidden mb-3 aspect-square border border-white/10 flex items-center justify-center bg-white/[0.04]">
+                            <div className="text-center">
+                                <div className="w-12 h-12 mx-auto rounded-full bg-white/[0.08] group-hover:bg-spotify-green/20 flex items-center justify-center mb-2 transition-colors">
+                                    <span className="text-2xl font-bold text-white/80 group-hover:text-spotify-green transition-colors">
+                                        +{totalItems - items.length}
+                                    </span>
+                                </div>
+                                <p className="text-white/70 text-sm font-medium">Show more</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-2.5">
+                            <div className="text-white/50 mt-0.5">
+                                <Sparkles size={15} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-white font-semibold text-[15px] truncate">
+                                    See all {totalItems} items
+                                </p>
+                                <p className="text-white/70 text-[13px] mt-1.5">
+                                    Browse the full collection
+                                </p>
+                            </div>
+                        </div>
+                    </button>
+                )}
+                {isShowingAll && onShowLess && (
+                    <button
+                        onClick={onShowLess}
+                        className="group w-[196px] shrink-0 rounded-2xl p-3.5
+                             border border-white/14 bg-white/[0.06] backdrop-blur-2xl
+                             hover:bg-white/[0.10] hover:border-white/24
+                             transition-all duration-300 text-left"
+                    >
+                        <div className="relative rounded-xl overflow-hidden mb-3 aspect-square border border-white/10 flex items-center justify-center bg-white/[0.04]">
+                            <div className="text-center">
+                                <div className="w-12 h-12 mx-auto rounded-full bg-white/[0.08] group-hover:bg-white/16 flex items-center justify-center mb-2 transition-colors">
+                                    <span className="text-xl text-white/80">↑</span>
+                                </div>
+                                <p className="text-white/70 text-sm font-medium">Show less</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-2.5">
+                            <div className="text-white/50 mt-0.5">
+                                <Sparkles size={15} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-white font-semibold text-[15px] truncate">
+                                    Collapse view
+                                </p>
+                                <p className="text-white/70 text-[13px] mt-1.5">
+                                    Back to top picks
+                                </p>
+                            </div>
+                        </div>
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -491,8 +573,27 @@ const HomeSkeleton: React.FC = () => {
 
 export const HomePage: React.FC = () => {
     const [playlists, setPlaylists] = React.useState<Playlist[]>([]);
+    const [recommendedPlaylists, setRecommendedPlaylists] = React.useState<Playlist[]>([]);
+    const [recommendedSongs, setRecommendedSongs] = React.useState<Song[]>([]);
+    const [trendingSongs, setTrendingSongs] = React.useState<Song[]>([]);
+    const [newReleases, setNewReleases] = React.useState<Song[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [hasApiError, setHasApiError] = React.useState(false);
+
+    // Track which sections are expanded to show more items
+    const [expandedSections, setExpandedSections] = React.useState<Record<string, boolean>>({
+        quickAccess: false,
+        madeForYou: false,
+        trendingNow: false,
+        recentlyAdded: false,
+    });
+
+    const toggleSection = (section: keyof typeof expandedSections) => {
+        setExpandedSections(prev => ({
+            ...prev,
+            [section]: !prev[section],
+        }));
+    };
 
     React.useEffect(() => {
         let isMounted = true;
@@ -502,14 +603,52 @@ export const HomePage: React.FC = () => {
             setHasApiError(false);
 
             try {
-                const data = await playlistAPI.list();
+                // Fetch all content in parallel
+                const [
+                    playlistsData,
+                    recommendedData,
+                    recentPlaysData,
+                    trendingData,
+                    newReleasesData,
+                ] = await Promise.all([
+                    playlistAPI.list().catch(err => {
+                        console.info('Could not fetch playlists:', err);
+                        return [];
+                    }),
+                    playlistAPI.getRecommended().catch(err => {
+                        console.info('Could not fetch recommended playlists:', err);
+                        return [];
+                    }),
+                    historyAPI.getRecentPlays().catch(err => {
+                        console.info('Could not fetch recent plays:', err);
+                        return [];
+                    }),
+                    searchAPI.getTrending({ limit: 30 }).catch(err => {
+                        console.info('Could not fetch trending:', err);
+                        return { songs: [], total: 0 };
+                    }),
+                    searchAPI.getNewReleases({ limit: 30 }).catch(err => {
+                        console.info('Could not fetch new releases:', err);
+                        return { songs: [], total: 0 };
+                    }),
+                ]);
+
                 if (!isMounted) return;
-                setPlaylists(Array.isArray(data) ? data : []);
+
+                setPlaylists(Array.isArray(playlistsData) ? playlistsData : []);
+                setRecommendedPlaylists(Array.isArray(recommendedData) ? recommendedData : []);
+                setTrendingSongs(trendingData.songs || []);
+                setNewReleases(newReleasesData.songs || []);
+                setRecommendedSongs(recentPlaysData || []);
             } catch (error) {
-                console.error("Failed to load home playlists:", error);
+                console.error("Failed to load home content:", error);
                 if (!isMounted) return;
                 setHasApiError(true);
                 setPlaylists([]);
+                setRecommendedPlaylists([]);
+                setTrendingSongs([]);
+                setNewReleases([]);
+                setRecommendedSongs([]);
             } finally {
                 if (isMounted) setIsLoading(false);
             }
@@ -523,26 +662,83 @@ export const HomePage: React.FC = () => {
     }, []);
 
     const greeting = getGreeting();
-    const apiCards = React.useMemo(
+
+    // Transform playlists to cards
+    const playlistCards = React.useMemo(
         () => mapPlaylistsToCards(playlists),
         [playlists],
     );
-    const hasRealData = apiCards.length > 0;
 
-    const quickAccess = hasRealData
-        ? apiCards.slice(0, 8)
-        : PLACEHOLDER_QUICK_ACCESS;
-    const madeForYou = hasRealData
-        ? apiCards.slice(0, 12)
-        : PLACEHOLDER_MADE_FOR_YOU;
-    const trendingNow = hasRealData
-        ? [...apiCards].reverse().slice(0, 12)
-        : PLACEHOLDER_TRENDING;
-    const recentlyAdded = hasRealData
-        ? [...apiCards]
-              .sort((a, b) => a.title.localeCompare(b.title))
-              .slice(0, 12)
-        : PLACEHOLDER_RECENT;
+    // Transform songs to cards
+    const songToCard = (song: any, index: number, kind: HomeCard['kind']): HomeCard => ({
+        id: `song-${song.id}`,
+        title: song.title,
+        subtitle: typeof song.artist === 'string' ? song.artist : song.artist?.name || 'Unknown Artist',
+        imageUrl: song.cover_url || PLACEHOLDER_COVERS[index % PLACEHOLDER_COVERS.length],
+        accentFrom: ['#1db954', '#8b5cf6', '#06b6d4', '#f97316'][index % 4],
+        accentTo: ['#0d6b30', '#4c1d95', '#0e7490', '#9a3412'][index % 4],
+        kind,
+    });
+
+    // Create all available cards (up to 30)
+    const allTrendingCards = React.useMemo(
+        () => trendingSongs.slice(0, 30).map((song, i) => songToCard(song, i, 'daily')),
+        [trendingSongs],
+    );
+
+    const allNewReleaseCards = React.useMemo(
+        () => newReleases.slice(0, 30).map((song, i) => songToCard(song, i, 'mix')),
+        [newReleases],
+    );
+
+    // Transform recommended playlists to cards
+    const recommendedPlaylistCards = React.useMemo(
+        () => mapPlaylistsToCards(recommendedPlaylists),
+        [recommendedPlaylists],
+    );
+
+    // Transform recent plays to cards for Quick Access
+    const allRecentPlayCards = React.useMemo(
+        () => recommendedSongs.slice(0, 30).map((song, i) => songToCard(song, i, 'daily')),
+        [recommendedSongs],
+    );
+
+    // Determine which data to show
+    const hasRealData = playlistCards.length > 0 || allTrendingCards.length > 0 || allNewReleaseCards.length > 0;
+
+    // Quick Access: Show 8 when collapsed, up to 30 when expanded
+    const quickAccess = React.useMemo(() => {
+        const baseCards = allRecentPlayCards.length > 0
+            ? allRecentPlayCards
+            : hasRealData
+                ? [...playlistCards.slice(0, 6), ...allTrendingCards.slice(0, 2)]
+                : PLACEHOLDER_QUICK_ACCESS;
+
+        return expandedSections.quickAccess ? baseCards.slice(0, 30) : baseCards.slice(0, 8);
+    }, [allRecentPlayCards, playlistCards, allTrendingCards, hasRealData, expandedSections.quickAccess]);
+
+    // Made for You: Show 12 when collapsed, up to 30 when expanded
+    const madeForYou = React.useMemo(() => {
+        const baseCards = recommendedPlaylistCards.length > 0
+            ? recommendedPlaylistCards
+            : hasRealData && playlistCards.length > 0
+                ? playlistCards
+                : PLACEHOLDER_MADE_FOR_YOU;
+
+        return expandedSections.madeForYou ? baseCards.slice(0, 30) : baseCards.slice(0, 12);
+    }, [recommendedPlaylistCards, playlistCards, hasRealData, expandedSections.madeForYou]);
+
+    // Trending Now: Show 12 when collapsed, up to 30 when expanded
+    const trendingNow = React.useMemo(() => {
+        const baseCards = allTrendingCards.length > 0 ? allTrendingCards : PLACEHOLDER_TRENDING;
+        return expandedSections.trendingNow ? baseCards.slice(0, 30) : baseCards.slice(0, 12);
+    }, [allTrendingCards, expandedSections.trendingNow]);
+
+    // Recently Added: Show 12 when collapsed, up to 30 when expanded
+    const recentlyAdded = React.useMemo(() => {
+        const baseCards = allNewReleaseCards.length > 0 ? allNewReleaseCards : PLACEHOLDER_RECENT;
+        return expandedSections.recentlyAdded ? baseCards.slice(0, 30) : baseCards.slice(0, 12);
+    }, [allNewReleaseCards, expandedSections.recentlyAdded]);
 
     return (
         <div className="relative min-h-full">
@@ -587,12 +783,15 @@ export const HomePage: React.FC = () => {
                         <section>
                             <SectionTitle
                                 title="Quick access"
+                                subtitle="Recently played songs and your go-to playlists"
                                 icon={
                                     <Sparkles
                                         size={20}
                                         className="text-spotify-green"
                                     />
                                 }
+                                onToggle={() => toggleSection('quickAccess')}
+                                isExpanded={expandedSections.quickAccess}
                             />
                             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
                                 {quickAccess.map((item) => (
@@ -605,15 +804,27 @@ export const HomePage: React.FC = () => {
                         <section>
                             <SectionTitle
                                 title="Made for you"
-                                subtitle="A personalized stream based on your listening patterns"
+                                subtitle="Auto-generated playlists based on your taste"
                                 icon={
                                     <Disc3
                                         size={20}
                                         className="text-purple-300"
                                     />
                                 }
+                                showToggleButton={false}
                             />
-                            <HorizontalShelf items={madeForYou} />
+                            <HorizontalShelf
+                                items={expandedSections.madeForYou
+                                    ? (recommendedPlaylistCards.length > 0
+                                        ? recommendedPlaylistCards
+                                        : hasRealData && playlistCards.length > 0
+                                            ? playlistCards
+                                            : PLACEHOLDER_MADE_FOR_YOU)
+                                    : madeForYou}
+                                totalItems={recommendedPlaylistCards.length || (hasRealData && playlistCards.length) || PLACEHOLDER_MADE_FOR_YOU.length}
+                                onShowMore={() => toggleSection('madeForYou')}
+                                onShowLess={() => toggleSection('madeForYou')}
+                            />
                         </section>
 
                         <section>
@@ -626,8 +837,16 @@ export const HomePage: React.FC = () => {
                                         className="text-pink-300"
                                     />
                                 }
+                                showToggleButton={false}
                             />
-                            <HorizontalShelf items={trendingNow} />
+                            <HorizontalShelf
+                                items={expandedSections.trendingNow
+                                    ? (allTrendingCards.length > 0 ? allTrendingCards : PLACEHOLDER_TRENDING)
+                                    : trendingNow}
+                                totalItems={allTrendingCards.length || PLACEHOLDER_TRENDING.length}
+                                onShowMore={() => toggleSection('trendingNow')}
+                                onShowLess={() => toggleSection('trendingNow')}
+                            />
                         </section>
 
                         <section>
@@ -640,8 +859,16 @@ export const HomePage: React.FC = () => {
                                         className="text-cyan-300"
                                     />
                                 }
+                                showToggleButton={false}
                             />
-                            <HorizontalShelf items={recentlyAdded} />
+                            <HorizontalShelf
+                                items={expandedSections.recentlyAdded
+                                    ? (allNewReleaseCards.length > 0 ? allNewReleaseCards : PLACEHOLDER_RECENT)
+                                    : recentlyAdded}
+                                totalItems={allNewReleaseCards.length || PLACEHOLDER_RECENT.length}
+                                onShowMore={() => toggleSection('recentlyAdded')}
+                                onShowLess={() => toggleSection('recentlyAdded')}
+                            />
                         </section>
                     </>
                 )}

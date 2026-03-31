@@ -171,9 +171,21 @@
   },
   "hotPaths": [
     {
+      "path": "src/pages/HomePage.tsx",
+      "accessCount": 64,
+      "lastAccessed": 1774999568196,
+      "type": "file"
+    },
+    {
       "path": "src/pages/SearchPage.tsx",
-      "accessCount": 26,
-      "lastAccessed": 1774974086560,
+      "accessCount": 46,
+      "lastAccessed": 1774999509300,
+      "type": "file"
+    },
+    {
+      "path": "src/components/layout/Navbar.tsx",
+      "accessCount": 32,
+      "lastAccessed": 1774999232112,
       "type": "file"
     },
     {
@@ -183,9 +195,39 @@
       "type": "file"
     },
     {
-      "path": "src/components/layout/Navbar.tsx",
+      "path": ".env",
+      "accessCount": 2,
+      "lastAccessed": 1774994509898,
+      "type": "file"
+    },
+    {
+      "path": "src/api/search.ts",
       "accessCount": 1,
-      "lastAccessed": 1774973963374,
+      "lastAccessed": 1774994440128,
+      "type": "file"
+    },
+    {
+      "path": "src/api/axios.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774994445526,
+      "type": "file"
+    },
+    {
+      "path": "src/api/tracks.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774998163853,
+      "type": "file"
+    },
+    {
+      "path": "src/api/history.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774998295357,
+      "type": "file"
+    },
+    {
+      "path": "src/types/index.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774999255292,
       "type": "file"
     }
   ],
