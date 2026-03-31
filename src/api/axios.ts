@@ -24,6 +24,8 @@ axiosInstance.interceptors.request.use((config) => {
     return config;
 });
 
+import { unwrapResponse } from '../utils/apiResponse';
+
 axiosInstance.interceptors.response.use(
     (response) => response,
     async (error) => {
@@ -46,8 +48,14 @@ axiosInstance.interceptors.response.use(
                         },
                     );
 
-                    localStorage.setItem("access_token", response.data.access);
-                    originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
+                    // Unwrap SuccessResponse for token refresh
+                    const tokens = unwrapResponse<{ access: string }>(
+                        response.data,
+                        'Token refresh failed'
+                    );
+
+                    localStorage.setItem("access_token", tokens.access);
+                    originalRequest.headers.Authorization = `Bearer ${tokens.access}`;
                     return axiosInstance(originalRequest);
                 } catch {
                     localStorage.removeItem("access_token");

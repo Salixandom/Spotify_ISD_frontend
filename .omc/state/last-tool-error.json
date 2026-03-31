@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd /home/sakib/Projects/Spotify_ISD/Spotify_ISD_backend/services/auth && python -c \\\"\\nfrom django.contrib.auth.models import User\\nfrom authapp.models import UserProfile\\nimport os\\nimpor...",
+  "error": "Exit code 127\nCommand 'python' not found, did you mean:\n  command 'python3' from deb python3\n  command 'python' from deb python-is-python3",
+  "timestamp": "2026-03-30T14:11:59.894Z",
+  "retry_count": 1
+}

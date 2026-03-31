@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { authAPI } from "../api/auth";
 import { useAuthStore } from "../store/authStore";
+import { getErrorMessage } from "../utils/apiResponse";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 
@@ -100,16 +101,7 @@ export const LoginPage: React.FC = () => {
             }
         } catch (err) {
             console.error("Login error:", err);
-            const error = err as {
-                response?: { status?: number; data?: { detail?: string } };
-            };
-            if (error.response?.status === 401) {
-                setError("Invalid username or password");
-            } else if (error.response?.data?.detail) {
-                setError(error.response.data.detail);
-            } else {
-                setError("Failed to login. Please try again.");
-            }
+            setError(getErrorMessage(err));
         } finally {
             setIsLoading(false);
         }

@@ -174,9 +174,13 @@ export const Navbar: React.FC = () => {
 
                 {user ? (
                     <div className="flex items-center gap-2 ml-1">
-                        <div
+                        <button
+                            onClick={() => navigate("/profile")}
                             className="h-9 rounded-full bg-white/[0.08] border border-white/15
-                         pl-1 pr-3 flex items-center gap-2"
+                         pl-1 pr-3 flex items-center gap-2
+                         hover:bg-white/[0.14] transition-colors"
+                            aria-label="View profile"
+                            title="View profile"
                         >
                             <div className="w-7 h-7 rounded-full bg-spotify-green flex items-center justify-center text-black">
                                 <User size={13} />
@@ -184,7 +188,7 @@ export const Navbar: React.FC = () => {
                             <span className="hidden md:block text-sm font-semibold text-white max-w-[120px] truncate">
                                 {user.username}
                             </span>
-                        </div>
+                        </button>
 
                         <button
                             onClick={handleLogout}
