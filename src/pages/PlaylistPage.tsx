@@ -21,6 +21,8 @@ import {
   getLocalDraftPlaylistById,
 } from "../utils/localPlaylists";
 import { Modal } from "../components/ui/Modal";
+import { ShareLinkModal } from "../components/modals/ShareLinkModal";
+import { CollabInviteModal } from "../components/modals/CollabInviteModal";
 
 type PlaylistViewModel = {
   id: string;
@@ -122,6 +124,14 @@ export const PlaylistPage: React.FC = () => {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = React.useState(false);
+  const [isCollabModalOpen, setIsCollabModalOpen] = React.useState(false);
+  const [shareLink, setShareLink] = React.useState("");
+  const [collabLink, setCollabLink] = React.useState("");
+  const [isShareLinkLoading, setIsShareLinkLoading] = React.useState(false);
+  const [isCollabLinkLoading, setIsCollabLinkLoading] = React.useState(false);
+  const [shareError, setShareError] = React.useState<string | null>(null);
+  const [collabError, setCollabError] = React.useState<string | null>(null);
 
   const actionsMenuRef = React.useRef<HTMLDivElement>(null);
 
@@ -281,6 +291,67 @@ export const PlaylistPage: React.FC = () => {
     }
   };
 
+  const buildFallbackLink = React.useCallback(
+    (mode: "share" | "collab") => {
+      const baseOrigin = window.location.origin;
+      const encodedPlaylist = encodeURIComponent(id || "demo-main");
+      return `${baseOrigin}/playlist/${encodedPlaylist}?${mode}=placeholder`;
+    },
+    [id]
+  );
+
+  const loadShareLink = React.useCallback(async () => {
+    if (!playlist) return;
+
+    setIsShareLinkLoading(true);
+    setShareError(null);
+    try {
+      const numericId = Number(playlist.id);
+      if (!Number.isFinite(numericId)) {
+        throw new Error("share-fallback");
+      }
+      const response = await playlistAPI.getShareLink(numericId);
+      setShareLink(response.link);
+    } catch {
+      setShareLink(buildFallbackLink("share"));
+      setShareError("Backend share-link endpoint is unavailable, using placeholder link.");
+    } finally {
+      setIsShareLinkLoading(false);
+    }
+  }, [buildFallbackLink, playlist]);
+
+  const loadCollabLink = React.useCallback(async () => {
+    if (!playlist) return;
+
+    setIsCollabLinkLoading(true);
+    setCollabError(null);
+    try {
+      const numericId = Number(playlist.id);
+      if (!Number.isFinite(numericId)) {
+        throw new Error("collab-fallback");
+      }
+      const response = await playlistAPI.getCollabInviteLink(numericId);
+      setCollabLink(response.link);
+    } catch {
+      setCollabLink(buildFallbackLink("collab"));
+      setCollabError("Backend collaboration-link endpoint is unavailable, using placeholder link.");
+    } finally {
+      setIsCollabLinkLoading(false);
+    }
+  }, [buildFallbackLink, playlist]);
+
+  const openShareModal = async () => {
+    setIsActionsOpen(false);
+    setIsShareModalOpen(true);
+    await loadShareLink();
+  };
+
+  const openCollabModal = async () => {
+    setIsActionsOpen(false);
+    setIsCollabModalOpen(true);
+    await loadCollabLink();
+  };
+
   if (isLoading || !playlist) {
     return (
       <div className="relative min-h-full p-6 md:p-8">
@@ -393,6 +464,18 @@ export const PlaylistPage: React.FC = () => {
                   <button className="w-full text-left px-3 py-2 text-sm text-white/85 hover:bg-white/[0.08] rounded-md transition-colors">
                     Edit details
                   </button>
+                  <button
+                    onClick={openCollabModal}
+                    className="w-full text-left px-3 py-2 text-sm text-white/85 hover:bg-white/[0.08] rounded-md transition-colors"
+                  >
+                    Invite collaborators
+                  </button>
+                  <button
+                    onClick={openShareModal}
+                    className="w-full text-left px-3 py-2 text-sm text-white/85 hover:bg-white/[0.08] rounded-md transition-colors"
+                  >
+                    Share
+                  </button>
                   <div className="my-1 border-t border-white/10" />
                   <button
                     onClick={() => {
@@ -403,9 +486,6 @@ export const PlaylistPage: React.FC = () => {
                   >
                     <Trash2 size={15} />
                     Delete playlist
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm text-white/85 hover:bg-white/[0.08] rounded-md transition-colors">
-                    Share
                   </button>
                 </div>
               )}
@@ -500,6 +580,26 @@ export const PlaylistPage: React.FC = () => {
           </button>
         </div>
       </Modal>
+
+      <ShareLinkModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        playlistName={playlist.name}
+        shareLink={shareLink}
+        isLoading={isShareLinkLoading}
+        errorMessage={shareError}
+        onRefreshLink={loadShareLink}
+      />
+
+      <CollabInviteModal
+        isOpen={isCollabModalOpen}
+        onClose={() => setIsCollabModalOpen(false)}
+        playlistName={playlist.name}
+        collabLink={collabLink}
+        isLoading={isCollabLinkLoading}
+        errorMessage={collabError}
+        onRefreshLink={loadCollabLink}
+      />
     </div>
   );
 };
