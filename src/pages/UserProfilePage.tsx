@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import { profileAPI } from "../api/profile";
+import { playlistAPI } from "../api/playlists";
+import { getLocalDraftPlaylists } from "../utils/localPlaylists";
 import type { UserProfile } from "../types";
 import { getErrorMessage } from "../utils/apiResponse";
 import { Button } from "../components/ui/Button";
@@ -49,11 +51,28 @@ export const UserProfilePage: React.FC = () => {
     following: 0,
     playlists: 0,
   });
+  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [localDrafts, setLocalDrafts] = useState<any[]>([]);
+  const [showPlaylists, setShowPlaylists] = useState(false);
 
   useEffect(() => {
     loadProfile();
     loadStats();
+    loadPlaylists();
   }, []);
+
+  const loadPlaylists = async () => {
+    if (!user?.id) return;
+
+    try {
+      const response = await playlistAPI.getUserPlaylists(user.id) as any;
+      const playlistData = response?.playlists || [];
+      setPlaylists(Array.isArray(playlistData) ? playlistData : []);
+      setLocalDrafts(getLocalDraftPlaylists());
+    } catch (err) {
+      console.error("Failed to load playlists:", err);
+    }
+  };
 
   const loadProfile = async () => {
     try {
@@ -501,7 +520,7 @@ export const UserProfilePage: React.FC = () => {
               <h2 className="text-white text-lg font-semibold mb-4">Quick Actions</h2>
               <div className="space-y-2">
                 <Button
-                  onClick={() => navigate("/playlists")}
+                  onClick={() => setShowPlaylists(!showPlaylists)}
                   className="w-full px-4 py-3 hover:bg-white/5 border border-white/10 rounded-xl text-white text-sm font-medium flex items-center justify-center gap-2"
                 >
                   <Music size={16} />
@@ -523,6 +542,56 @@ export const UserProfilePage: React.FC = () => {
                 </Button>
               </div>
             </div>
+
+            {/* User's Playlists - shown when toggled */}
+            {showPlaylists && (
+              <div className="md:col-span-3 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+                <h2 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Music size={18} className="text-[#1DB954]" />
+                  My Playlists
+                </h2>
+                {playlists.length === 0 && localDrafts.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Music className="mx-auto mb-3 text-white/20" size={32} />
+                    <p className="text-white/60 text-sm">No playlists yet</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="flex gap-3 w-max">
+                      {[...localDrafts, ...playlists].map((playlist: any) => (
+                        <div
+                          key={playlist.id}
+                          onClick={() => navigate(`/playlist/${playlist.id}`)}
+                          className="group cursor-pointer"
+                        >
+                          <div className="w-[220px]">
+                            <div className="relative aspect-square bg-white/5 rounded-xl overflow-hidden border border-white/10 hover:border-[#1DB954]/50 transition-all mb-2">
+                              {playlist.cover_url ? (
+                                <img
+                                  src={playlist.cover_url}
+                                  alt={playlist.name}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5">
+                                  <Music className="text-white/20" size={32} />
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-white font-semibold text-sm truncate">
+                              {playlist.name}
+                            </p>
+                            <p className="text-white/60 text-xs truncate">
+                              {playlist.description || (playlist.is_system_generated ? 'Auto-generated' : 'Playlist')}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

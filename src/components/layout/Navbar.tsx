@@ -25,17 +25,10 @@ import {
     Monitor,
     Ban,
     ListPlus,
+    Loader2,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
-import { getDemoPlaylistRoute } from "../../utils/playlistRoutes";
-
-type SearchResult = {
-    id: string;
-    type: "track" | "artist" | "album" | "playlist";
-    title: string;
-    subtitle: string;
-    imageUrl: string;
-};
+import { searchAPI } from "../../api/search";
 
 export const Navbar: React.FC = () => {
     const navigate = useNavigate();
@@ -51,12 +44,15 @@ export const Navbar: React.FC = () => {
     const [searchValue, setSearchValue] = React.useState("");
     const [showSearchDropdown, setShowSearchDropdown] = React.useState(false);
     const [recentSearches, setRecentSearches] = React.useState<string[]>([]);
+    type SearchResult = {
+        id: string;
+        type: "track" | "artist" | "album" | "playlist";
+        title: string;
+        subtitle: string;
+        imageUrl: string;
+    };
     const [searchResults, setSearchResults] = React.useState<SearchResult[]>([]);
-    const [searchDropdownStyle, setSearchDropdownStyle] = React.useState<React.CSSProperties>({
-        top: 0,
-        left: 0,
-        width: 0,
-    });
+    const [isSearching, setIsSearching] = React.useState(false);
     const [openContextMenuId, setOpenContextMenuId] = React.useState<string | null>(null);
     const [contextMenuPos, setContextMenuPos] = React.useState({ top: 0, left: 0 });
     const [showPlaylistSubmenu, setShowPlaylistSubmenu] = React.useState(false);
@@ -64,6 +60,7 @@ export const Navbar: React.FC = () => {
     const [playlistSearch, setPlaylistSearch] = React.useState("");
     const [showArtistSubmenu, setShowArtistSubmenu] = React.useState(false);
     const [artistSubmenuPos, setArtistSubmenuPos] = React.useState({ top: 0, left: 0 });
+    const [userDisplayName, setUserDisplayName] = React.useState<string>("");
     const searchRef = React.useRef<HTMLDivElement>(null);
     const dropdownRef = React.useRef<HTMLDivElement>(null);
     const contextMenuRef = React.useRef<HTMLDivElement>(null);
@@ -95,52 +92,7 @@ export const Navbar: React.FC = () => {
         { id: "p5", name: "Late Night Drive" },
     ];
 
-    const HARDCODED_SEARCH_RESULTS: SearchResult[] = [
-        {
-            id: "1",
-            type: "track",
-            title: "Blinding Lights",
-            subtitle: "The Weeknd",
-            imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop",
-        },
-        {
-            id: "2",
-            type: "track",
-            title: "Levitating",
-            subtitle: "Dua Lipa",
-            imageUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&h=200&fit=crop",
-        },
-        {
-            id: "3",
-            type: "artist",
-            title: "Taylor Swift",
-            subtitle: "Artist",
-            imageUrl: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=200&h=200&fit=crop",
-        },
-        {
-            id: "4",
-            type: "playlist",
-            title: "Today's Top Hits",
-            subtitle: "Playlist • Spotify",
-            imageUrl: "https://images.unsplash.com/photo-1458560871784-56d23406c091?w=200&h=200&fit=crop",
-        },
-        {
-            id: "5",
-            type: "track",
-            title: "Save Your Tears",
-            subtitle: "The Weeknd",
-            imageUrl: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&h=200&fit=crop",
-        },
-        {
-            id: "6",
-            type: "album",
-            title: "After Hours",
-            subtitle: "Album • The Weeknd",
-            imageUrl: "https://images.unsplash.com/photo-1445985543470-41fba5c3144a?w=200&h=200&fit=crop",
-        },
-    ];
-
-    // Load recent searches from localStorage on mount
+    // Load recent searches and user display name from localStorage on mount
     React.useEffect(() => {
         const saved = localStorage.getItem("recentSearches");
         if (saved) {
@@ -150,20 +102,85 @@ export const Navbar: React.FC = () => {
                 console.error("Failed to parse recent searches:", error);
             }
         }
+
+        // Load user display name
+        try {
+            const user = JSON.parse(localStorage.getItem("user") || "null");
+            if (user?.displayName) {
+                setUserDisplayName(user.displayName);
+            } else if (user?.username) {
+                setUserDisplayName(user.username);
+            }
+        } catch (error) {
+            console.error("Failed to load user display name:", error);
+        }
     }, []);
 
-    // Debounced search effect - fetch results on each keypress
+    // Debounced search effect - fetch results from API
     React.useEffect(() => {
-        const timer = setTimeout(() => {
+        const timer = setTimeout(async () => {
             if (searchValue.trim().length > 0) {
-                // Filter hardcoded results based on search query
-                const filtered = HARDCODED_SEARCH_RESULTS.filter(result =>
-                    result.title.toLowerCase().includes(searchValue.toLowerCase()) ||
-                    result.subtitle.toLowerCase().includes(searchValue.toLowerCase())
-                );
-                setSearchResults(filtered);
+                setIsSearching(true);
+                try {
+                    const results = await searchAPI.search(searchValue.trim());
+
+                    // Transform API results to display format
+                    const transformedResults: any[] = [];
+
+                    // Add songs
+                    results.songs?.slice(0, 3).forEach((song: any) => {
+                        transformedResults.push({
+                            id: `song-${song.id}`,
+                            type: 'track',
+                            title: song.title,
+                            subtitle: typeof song.artist === 'string' ? song.artist : song.artist?.name || 'Unknown Artist',
+                            imageUrl: song.cover_url || song.imageUrl || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop',
+                        });
+                    });
+
+                    // Add artists
+                    results.artists?.slice(0, 2).forEach((artist: any) => {
+                        transformedResults.push({
+                            id: `artist-${artist.id}`,
+                            type: 'artist',
+                            title: artist.name,
+                            subtitle: 'Artist',
+                            imageUrl: artist.image_url || artist.imageUrl || 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=200&h=200&fit=crop',
+                        });
+                    });
+
+                    // Add albums
+                    results.albums?.slice(0, 2).forEach((album: any) => {
+                        transformedResults.push({
+                            id: `album-${album.id}`,
+                            type: 'album',
+                            title: album.name,
+                            subtitle: `Album • ${typeof album.artist === 'string' ? album.artist : album.artist?.name || 'Unknown Artist'}`,
+                            imageUrl: album.cover_url || album.imageUrl || 'https://images.unsplash.com/photo-1458560871784-56d23406c091?w=200&h=200&fit=crop',
+                        });
+                    });
+
+                    // Add playlists
+                    results.playlists?.slice(0, 2).forEach((playlist: any) => {
+                        transformedResults.push({
+                            id: `playlist-${playlist.id}`,
+                            type: 'playlist',
+                            title: playlist.name || playlist.title,
+                            subtitle: `Playlist • ${playlist.owner_id || 'Spotify'}`,
+                            imageUrl: playlist.cover_image || playlist.imageUrl || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&h=200&fit=crop',
+                        });
+                    });
+
+                    setSearchResults(transformedResults.slice(0, 5)); // Show max 5 results
+                } catch (error) {
+                    console.error('Search failed:', error);
+                    setSearchResults([]);
+                } finally {
+                    setIsSearching(false);
+                }
             } else {
                 setSearchResults([]);
+                setIsSearching(false);
             }
         }, 300); // 300ms debounce
 
@@ -197,13 +214,7 @@ export const Navbar: React.FC = () => {
     const updateSearchDropdownPosition = React.useCallback(() => {
         const searchElement = searchRef.current;
         if (!searchElement) return;
-
-        const rect = searchElement.getBoundingClientRect();
-        setSearchDropdownStyle({
-            top: rect.bottom + 8,
-            left: rect.left,
-            width: rect.width,
-        });
+        // Dropdown positioning is handled by inline styles
     }, []);
 
     // Keep input synced with route/history.
@@ -399,10 +410,22 @@ export const Navbar: React.FC = () => {
                             shadow-[0_8px_30px_rgba(0,0,0,0.50)]
                             overflow-hidden z-[99999] animate-in slide-in-from-top-2
                             duration-200"
-                            style={searchDropdownStyle}
+                            style={{
+                                top: searchRef.current?.getBoundingClientRect().bottom ? searchRef.current.getBoundingClientRect().bottom + 8 : 0,
+                                left: searchRef.current?.getBoundingClientRect().left,
+                                width: searchRef.current?.offsetWidth,
+                            }}
                         >
-                            {/* Search Results - only show when there's a query */}
-                            {searchValue.trim() && searchResults.length > 0 && (
+                            {/* Loading state */}
+                            {isSearching && (
+                                <div className="p-4 flex items-center justify-center">
+                                    <Loader2 className="w-5 h-5 text-spotify-green animate-spin" />
+                                    <span className="ml-2 text-sm text-white/60">Searching...</span>
+                                </div>
+                            )}
+
+                            {/* Search Results - only show when there's a query and not loading */}
+                            {!isSearching && searchValue.trim() && searchResults.length > 0 && (
                                 <div className="p-2">
                                     <div className="px-3 py-2 text-sm font-semibold text-white/60 uppercase tracking-wider">
                                         Best result
@@ -421,18 +444,18 @@ export const Navbar: React.FC = () => {
                                                 />
                                             </div>
 
-                                            {/* Info */}
+                                            {/* Info - expands to type tag, shrinks on hover */}
                                             <button
                                                 onClick={() => {
                                                     if (result.type === "playlist") {
                                                         setShowSearchDropdown(false);
                                                         setOpenContextMenuId(null);
-                                                        navigate(getDemoPlaylistRoute());
+                                                        runSearch(result.title);
                                                         return;
                                                     }
                                                     runSearch(result.title);
                                                 }}
-                                                className="flex-1 text-left"
+                                                className="flex-1 min-w-0 text-left transition-all duration-200 group-hover:max-w-[140px]"
                                             >
                                                 <div className="text-white font-medium truncate">
                                                     {result.title}
@@ -442,50 +465,59 @@ export const Navbar: React.FC = () => {
                                                 </div>
                                             </button>
 
-                                            {/* Type badge */}
-                                            <span className="text-xs text-white/40 uppercase px-2 py-1 bg-white/5 rounded">
+                                            {/* Action buttons - hidden by default, shown on hover */}
+                                            <div className="flex items-center gap-2 opacity-0 w-0 overflow-hidden group-hover:opacity-100 group-hover:w-auto transition-all duration-200">
+                                                {/* Add to Liked Songs - circled plus */}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        console.log("Save to Liked Songs:", result.title);
+                                                    }}
+                                                    className="w-8 h-8 rounded-full border border-white/40 hover:border-white
+                                                    flex items-center justify-center text-white/70 hover:text-white
+                                                    hover:scale-105 shrink-0"
+                                                    aria-label="Save to Liked Songs"
+                                                    title="Save to Liked Songs"
+                                                >
+                                                    <Plus size={15} />
+                                                </button>
+
+                                                {/* Three-dot context menu */}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                        setContextMenuPos({
+                                                            top: rect.bottom + 6,
+                                                            left: rect.right - 220,
+                                                        });
+                                                        setOpenContextMenuId(
+                                                            openContextMenuId === result.id ? null : result.id
+                                                        );
+                                                    }}
+                                                    className="w-8 h-8 rounded-full hover:bg-white/15
+                                                    flex items-center justify-center text-white/70 hover:text-white shrink-0"
+                                                    aria-label="More options"
+                                                    title="More options"
+                                                >
+                                                    <MoreHorizontal size={16} />
+                                                </button>
+                                            </div>
+
+                                            {/* Type badge - always visible on far right */}
+                                            <span className="text-xs text-white/40 uppercase px-2 py-1 bg-white/5 rounded shrink-0 whitespace-nowrap">
                                                 {result.type}
                                             </span>
-
-                                            {/* Add to Liked Songs - circled plus */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    console.log("Save to Liked Songs:", result.title);
-                                                }}
-                                                className="opacity-0 group-hover:opacity-100 transition-opacity
-                                                w-8 h-8 rounded-full border border-white/40 hover:border-white
-                                                flex items-center justify-center text-white/70 hover:text-white
-                                                hover:scale-105 shrink-0"
-                                                aria-label="Save to Liked Songs"
-                                                title="Save to Liked Songs"
-                                            >
-                                                <Plus size={15} />
-                                            </button>
-
-                                            {/* Three-dot context menu */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                                    setContextMenuPos({
-                                                        top: rect.bottom + 6,
-                                                        left: rect.right - 220,
-                                                    });
-                                                    setOpenContextMenuId(
-                                                        openContextMenuId === result.id ? null : result.id
-                                                    );
-                                                }}
-                                                className="opacity-0 group-hover:opacity-100 transition-opacity
-                                                w-8 h-8 rounded-full hover:bg-white/15
-                                                flex items-center justify-center text-white/70 hover:text-white shrink-0"
-                                                aria-label="More options"
-                                                title="More options"
-                                            >
-                                                <MoreHorizontal size={16} />
-                                            </button>
                                         </div>
                                     ))}
+                                </div>
+                            )}
+
+                            {/* Empty state when no results found */}
+                            {!isSearching && searchValue.trim() && searchResults.length === 0 && (
+                                <div className="p-4 text-center">
+                                    <p className="text-white/60 text-sm">No results found for "{searchValue}"</p>
+                                    <p className="text-white/40 text-xs mt-1">Try different keywords</p>
                                 </div>
                             )}
 
@@ -844,7 +876,7 @@ export const Navbar: React.FC = () => {
                                 <User size={13} />
                             </div>
                             <span className="hidden md:block text-sm font-semibold text-white max-w-[120px] truncate">
-                                {user.username}
+                                {userDisplayName || user.username}
                             </span>
                         </button>
 

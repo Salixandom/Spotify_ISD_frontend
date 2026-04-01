@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,14 +11,15 @@ import {
     Music2,
 } from "lucide-react";
 import { playlistAPI } from "../api/playlists";
+import { searchAPI } from "../api/search";
+import { historyAPI } from "../api/history";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
-import type { Playlist } from "../types";
-import { getDemoPlaylistRoute } from "../utils/playlistRoutes";
+import type { Playlist, Song } from "../types";
 
 /**
  * Spotify-inspired homepage:
  * - API-first data source (playlists)
- * - graceful placeholder fallback when API is unavailable/empty
+ * - only shows real data from backend
  * - custom visual language aligned with Login/Register pages
  */
 
@@ -30,268 +33,21 @@ type HomeCard = {
     kind: "playlist" | "mix" | "daily" | "focus";
 };
 
-const PLACEHOLDER_COVERS = [
-    "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=600&h=600&fit=crop",
-    "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&h=600&fit=crop",
-    "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&h=600&fit=crop",
-    "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=600&h=600&fit=crop",
-    "https://images.unsplash.com/photo-1516280030429-27679b3dc9cf?w=600&h=600&fit=crop",
-    "https://images.unsplash.com/photo-1501612780327-45045538702b?w=600&h=600&fit=crop",
-    "https://images.unsplash.com/photo-1445985543470-41fba5c3144a?w=600&h=600&fit=crop",
-    "https://images.unsplash.com/photo-1458560871784-56d23406c091?w=600&h=600&fit=crop",
-];
-
-const PLACEHOLDER_QUICK_ACCESS: HomeCard[] = [
-    {
-        id: "qa-1",
-        title: "Daily Lift",
-        subtitle: "Your energy booster mix",
-        imageUrl: PLACEHOLDER_COVERS[0],
-        accentFrom: "#1db954",
-        accentTo: "#0d6b30",
-        kind: "daily",
-    },
-    {
-        id: "qa-2",
-        title: "Midnight Echo",
-        subtitle: "Late-night synth glow",
-        imageUrl: PLACEHOLDER_COVERS[1],
-        accentFrom: "#8b5cf6",
-        accentTo: "#4c1d95",
-        kind: "mix",
-    },
-    {
-        id: "qa-3",
-        title: "Focus Bloom",
-        subtitle: "Deep work soundscape",
-        imageUrl: PLACEHOLDER_COVERS[2],
-        accentFrom: "#06b6d4",
-        accentTo: "#0e7490",
-        kind: "focus",
-    },
-    {
-        id: "qa-4",
-        title: "Indie Horizon",
-        subtitle: "Fresh indie discoveries",
-        imageUrl: PLACEHOLDER_COVERS[3],
-        accentFrom: "#f97316",
-        accentTo: "#9a3412",
-        kind: "playlist",
-    },
-    {
-        id: "qa-5",
-        title: "Retro Nights",
-        subtitle: "Neon city throwbacks",
-        imageUrl: PLACEHOLDER_COVERS[4],
-        accentFrom: "#ec4899",
-        accentTo: "#9d174d",
-        kind: "mix",
-    },
-    {
-        id: "qa-6",
-        title: "Lo-Fi Station",
-        subtitle: "Calm beats, soft rain",
-        imageUrl: PLACEHOLDER_COVERS[5],
-        accentFrom: "#84cc16",
-        accentTo: "#3f6212",
-        kind: "focus",
-    },
-    {
-        id: "qa-7",
-        title: "Road Pulse",
-        subtitle: "Drive-time essentials",
-        imageUrl: PLACEHOLDER_COVERS[6],
-        accentFrom: "#ef4444",
-        accentTo: "#7f1d1d",
-        kind: "playlist",
-    },
-    {
-        id: "qa-8",
-        title: "Bedroom Pop",
-        subtitle: "Sweet and dreamy picks",
-        imageUrl: PLACEHOLDER_COVERS[7],
-        accentFrom: "#3b82f6",
-        accentTo: "#1e3a8a",
-        kind: "daily",
-    },
-];
-
-const PLACEHOLDER_MADE_FOR_YOU: HomeCard[] = [
-    {
-        id: "mfy-1",
-        title: "Your Top Replay",
-        subtitle: "Built from your vibe",
-        imageUrl: PLACEHOLDER_COVERS[2],
-        accentFrom: "#22c55e",
-        accentTo: "#166534",
-        kind: "daily",
-    },
-    {
-        id: "mfy-2",
-        title: "Sunset Sessions",
-        subtitle: "Warm, melodic, floating",
-        imageUrl: PLACEHOLDER_COVERS[6],
-        accentFrom: "#f59e0b",
-        accentTo: "#92400e",
-        kind: "mix",
-    },
-    {
-        id: "mfy-3",
-        title: "Night Drive",
-        subtitle: "Neon and basslines",
-        imageUrl: PLACEHOLDER_COVERS[1],
-        accentFrom: "#a855f7",
-        accentTo: "#581c87",
-        kind: "playlist",
-    },
-    {
-        id: "mfy-4",
-        title: "Soft Focus",
-        subtitle: "Instrumental flow state",
-        imageUrl: PLACEHOLDER_COVERS[5],
-        accentFrom: "#14b8a6",
-        accentTo: "#134e4a",
-        kind: "focus",
-    },
-    {
-        id: "mfy-5",
-        title: "Blue Hour",
-        subtitle: "Chill alt-electronica",
-        imageUrl: PLACEHOLDER_COVERS[0],
-        accentFrom: "#60a5fa",
-        accentTo: "#1e3a8a",
-        kind: "mix",
-    },
-    {
-        id: "mfy-6",
-        title: "Rhythm Theory",
-        subtitle: "Percussive and punchy",
-        imageUrl: PLACEHOLDER_COVERS[4],
-        accentFrom: "#f43f5e",
-        accentTo: "#881337",
-        kind: "playlist",
-    },
-];
-
-const PLACEHOLDER_TRENDING: HomeCard[] = [
-    {
-        id: "tr-1",
-        title: "Trending Global",
-        subtitle: "What everyone is spinning",
-        imageUrl: PLACEHOLDER_COVERS[7],
-        accentFrom: "#fb7185",
-        accentTo: "#9f1239",
-        kind: "playlist",
-    },
-    {
-        id: "tr-2",
-        title: "Viral Rhythms",
-        subtitle: "Fast-rising tracks",
-        imageUrl: PLACEHOLDER_COVERS[3],
-        accentFrom: "#34d399",
-        accentTo: "#065f46",
-        kind: "mix",
-    },
-    {
-        id: "tr-3",
-        title: "Chart Climbers",
-        subtitle: "This week’s hottest",
-        imageUrl: PLACEHOLDER_COVERS[1],
-        accentFrom: "#38bdf8",
-        accentTo: "#0c4a6e",
-        kind: "playlist",
-    },
-    {
-        id: "tr-4",
-        title: "Fresh Finds",
-        subtitle: "Breaking this month",
-        imageUrl: PLACEHOLDER_COVERS[6],
-        accentFrom: "#a3e635",
-        accentTo: "#365314",
-        kind: "daily",
-    },
-    {
-        id: "tr-5",
-        title: "Pulse Radar",
-        subtitle: "Live trend monitor",
-        imageUrl: PLACEHOLDER_COVERS[4],
-        accentFrom: "#c084fc",
-        accentTo: "#6b21a8",
-        kind: "mix",
-    },
-    {
-        id: "tr-6",
-        title: "Up Next",
-        subtitle: "Tomorrow’s favorites",
-        imageUrl: PLACEHOLDER_COVERS[0],
-        accentFrom: "#f97316",
-        accentTo: "#7c2d12",
-        kind: "playlist",
-    },
-];
-
-const PLACEHOLDER_RECENT: HomeCard[] = [
-    {
-        id: "rc-1",
-        title: "New in Library",
-        subtitle: "Recently saved sounds",
-        imageUrl: PLACEHOLDER_COVERS[5],
-        accentFrom: "#2dd4bf",
-        accentTo: "#0f766e",
-        kind: "playlist",
-    },
-    {
-        id: "rc-2",
-        title: "Quick Picks",
-        subtitle: "Fresh daily updates",
-        imageUrl: PLACEHOLDER_COVERS[2],
-        accentFrom: "#22d3ee",
-        accentTo: "#155e75",
-        kind: "daily",
-    },
-    {
-        id: "rc-3",
-        title: "After Hours",
-        subtitle: "Late evening textures",
-        imageUrl: PLACEHOLDER_COVERS[1],
-        accentFrom: "#818cf8",
-        accentTo: "#312e81",
-        kind: "mix",
-    },
-    {
-        id: "rc-4",
-        title: "Acoustic Corner",
-        subtitle: "Unplugged and intimate",
-        imageUrl: PLACEHOLDER_COVERS[3],
-        accentFrom: "#f59e0b",
-        accentTo: "#78350f",
-        kind: "focus",
-    },
-    {
-        id: "rc-5",
-        title: "Bassline Lab",
-        subtitle: "Experimental low-end",
-        imageUrl: PLACEHOLDER_COVERS[7],
-        accentFrom: "#f43f5e",
-        accentTo: "#881337",
-        kind: "playlist",
-    },
-    {
-        id: "rc-6",
-        title: "Cosmic Drift",
-        subtitle: "Ambient & atmospheric",
-        imageUrl: PLACEHOLDER_COVERS[0],
-        accentFrom: "#a78bfa",
-        accentTo: "#4c1d95",
-        kind: "mix",
-    },
-];
+const DEFAULT_COVER = "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=600&h=600&fit=crop";
 
 function getGreeting() {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
     if (hour < 18) return "Good afternoon";
     return "Good evening";
+}
+
+function toArtistRouteId(artistName: string): string {
+    return artistName
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
 }
 
 function mapPlaylistsToCards(playlists: Playlist[]): HomeCard[] {
@@ -314,7 +70,7 @@ function mapPlaylistsToCards(playlists: Playlist[]): HomeCard[] {
                 `${playlist.playlist_type} • ${playlist.visibility}`,
             imageUrl:
                 playlist.cover_url ||
-                PLACEHOLDER_COVERS[index % PLACEHOLDER_COVERS.length],
+                DEFAULT_COVER,
             accentFrom,
             accentTo,
             kind:
@@ -334,7 +90,10 @@ const SectionTitle: React.FC<{
     title: string;
     icon?: React.ReactNode;
     subtitle?: string;
-}> = ({ title, icon, subtitle }) => {
+    onToggle?: () => void;
+    isExpanded?: boolean;
+    showToggleButton?: boolean;
+}> = ({ title, icon, subtitle, onToggle, isExpanded = false, showToggleButton = true }) => {
     return (
         <div className="mb-4 flex items-end justify-between">
             <div>
@@ -346,12 +105,15 @@ const SectionTitle: React.FC<{
                     <p className="text-white/65 text-sm mt-1">{subtitle}</p>
                 )}
             </div>
-            <button
-                className="text-white/60 text-sm font-semibold hover:text-white transition-colors
-                rounded-full border border-white/15 bg-white/[0.04] px-3 py-1"
-            >
-                Show all
-            </button>
+            {showToggleButton && onToggle && (
+                <button
+                    onClick={onToggle}
+                    className="text-white/60 text-sm font-semibold hover:text-white transition-colors
+                    rounded-full border border-white/15 bg-white/[0.04] px-3 py-1"
+                >
+                    {isExpanded ? 'Show less' : 'Show all'}
+                </button>
+            )}
         </div>
     );
 };
@@ -454,13 +216,88 @@ const ShelfCard: React.FC<{ item: HomeCard; onClick?: () => void }> = ({ item, o
     );
 };
 
-const HorizontalShelf: React.FC<{ items: HomeCard[]; onCardClick?: () => void }> = ({ items, onCardClick }) => {
+const HorizontalShelf: React.FC<{
+    items: HomeCard[];
+    totalItems?: number;
+    onShowMore?: () => void;
+    onShowLess?: () => void;
+    onItemClick?: (item: HomeCard) => void;
+}> = ({ items, totalItems = 0, onShowMore, onShowLess, onItemClick }) => {
+    const hasMore = totalItems > items.length;
+    const isShowingAll = items.length >= totalItems;
+    // Only show collapse button if we're showing more than 12 items (collapsed limit)
+    const canCollapse = items.length > 12;
+
     return (
         <div className="overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex gap-3 w-max">
                 {items.map((item) => (
-                    <ShelfCard key={item.id} item={item} onClick={onCardClick} />
+                    <ShelfCard key={item.id} item={item} onClick={() => onItemClick?.(item)} />
                 ))}
+                {!isShowingAll && hasMore && onShowMore && (
+                    <button
+                        onClick={onShowMore}
+                        className="group w-[196px] shrink-0 rounded-2xl p-3.5
+                             border border-white/14 bg-white/[0.06] backdrop-blur-2xl
+                             hover:bg-white/[0.10] hover:border-white/24 hover:border-spotify-green/50
+                             transition-all duration-300 text-left"
+                    >
+                        <div className="relative rounded-xl overflow-hidden mb-3 aspect-square border border-white/10 flex items-center justify-center bg-white/[0.04]">
+                            <div className="text-center">
+                                <div className="w-12 h-12 mx-auto rounded-full bg-white/[0.08] group-hover:bg-spotify-green/20 flex items-center justify-center mb-2 transition-colors">
+                                    <span className="text-2xl font-bold text-white/80 group-hover:text-spotify-green transition-colors">
+                                        +{totalItems - items.length}
+                                    </span>
+                                </div>
+                                <p className="text-white/70 text-sm font-medium">Show more</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-2.5">
+                            <div className="text-white/50 mt-0.5">
+                                <Sparkles size={15} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-white font-semibold text-[15px] truncate">
+                                    See all {totalItems} items
+                                </p>
+                                <p className="text-white/70 text-[13px] mt-1.5">
+                                    Browse the full collection
+                                </p>
+                            </div>
+                        </div>
+                    </button>
+                )}
+                {isShowingAll && canCollapse && onShowLess && (
+                    <button
+                        onClick={onShowLess}
+                        className="group w-[196px] shrink-0 rounded-2xl p-3.5
+                             border border-white/14 bg-white/[0.06] backdrop-blur-2xl
+                             hover:bg-white/[0.10] hover:border-white/24
+                             transition-all duration-300 text-left"
+                    >
+                        <div className="relative rounded-xl overflow-hidden mb-3 aspect-square border border-white/10 flex items-center justify-center bg-white/[0.04]">
+                            <div className="text-center">
+                                <div className="w-12 h-12 mx-auto rounded-full bg-white/[0.08] group-hover:bg-white/16 flex items-center justify-center mb-2 transition-colors">
+                                    <span className="text-xl text-white/80">↑</span>
+                                </div>
+                                <p className="text-white/70 text-sm font-medium">Show less</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-2.5">
+                            <div className="text-white/50 mt-0.5">
+                                <Sparkles size={15} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-white font-semibold text-[15px] truncate">
+                                    Collapse view
+                                </p>
+                                <p className="text-white/70 text-[13px] mt-1.5">
+                                    Back to top picks
+                                </p>
+                            </div>
+                        </div>
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -496,9 +333,14 @@ const HomeSkeleton: React.FC = () => {
 export const HomePage: React.FC = () => {
     const navigate = useNavigate();
     const [playlists, setPlaylists] = React.useState<Playlist[]>([]);
+    const [recommendedPlaylists, setRecommendedPlaylists] = React.useState<Playlist[]>([]);
+    const [systemPlaylists, setSystemPlaylists] = React.useState<Playlist[]>([]);
+    const [recommendedSongs, setRecommendedSongs] = React.useState<Song[]>([]);
+    const [trendingSongs, setTrendingSongs] = React.useState<Song[]>([]);
+    const [newReleases, setNewReleases] = React.useState<Song[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     //const [hasApiError, setHasApiError] = React.useState(false);
-    
+
     const [displayName, setDisplayName] = React.useState("Buddy");
     
     React.useEffect(() => {
@@ -519,29 +361,88 @@ export const HomePage: React.FC = () => {
     }, []);
     
     const messages = [
-        "Ready to liven up your day?",
-        "Let the music set your mood 🎧",
-        "Your vibe starts here.",
-        "Hit play and escape the noise.",
-        "Fresh beats waiting for you.",
-        "Turn up the volume on life.",
-        "Discover something new today.",
-        "Your soundtrack begins now.",
-        "Feel the rhythm, feel alive.",
-        "Music that matches your mood.",
-        "Press play. Everything else can wait.",
-        "Find your next favorite track.",
-        "Let the beats carry you.",
-        "Good vibes only from here.",
-        "Where your music journey begins.",
-        "Soundtrack your moment.",
-        "Every day deserves great music.",
-        "Dive into your vibe.",
+        "bro came for one song and stayed for three hours",
+        "who gave you the aux this time",
+        "another day, another banger",
+        "main character music loading",
+        "sad songs? bold choice",
+        "we both know you’re skipping in 10 seconds",
+        "this playlist might fix you",
+        "dangerously close to finding your new obsession",
+        "one song away from changing your whole mood",
+        "the speakers are nervous",
+        "today’s personality: depends on the next track",
+        "you came here for vibes. respectable.",
+        "this app knows you need music right now",
+        "time to pretend life is a montage",
+        "your neighbors may not love this one",
+        "queueing bad decisions and great music",
+        "go on, romanticize your life a little",
+        "you’re either healing or making it worse",
+        "certified headphone moment",
+        "plot twist: this one actually slaps",
+        "just a casual search for your next obsession",
+        "locked in. volume up.",
+        "for legal reasons, this is too much heat",
+        "welcome back, professional song skipper",
+        "bro did NOT come here for silence",
+        "who let you have the aux",
+        "one more song won’t hurt. probably.",
+        "we both know you’re about to loop the same track",
+        "main character mode: activated",
+        "another peaceful day ruined by a banger",
+        "this app supports your music addiction",
+        "sad songs again? stay strong soldier",
+        "you’re either healing or spiraling",
+        "caught chasing vibes again",
+        "professional song skipper has arrived",
+        "bro’s building the most questionable queue ever",
+        "romanticize your life. press play.",
+        "this playlist has opinions",
+        "one tap away from being dramatic for no reason",
+        "you did not open this app to be normal",
+        "today’s mood depends on the next track",
+        "bad decisions. great soundtrack.",
+        "the speakers fear what you’re about to play",
+        "this app has seen your music choices. brave.",
+        "back to ignore your responsibilities with style?",
+        "one song in and suddenly you’re a philosopher",
+        "welcome back, curator of emotional damage",
+        "this queue is either elite or deeply concerning",
+        "you came for vibes and left with an identity crisis",
+        "the algorithm is judging softly",
+        "play something loud enough to defeat the plot",
+        "your headphones deserve an apology in advance",
+        "this next track might unnecessarily change your life",
+        "today’s forecast: 100% chance of replaying the same song",
+        "just you, your thoughts, and suspiciously good music",
+        "go ahead. make the whole day cinematic.",
+        "one dramatic track away from staring out a window",
+        "who needs stability when you have playlists",
+        "this session may contain bangers",
+        "you’re dangerously close to finding your new obsession",
+        "entering vibe management mode",
+        "let’s make bad timing sound amazing",
     ];
     
     const randomMessage = React.useMemo(() => {
         return messages[Math.floor(Math.random() * messages.length)];
     }, []);
+
+    // Track which sections are expanded to show more items
+    const [expandedSections, setExpandedSections] = React.useState<Record<string, boolean>>({
+        quickAccess: false,
+        madeForYou: false,
+        trendingNow: false,
+        recentlyAdded: false,
+    });
+
+    const toggleSection = (section: keyof typeof expandedSections) => {
+        setExpandedSections(prev => ({
+            ...prev,
+            [section]: !prev[section],
+        }));
+    };
 
     React.useEffect(() => {
         let isMounted = true;
@@ -551,14 +452,59 @@ export const HomePage: React.FC = () => {
             //setHasApiError(false);
 
             try {
-                const data = await playlistAPI.list();
+                // Fetch all content in parallel
+                const [
+                    playlistsData,
+                    recommendedData,
+                    systemData,
+                    recentPlaysData,
+                    trendingData,
+                    newReleasesData,
+                ] = await Promise.all([
+                    playlistAPI.list().catch(err => {
+                        console.info('Could not fetch playlists:', err);
+                        return [];
+                    }),
+                    playlistAPI.getRecommended().catch(err => {
+                        console.info('Could not fetch recommended playlists:', err);
+                        return [];
+                    }),
+                    playlistAPI.list({ is_system_generated: 'true' }).catch(err => {
+                        console.info('Could not fetch system playlists:', err);
+                        return [];
+                    }),
+                    historyAPI.getRecentPlays().catch(err => {
+                        console.info('Could not fetch recent plays:', err);
+                        return [];
+                    }),
+                    searchAPI.getTrending({ limit: 30 }).catch(err => {
+                        console.info('Could not fetch trending:', err);
+                        return { songs: [], total: 0 };
+                    }),
+                    searchAPI.getNewReleases({ limit: 30 }).catch(err => {
+                        console.info('Could not fetch new releases:', err);
+                        return { songs: [], total: 0 };
+                    }),
+                ]);
+
                 if (!isMounted) return;
-                setPlaylists(Array.isArray(data) ? data : []);
+
+                setPlaylists(Array.isArray(playlistsData) ? playlistsData : []);
+                setRecommendedPlaylists(Array.isArray(recommendedData) ? recommendedData : []);
+                setSystemPlaylists(Array.isArray(systemData) ? systemData : []);
+                setTrendingSongs(trendingData.songs || []);
+                setNewReleases(newReleasesData.songs || []);
+                setRecommendedSongs(recentPlaysData || []);
             } catch (error) {
-                console.error("Failed to load home playlists:", error);
+                console.error("Failed to load home content:", error);
                 if (!isMounted) return;
                 //setHasApiError(true);
                 setPlaylists([]);
+                setRecommendedPlaylists([]);
+                setSystemPlaylists([]);
+                setTrendingSongs([]);
+                setNewReleases([]);
+                setRecommendedSongs([]);
             } finally {
                 if (isMounted) setIsLoading(false);
             }
@@ -572,30 +518,113 @@ export const HomePage: React.FC = () => {
     }, []);
 
     const greeting = getGreeting();
-    const apiCards = React.useMemo(
+
+    // Transform playlists to cards
+    const playlistCards = React.useMemo(
         () => mapPlaylistsToCards(playlists),
         [playlists],
     );
-    const hasRealData = apiCards.length > 0;
 
-    const openDemoPlaylist = React.useCallback(() => {
-        navigate(getDemoPlaylistRoute());
-    }, [navigate]);
+    // Transform songs to cards
+    const songToCard = (song: any, index: number, kind: HomeCard['kind']): HomeCard => ({
+        id: `song-${song.id}`,
+        title: song.title,
+        subtitle: typeof song.artist === 'string' ? song.artist : song.artist?.name || 'Unknown Artist',
+        imageUrl: song.cover_url || DEFAULT_COVER,
+        accentFrom: ['#1db954', '#8b5cf6', '#06b6d4', '#f97316'][index % 4],
+        accentTo: ['#0d6b30', '#4c1d95', '#0e7490', '#9a3412'][index % 4],
+        kind,
+    });
 
-    const quickAccess = hasRealData
-        ? apiCards.slice(0, 8)
-        : PLACEHOLDER_QUICK_ACCESS;
-    const madeForYou = hasRealData
-        ? apiCards.slice(0, 12)
-        : PLACEHOLDER_MADE_FOR_YOU;
-    const trendingNow = hasRealData
-        ? [...apiCards].reverse().slice(0, 12)
-        : PLACEHOLDER_TRENDING;
-    const recentlyAdded = hasRealData
-        ? [...apiCards]
-              .sort((a, b) => a.title.localeCompare(b.title))
-              .slice(0, 12)
-        : PLACEHOLDER_RECENT;
+    // Create all available cards (up to 30)
+    const allTrendingCards = React.useMemo(
+        () => trendingSongs.slice(0, 30).map((song, i) => songToCard(song, i, 'daily')),
+        [trendingSongs],
+    );
+
+    const allNewReleaseCards = React.useMemo(
+        () => newReleases.slice(0, 30).map((song, i) => songToCard(song, i, 'mix')),
+        [newReleases],
+    );
+
+    // Transform recommended playlists to cards
+    const recommendedPlaylistCards = React.useMemo(
+        () => mapPlaylistsToCards(recommendedPlaylists),
+        [recommendedPlaylists],
+    );
+
+    // Transform system playlists to cards
+    const systemPlaylistCards = React.useMemo(
+        () => mapPlaylistsToCards(systemPlaylists),
+        [systemPlaylists],
+    );
+
+    // Transform recent plays to cards for Quick Access
+    const allRecentPlayCards = React.useMemo(
+        () => recommendedSongs.slice(0, 30).map((song, i) => songToCard(song, i, 'daily')),
+        [recommendedSongs],
+    );
+
+    // Determine which data to show
+    const hasRealData = playlistCards.length > 0 || allTrendingCards.length > 0 || allNewReleaseCards.length > 0;
+
+    // Quick Access: Show 8 when collapsed, up to 30 when expanded
+    const quickAccess = React.useMemo(() => {
+        const baseCards = allRecentPlayCards.length > 0
+            ? allRecentPlayCards
+            : hasRealData
+                ? [...playlistCards.slice(0, 6), ...allTrendingCards.slice(0, 2)]
+                : [];
+
+        return expandedSections.quickAccess ? baseCards.slice(0, 30) : baseCards.slice(0, 8);
+    }, [allRecentPlayCards, playlistCards, allTrendingCards, hasRealData, expandedSections.quickAccess]);
+
+    // Made for You: Show 12 when collapsed, up to 30 when expanded
+    const madeForYouCards = React.useMemo(() => {
+        // Combine system playlists with recommended playlists
+        const systemAndRecommended = [
+            ...systemPlaylistCards,
+            ...recommendedPlaylistCards.filter(
+                rp => !systemPlaylistCards.some(sp => sp.id === rp.id)
+            )
+        ];
+
+        const baseCards = systemAndRecommended.length > 0
+            ? systemAndRecommended
+            : hasRealData && playlistCards.length > 0
+                ? playlistCards
+                : [];
+
+        return expandedSections.madeForYou ? baseCards.slice(0, 30) : baseCards.slice(0, 12);
+    }, [systemPlaylistCards, recommendedPlaylistCards, playlistCards, hasRealData, expandedSections.madeForYou]);
+
+    // Calculate total count for "See all" button
+    const madeForYouTotal = React.useMemo(() => {
+        const systemAndRecommended = [
+            ...systemPlaylistCards,
+            ...recommendedPlaylistCards.filter(
+                rp => !systemPlaylistCards.some(sp => sp.id === rp.id)
+            )
+        ];
+
+        return systemAndRecommended.length > 0
+            ? systemAndRecommended.length
+            : hasRealData && playlistCards.length > 0
+                ? playlistCards.length
+                : 0;
+    }, [systemPlaylistCards, recommendedPlaylistCards, playlistCards, hasRealData]);
+
+    // Trending Now: Show 12 when collapsed, up to 30 when expanded
+    const trendingNow = React.useMemo(() => {
+        const baseCards = allTrendingCards.length > 0 ? allTrendingCards : [];
+        return expandedSections.trendingNow ? baseCards.slice(0, 30) : baseCards.slice(0, 12);
+    }, [allTrendingCards, expandedSections.trendingNow]);
+
+    // Recently Added: Show 12 when collapsed, up to 30 when expanded
+    const recentlyAdded = React.useMemo(() => {
+        const baseCards = allNewReleaseCards.length > 0 ? allNewReleaseCards : [];
+        return expandedSections.recentlyAdded ? baseCards.slice(0, 30) : baseCards.slice(0, 12);
+    }, [allNewReleaseCards, expandedSections.recentlyAdded]);
 
     return (
         <div className="relative min-h-full">
@@ -617,7 +646,7 @@ export const HomePage: React.FC = () => {
                     shadow-[0_10px_30px_rgba(0,0,0,0.28)] px-5 py-4"
                 >
                     <h1 className="text-white text-3xl md:text-4xl font-bold tracking-tight">
-                        {greeting}, {displayName}
+                        {greeting}, <span className="text-[#1DB954]">{displayName}</span>
                     </h1>
                     <p className="text-white/70 text-sm md:text-base">
                         {/*{hasRealData
@@ -641,16 +670,31 @@ export const HomePage: React.FC = () => {
                         <section>
                             <SectionTitle
                                 title="Quick access"
+                                subtitle="Recently played songs and your go-to playlists"
                                 icon={
                                     <Sparkles
                                         size={20}
                                         className="text-spotify-green"
                                     />
                                 }
+                                onToggle={() => toggleSection('quickAccess')}
+                                isExpanded={expandedSections.quickAccess}
                             />
                             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
                                 {quickAccess.map((item) => (
-                                    <QuickTile key={item.id} item={item} onClick={openDemoPlaylist} />
+                                    <QuickTile
+                                        key={item.id}
+                                        item={item}
+                                        onClick={() => {
+                                            if (item.id.startsWith('pl-')) {
+                                                const playlistId = item.id.replace('pl-', '');
+                                                navigate(`/playlist/${playlistId}`);
+                                            } else if (item.id.startsWith('song-')) {
+                                                const artistName = item.subtitle;
+                                                navigate(`/artist/${toArtistRouteId(artistName)}`);
+                                            }
+                                        }}
+                                    />
                                 ))}
                             </div>
                         </section>
@@ -659,15 +703,30 @@ export const HomePage: React.FC = () => {
                         <section>
                             <SectionTitle
                                 title="Made for you"
-                                subtitle="A personalized stream based on your listening patterns"
+                                subtitle="Auto-generated playlists based on your taste"
                                 icon={
                                     <Disc3
                                         size={20}
                                         className="text-purple-300"
                                     />
                                 }
+                                showToggleButton={false}
                             />
-                            <HorizontalShelf items={madeForYou} onCardClick={openDemoPlaylist} />
+                            <HorizontalShelf
+                                items={madeForYouCards}
+                                totalItems={madeForYouTotal}
+                                onShowMore={() => toggleSection('madeForYou')}
+                                onShowLess={() => toggleSection('madeForYou')}
+                                onItemClick={(item) => {
+                                    if (item.id.startsWith('pl-')) {
+                                        const playlistId = item.id.replace('pl-', '');
+                                        navigate(`/playlist/${playlistId}`);
+                                    } else if (item.id.startsWith('song-')) {
+                                        const artistName = item.subtitle;
+                                        navigate(`/artist/${toArtistRouteId(artistName)}`);
+                                    }
+                                }}
+                            />
                         </section>
 
                         <section>
@@ -680,8 +739,25 @@ export const HomePage: React.FC = () => {
                                         className="text-pink-300"
                                     />
                                 }
+                                showToggleButton={false}
                             />
-                            <HorizontalShelf items={trendingNow} onCardClick={openDemoPlaylist} />
+                            <HorizontalShelf
+                                items={expandedSections.trendingNow
+                                    ? (allTrendingCards.length > 0 ? allTrendingCards : [])
+                                    : trendingNow}
+                                totalItems={allTrendingCards.length || 0}
+                                onShowMore={() => toggleSection('trendingNow')}
+                                onShowLess={() => toggleSection('trendingNow')}
+                                onItemClick={(item) => {
+                                    if (item.id.startsWith('pl-')) {
+                                        const playlistId = item.id.replace('pl-', '');
+                                        navigate(`/playlist/${playlistId}`);
+                                    } else if (item.id.startsWith('song-')) {
+                                        const artistName = item.subtitle;
+                                        navigate(`/artist/${toArtistRouteId(artistName)}`);
+                                    }
+                                }}
+                            />
                         </section>
 
                         <section>
@@ -694,8 +770,25 @@ export const HomePage: React.FC = () => {
                                         className="text-cyan-300"
                                     />
                                 }
+                                showToggleButton={false}
                             />
-                            <HorizontalShelf items={recentlyAdded} onCardClick={openDemoPlaylist} />
+                            <HorizontalShelf
+                                items={expandedSections.recentlyAdded
+                                    ? (allNewReleaseCards.length > 0 ? allNewReleaseCards : [])
+                                    : recentlyAdded}
+                                totalItems={allNewReleaseCards.length || 0}
+                                onShowMore={() => toggleSection('recentlyAdded')}
+                                onShowLess={() => toggleSection('recentlyAdded')}
+                                onItemClick={(item) => {
+                                    if (item.id.startsWith('pl-')) {
+                                        const playlistId = item.id.replace('pl-', '');
+                                        navigate(`/playlist/${playlistId}`);
+                                    } else if (item.id.startsWith('song-')) {
+                                        const artistName = item.subtitle;
+                                        navigate(`/artist/${toArtistRouteId(artistName)}`);
+                                    }
+                                }}
+                            />
                         </section>
                     </>
                 )}
