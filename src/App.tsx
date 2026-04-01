@@ -8,6 +8,7 @@ import { HomePage } from "./pages/HomePage";
 import { SearchPage } from "./pages/SearchPage";
 import { BrowsePage } from "./pages/BrowsePage";
 import { PlaylistPage } from "./pages/PlaylistPage";
+import { PlaylistsPage } from "./pages/PlaylistsPage";
 import { ArtistPage } from "./pages/ArtistPage";
 import { UserProfilePage } from "./pages/UserProfilePage";
 import { useAuth } from "./hooks/useAuth";
@@ -62,6 +63,7 @@ const AppRoutes: React.FC = () => {
                 <Route index element={<HomePage />} />
                 <Route path="search" element={<SearchPage />} />
                 <Route path="browse" element={<BrowsePage />} />
+                <Route path="playlists" element={<PlaylistsPage />} />
                 <Route path="playlist/:id" element={<PlaylistPage />} />
                 <Route path="artist/:id" element={<ArtistPage />} />
                 <Route path="profile" element={<UserProfilePage />} />

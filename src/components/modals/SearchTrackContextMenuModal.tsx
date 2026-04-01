@@ -13,6 +13,8 @@ import {
     ChevronRight,
     Plus,
     Search as SearchIcon,
+    Loader2,
+    Check,
 } from "lucide-react";
 
 interface PlaylistOption {
@@ -30,8 +32,14 @@ interface Props {
     contextPos: ContextPosition;
     artists: string[];
     playlists: PlaylistOption[];
+    song?: any; // The current song being operated on
+    songPlaylistIds?: Set<string>; // Which playlists this song is already in
+    isLoadingMemberships?: boolean; // Loading state for fetching memberships
     onClose: () => void;
     onArtistSelect: (artist: string) => void;
+    onAddToPlaylist?: (song: any, playlistId?: string) => void;
+    onToggleLike?: (song: any) => void;
+    isLiked?: boolean;
 }
 
 export const SearchTrackContextMenuModal: React.FC<Props> = ({
@@ -39,8 +47,14 @@ export const SearchTrackContextMenuModal: React.FC<Props> = ({
     contextPos,
     artists,
     playlists,
+    song,
+    songPlaylistIds = new Set(),
+    isLoadingMemberships = false,
     onClose,
     onArtistSelect,
+    onAddToPlaylist,
+    onToggleLike,
+    isLiked = false,
 }) => {
     const [showPlaylistSubmenu, setShowPlaylistSubmenu] = React.useState(false);
     const [showArtistSubmenu, setShowArtistSubmenu] = React.useState(false);
@@ -95,21 +109,32 @@ export const SearchTrackContextMenuModal: React.FC<Props> = ({
 
                     <div className="my-1 mx-3 border-t border-white/10" />
 
-                    {[
-                        { icon: Heart, label: "Save to your Liked Songs" },
-                        { icon: Ban, label: "Exclude from your taste profile" },
-                    ].map((item, i) => (
-                        <button
-                            key={i}
-                            onMouseEnter={closeAllSubmenus}
-                            onClick={onClose}
-                            className="w-full flex items-center gap-3 px-3 py-2 text-sm
-                            text-white/80 hover:text-white hover:bg-white/10 transition-colors text-left"
-                        >
-                            <item.icon size={16} className="text-white/60 shrink-0" />
-                            <span className="flex-1">{item.label}</span>
-                        </button>
-                    ))}
+                    <button
+                        onMouseEnter={closeAllSubmenus}
+                        onClick={() => {
+                            onToggleLike?.(song);
+                            onClose();
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2 text-sm
+                        text-white/80 hover:text-white hover:bg-white/10 transition-colors text-left"
+                    >
+                        {isLiked ? (
+                            <Heart size={16} fill="#1db954" stroke="#1db954" />
+                        ) : (
+                            <Heart size={16} className="text-white/60 shrink-0" />
+                        )}
+                        <span className="flex-1">{isLiked ? "Remove from Liked Songs" : "Save to your Liked Songs"}</span>
+                    </button>
+
+                    <button
+                        onMouseEnter={closeAllSubmenus}
+                        onClick={onClose}
+                        className="w-full flex items-center gap-3 px-3 py-2 text-sm
+                        text-white/80 hover:text-white hover:bg-white/10 transition-colors text-left"
+                    >
+                        <Ban size={16} className="text-white/60 shrink-0" />
+                        <span className="flex-1">Exclude from your taste profile</span>
+                    </button>
 
                     <div className="my-1 mx-3 border-t border-white/10" />
 
@@ -210,7 +235,10 @@ export const SearchTrackContextMenuModal: React.FC<Props> = ({
                         <div className="mx-3 mb-1 border-t border-white/10" />
 
                         <button
-                            onClick={onClose}
+                            onClick={() => {
+                                onAddToPlaylist?.(song, undefined); // undefined creates new playlist
+                                onClose();
+                            }}
                             className="w-full flex items-center gap-3 px-3 py-2
                             text-sm text-white/80 hover:text-white hover:bg-white/10
                             transition-colors text-left"
@@ -225,28 +253,57 @@ export const SearchTrackContextMenuModal: React.FC<Props> = ({
                         <div className="mx-3 my-1 border-t border-white/10" />
 
                         <div className="max-h-48 overflow-y-auto">
-                            {playlists
-                                .filter((playlist) =>
-                                    playlist.name.toLowerCase().includes(playlistSearch.toLowerCase())
-                                )
-                                .map((playlist) => (
-                                    <button
-                                        key={playlist.id}
-                                        onClick={onClose}
-                                        className="w-full flex items-center px-3 py-2 text-sm
-                                        text-white/80 hover:text-white hover:bg-white/10
-                                        transition-colors text-left"
-                                    >
-                                        {playlist.name}
-                                    </button>
-                                ))}
-
-                            {playlists.filter((playlist) =>
-                                playlist.name.toLowerCase().includes(playlistSearch.toLowerCase())
-                            ).length === 0 && (
-                                <div className="px-3 py-3 text-sm text-white/40 text-center">
-                                    No playlists found
+                            {isLoadingMemberships ? (
+                                <div className="px-3 py-4 flex items-center justify-center">
+                                    <Loader2 size={16} className="animate-spin text-spotify-green" />
+                                    <span className="ml-2 text-sm text-white/60">Checking playlists...</span>
                                 </div>
+                            ) : (
+                                <>
+                                    {Array.isArray(playlists) && playlists
+                                        .filter((playlist) => {
+                                            // Filter out "Liked Songs" and apply search
+                                            const isLikedSongs = playlist.name === "Liked Songs";
+                                            const matchesSearch = playlist.name.toLowerCase().includes(playlistSearch.toLowerCase());
+                                            return !isLikedSongs && matchesSearch;
+                                        })
+                                        .slice(0, 10)
+                                        .map((playlist) => {
+                                            const isAlreadyInPlaylist = songPlaylistIds.has(playlist.id);
+
+                                            return (
+                                            <button
+                                                key={playlist.id}
+                                                onClick={() => {
+                                                    if (!isAlreadyInPlaylist) {
+                                                        onAddToPlaylist?.(song, playlist.id);
+                                                        onClose();
+                                                    }
+                                                }}
+                                                disabled={isAlreadyInPlaylist}
+                                                className={`w-full flex items-center justify-between px-3 py-2 text-sm
+                                                    transition-colors text-left
+                                                    ${isAlreadyInPlaylist
+                                                        ? 'text-white/40 cursor-default'
+                                                        : 'text-white/80 hover:text-white hover:bg-white/10 cursor-pointer'
+                                                    }`}
+                                            >
+                                                <span className="truncate flex-1">{playlist.name}</span>
+                                                {isAlreadyInPlaylist && <Check size={14} className="text-spotify-green shrink-0 ml-2" />}
+                                            </button>
+                                            );
+                                        })}
+
+                                    {(!Array.isArray(playlists) || playlists.filter((playlist) => {
+                                        const isLikedSongs = playlist.name === "Liked Songs";
+                                        const matchesSearch = playlist.name.toLowerCase().includes(playlistSearch.toLowerCase());
+                                        return !isLikedSongs && matchesSearch;
+                                    }).slice(0, 10).length === 0) && (
+                                        <div className="px-3 py-3 text-sm text-white/40 text-center">
+                                            No playlists found
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>,

@@ -57,6 +57,8 @@ export interface Playlist {
   playlist_type: 'solo' | 'collaborative';
   cover_url: string;
   snapshot_id: string;
+  is_liked_songs?: boolean;
+  is_system_generated?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -90,10 +92,78 @@ export interface InviteLink {
   expires_at: string | null;
 }
 
+// ─── Artist & Album (catalog) ────────────────────────────
+export interface Artist {
+  id: number;
+  name: string;
+  bio: string;
+  image_url: string;
+  monthly_listeners: number;
+}
+
+export interface Album {
+  id: number;
+  name: string;
+  artist: Artist;
+  release_year: number | null;
+  cover_url: string;
+}
+
 // ─── Genre (for browse page) ─────────────────────────────
 export interface Genre {
   name: string;
   color: string;
+}
+
+export interface GenreData {
+  name: string;
+  description: string;
+  song_count: number;
+  image_url: string;
+  follower_count: number;
+}
+
+// ─── Search ──────────────────────────────────────────────
+export interface SearchResults {
+  songs: Song[];
+  playlists: Playlist[];
+  artists: Artist[];
+  albums: Album[];
+}
+
+// ─── Playlist extras ─────────────────────────────────────
+export interface PlaylistStats {
+  total_tracks: number;
+  total_duration_seconds: number;
+  genres: string[];
+  artists: string[];
+  albums: string[];
+  collaborators_count: number;
+  followers_count: number;
+  likes_count: number;
+}
+
+export interface PlaylistComment {
+  id: number;
+  playlist_id: number;
+  user_id: number;
+  username: string;
+  text: string;
+  parent_id: number | null;
+  likes_count: number;
+  replies_count: number;
+  is_deleted: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlaylistSnapshot {
+  id: number;
+  playlist_id: number;
+  snapshot_data: Record<string, unknown>;
+  change_reason: string;
+  track_count: number;
+  created_at: string;
 }
 
 // ─── Player ──────────────────────────────────────────────

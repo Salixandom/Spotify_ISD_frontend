@@ -44,6 +44,11 @@ export interface FollowingResponse {
 }
 
 export const profileAPI = {
+  getPublicProfile: async (userId: number): Promise<UserProfileData> => {
+    const res = await api.get(`/auth/profile/${userId}/`);
+    return unwrapResponse<UserProfileData>(res.data, 'Failed to fetch profile');
+  },
+
   getMyProfile: async (): Promise<UserProfileData> => {
     const res = await api.get('/auth/profile/me/');
     return unwrapResponse<UserProfileData>(res.data, 'Failed to fetch profile');

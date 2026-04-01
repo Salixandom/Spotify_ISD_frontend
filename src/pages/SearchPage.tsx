@@ -1,19 +1,35 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
     Play, Plus, MoreHorizontal,
-    Mic2, Disc3, Music2, Sparkles, Clock,
+    Mic2, Disc3,
+    Music2, Sparkles, Search as SearchIcon, Clock,
+    Loader2, CheckCircle2,
 } from "lucide-react";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
 import { SearchTrackContextMenuModal } from "../components/modals/SearchTrackContextMenuModal";
-import { getDemoPlaylistRoute } from "../utils/playlistRoutes";
+import { searchAPI } from "../api/search";
+import { playlistAPI } from "../api/playlists";
+import { trackAPI } from "../api/tracks";
+import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Track   = { id: string; title: string; artist: string; album: string; duration: string; imageUrl: string };
-type Artist  = { id: string; name: string; followers: string; imageUrl: string };
-type Album   = { id: string; title: string; year: string; artist: string; imageUrl: string };
-type Playlist = { id: string; title: string; description: string; imageUrl: string };
+type Track = {
+    id: string;
+    title: string;
+    artist: string;
+    album: string;
+    duration: string;
+    imageUrl: string;
+    song?: {
+        id: string;
+        title: string;
+        artist: string;
+        album: string;
+        cover_url: string;
+    };
+};
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -27,59 +43,6 @@ const IMG = [
     "https://images.unsplash.com/photo-1445985543470-41fba5c3144a?w=600&h=600&fit=crop",
     "https://images.unsplash.com/photo-1458560871784-56d23406c091?w=600&h=600&fit=crop",
 ];
-
-const SONGS: Track[] = [
-    { id: "t1", title: "Blinding Lights",   artist: "The Weeknd",                   album: "After Hours",          duration: "3:20", imageUrl: IMG[0] },
-    { id: "t2", title: "Levitating",         artist: "Dua Lipa",                     album: "Future Nostalgia",     duration: "3:23", imageUrl: IMG[1] },
-    { id: "t3", title: "Save Your Tears",    artist: "The Weeknd",                   album: "After Hours",          duration: "3:36", imageUrl: IMG[2] },
-    { id: "t4", title: "Stay",               artist: "The Kid LAROI, Justin Bieber", album: "F*CK LOVE 3",          duration: "2:21", imageUrl: IMG[3] },
-    { id: "t5", title: "Peaches",            artist: "Justin Bieber",                album: "Justice",              duration: "3:18", imageUrl: IMG[4] },
-    { id: "t6", title: "Good 4 U",           artist: "Olivia Rodrigo",               album: "SOUR",                 duration: "2:58", imageUrl: IMG[5] },
-    { id: "t7", title: "drivers license",    artist: "Olivia Rodrigo",               album: "SOUR",                 duration: "4:02", imageUrl: IMG[6] },
-    { id: "t8", title: "Montero",            artist: "Lil Nas X",                    album: "MONTERO",              duration: "2:17", imageUrl: IMG[7] },
-];
-
-const ARTISTS: Artist[] = [
-    { id: "a1", name: "The Weeknd",    followers: "38.2M followers", imageUrl: IMG[0] },
-    { id: "a2", name: "Dua Lipa",      followers: "26.4M followers", imageUrl: IMG[1] },
-    { id: "a3", name: "Taylor Swift",  followers: "45.1M followers", imageUrl: IMG[2] },
-    { id: "a4", name: "Post Malone",   followers: "19.8M followers", imageUrl: IMG[3] },
-    { id: "a5", name: "Billie Eilish", followers: "22.7M followers", imageUrl: IMG[4] },
-    { id: "a6", name: "Harry Styles",  followers: "16.3M followers", imageUrl: IMG[5] },
-    { id: "a7", name: "Olivia Rodrigo",followers: "18.5M followers", imageUrl: IMG[6] },
-    { id: "a8", name: "Lil Nas X",     followers: "12.1M followers", imageUrl: IMG[7] },
-];
-
-const ALBUMS: Album[] = [
-    { id: "al1", title: "After Hours",          year: "2020", artist: "The Weeknd",    imageUrl: IMG[6] },
-    { id: "al2", title: "Future Nostalgia",     year: "2020", artist: "Dua Lipa",      imageUrl: IMG[1] },
-    { id: "al3", title: "Hollywood's Bleeding", year: "2019", artist: "Post Malone",   imageUrl: IMG[3] },
-    { id: "al4", title: "Fine Line",            year: "2019", artist: "Harry Styles",  imageUrl: IMG[5] },
-    { id: "al5", title: "Lover",                year: "2019", artist: "Taylor Swift",  imageUrl: IMG[7] },
-    { id: "al6", title: "When We All Fall Asleep", year: "2019", artist: "Billie Eilish", imageUrl: IMG[4] },
-    { id: "al7", title: "SOUR",                 year: "2021", artist: "Olivia Rodrigo",imageUrl: IMG[6] },
-    { id: "al8", title: "Justice",              year: "2021", artist: "Justin Bieber", imageUrl: IMG[2] },
-];
-
-const PLAYLISTS: Playlist[] = [
-    { id: "pl1", title: "Today's Top Hits",  description: "Playlist · Spotify",      imageUrl: IMG[0] },
-    { id: "pl2", title: "RapCaviar",         description: "Playlist · Spotify",      imageUrl: IMG[2] },
-    { id: "pl3", title: "Hot Country",       description: "Playlist · Spotify",      imageUrl: IMG[5] },
-    { id: "pl4", title: "Peaceful Piano",    description: "Playlist · Spotify",      imageUrl: IMG[7] },
-    { id: "pl5", title: "Mega Hit Mix",      description: "Playlist · Spotify",      imageUrl: IMG[3] },
-    { id: "pl6", title: "Indie Horizon",     description: "Playlist · Sakib",        imageUrl: IMG[6] },
-    { id: "pl7", title: "Late Night Drive",  description: "Playlist · Sakib",        imageUrl: IMG[1] },
-    { id: "pl8", title: "Vibrant Energy",    description: "Playlist · Spotify",      imageUrl: IMG[4] },
-];
-
-const MY_PLAYLISTS = [
-    { id: "p1", name: "Emraan mood" },
-    { id: "p2", name: "Banter Beats" },
-    { id: "p3", name: "Skibbididoo" },
-    { id: "p4", name: "Chill Vibes" },
-    { id: "p5", name: "Late Night Drive" },
-];
-
 
 const FILTERS = ["All", "Songs", "Albums", "Playlists", "Artists"];
 
@@ -265,7 +228,9 @@ const SongRow: React.FC<{
     showAlbumCol?: boolean;
     showOrderNumber?: boolean;
     onContextMenu: (e: React.MouseEvent, song: Track) => void;
-}> = ({ song, index, showAlbumCol = false, showOrderNumber = false, onContextMenu }) => (
+    onToggleLike: (song: Track) => void;
+    isLiked: boolean;
+}> = ({ song, index, showAlbumCol = false, showOrderNumber = false, onContextMenu, onToggleLike, isLiked }) => (
     <div
         className="group flex items-center gap-3 px-3 py-2 rounded-xl
             border border-transparent
@@ -297,27 +262,30 @@ const SongRow: React.FC<{
         {/* Title + artist */}
         <div className="flex-1 min-w-0">
             <div className="text-white font-semibold text-[14px] truncate">{song.title}</div>
-            <div className="text-[12px] text-white/55 truncate">{song.artist}</div>
+            <div className="text-[12px] text-white/55 truncate">{song.artist || 'Unknown Artist'}</div>
         </div>
 
         {/* Album column (only in Songs tab full view) */}
         {showAlbumCol && (
             <span className="hidden md:block text-[13px] text-white/45 truncate w-[140px] shrink-0">
-                {song.album}
+                {song.album || 'Unknown Album'}
             </span>
         )}
 
         {/* + circle — left of duration */}
         <button
-            onClick={(e) => e.stopPropagation()}
-            className="opacity-0 group-hover:opacity-100 transition-all
+            onClick={(e) => {
+                e.stopPropagation();
+                onToggleLike(song);
+            }}
+            className={`opacity-0 group-hover:opacity-100 transition-all
                 w-7 h-7 rounded-full border border-white/35
                 hover:border-white hover:scale-105
-                flex items-center justify-center
-                text-white/65 hover:text-white shrink-0"
+                flex items-center justify-center shrink-0
+                ${isLiked ? "text-spotify-green border-spotify-green/50" : "text-white/65 hover:text-white"}`}
             aria-label="Save to Liked Songs"
         >
-            <Plus size={13} />
+            {isLiked ? <CheckCircle2 size={13} /> : <Plus size={13} />}
         </button>
 
         {/* Duration */}
@@ -348,9 +316,31 @@ export const SearchPage: React.FC = () => {
 
     const [activeFilter, setActiveFilter] = React.useState("All");
 
+    // API data state
+    const [searchResults, setSearchResults] = useState<{
+        songs: any[];
+        artists: any[];
+        albums: any[];
+        playlists: any[];
+    }>({ songs: [], artists: [], albums: [], playlists: [] });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // User's own playlists for context menu
+    const [userPlaylists, setUserPlaylists] = useState<any[]>([]);
+
+    // Liked tracks state
+    const [likedTrackSongIds, setLikedTrackSongIds] = useState<Set<number>>(new Set());
+
+    // Track which playlists each song is in: Map<songId, Set<playlistId>>
+    const [songPlaylistMemberships, setSongPlaylistMemberships] = useState<Map<number, Set<string>>>(new Map());
+
+    // Loading state for fetching song memberships
+    const [isLoadingMemberships, setIsLoadingMemberships] = useState(false);
+
     // Context menu
     const [contextMenu, setContextMenu] = React.useState<{
-        id: string; top: number; left: number; songArtist?: string;
+        id: string; top: number; left: number; songArtist?: string; song?: any;
     } | null>(null);
 
     const closeAll = React.useCallback(() => {
@@ -364,91 +354,363 @@ export const SearchPage: React.FC = () => {
 
     React.useEffect(() => { setActiveFilter("All"); }, [query]);
 
+    // Fetch user's own playlists on mount
+    useEffect(() => {
+        const fetchUserPlaylists = async () => {
+            try {
+                // Get current user ID from localStorage
+                const userStr = localStorage.getItem('user');
+                if (!userStr) {
+                    setUserPlaylists([]);
+                    return;
+                }
+                const user = JSON.parse(userStr);
+                const userId = user.id;
+
+                if (!userId) {
+                    setUserPlaylists([]);
+                    return;
+                }
+
+                // Fetch user's own and collaborative playlists
+                const response = await playlistAPI.getUserPlaylists(userId) as any;
+                console.log('User playlists response:', response);
+
+                // Extract playlists array from response (API returns { playlists: [], total, ... })
+                const playlistArray = response?.playlists || [];
+                setUserPlaylists(playlistArray);
+            } catch (err) {
+                console.error('Could not fetch user playlists:', err);
+                setUserPlaylists([]);
+            }
+        };
+        fetchUserPlaylists();
+    }, []);
+
+    // Fetch search results when query changes
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!query) {
+                // No query - fetch featured content as default
+                setLoading(true);
+                setError(null);
+
+                try {
+                    // Fetch multiple content types in parallel
+                    const [trending, artists, albums] = await Promise.all([
+                        searchAPI.getTrending({ limit: 10 }),
+                        searchAPI.searchArtists(''), // Get all artists
+                        searchAPI.searchAlbums(''), // Get all albums
+                    ]);
+
+                    // Try to fetch playlists separately (requires auth)
+                    let playlists: any[] = [];
+                    try {
+                        const playlistData = await playlistAPI.list();
+                        playlists = playlistData || [];
+                    } catch (playlistErr) {
+                        // Silently fail if not authenticated - playlists will be empty
+                        console.info('Playlists require authentication, skipping for now');
+                    }
+
+                    setSearchResults({
+                        songs: trending.songs || [],
+                        artists: (artists || []).slice(0, 10),
+                        albums: (albums || []).slice(0, 10),
+                        playlists: playlists.slice(0, 10)
+                    });
+                } catch (err) {
+                    console.error("Failed to load featured content:", err);
+                    setError("Failed to load featured content");
+                    setSearchResults({ songs: [], artists: [], albums: [], playlists: [] });
+                } finally {
+                    setLoading(false);
+                }
+                return;
+            }
+
+            setLoading(true);
+            setError(null);
+
+            try {
+                const results = await searchAPI.search(query);
+                setSearchResults(results);
+            } catch (err) {
+                console.error("Search failed:", err);
+                setError("Failed to load search results");
+                setSearchResults({ songs: [], artists: [], albums: [], playlists: [] });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [query]);
+
     const openContextMenu = (e: React.MouseEvent, song: Track) => {
         e.stopPropagation();
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const songId = song.id || song.song?.id;
+
+        // Open menu immediately, fetch memberships in background
         setContextMenu({
             id: song.id,
             top: rect.bottom + 4,
             left: Math.min(rect.right - 224, window.innerWidth - 240),
             songArtist: song.artist,
+            song,
         });
+
+        // Fetch memberships asynchronously (don't block menu)
+        if (songId !== undefined) {
+            fetchSongMemberships(Number(songId));
+        }
+    };
+
+    // Handle toggle like
+    const handleToggleLike = async (song: any) => {
+        try {
+            const songId = song.id || song.song?.id;
+
+            // Find Liked Songs playlist
+            let likedPlaylist = userPlaylists.find(p => p.name === "Liked Songs");
+
+            if (likedTrackSongIds.has(songId)) {
+                // Unlike - remove from Liked Songs playlist
+                if (likedPlaylist) {
+                    // Find the track ID in that playlist
+                    const tracks = await trackAPI.list(Number(likedPlaylist.id));
+                    const track = tracks.find(t => t.song.id === songId);
+                    if (track) {
+                        await trackAPI.remove(Number(likedPlaylist.id), track.id);
+                        setLikedTrackSongIds(prev => {
+                            const next = new Set(prev);
+                            next.delete(songId);
+                            return next;
+                        });
+                        toast.success("Removed from Liked Songs");
+                    }
+                }
+            } else {
+                // Like - add to Liked Songs playlist
+                let playlistId = likedPlaylist?.id;
+
+                // Create Liked Songs playlist if it doesn't exist
+                if (!playlistId) {
+                    const newPlaylist = await playlistAPI.create({
+                        name: "Liked Songs",
+                        visibility: "private",
+                        is_liked_songs: true,
+                    });
+                    playlistId = String(newPlaylist.id);
+                    setUserPlaylists(prev => [...prev, { id: playlistId, name: newPlaylist.name }]);
+                }
+
+                await trackAPI.add(Number(playlistId), songId);
+                setLikedTrackSongIds(prev => new Set(prev).add(songId));
+                toast.success("Added to Liked Songs");
+            }
+        } catch {
+            toast.error("Failed to update liked songs");
+        }
+    };
+
+    // Fetch which playlists a song is already in
+    const fetchSongMemberships = async (songId: number): Promise<Set<string>> => {
+        // Check cache first
+        if (songPlaylistMemberships.has(songId)) {
+            return songPlaylistMemberships.get(songId)!;
+        }
+
+        setIsLoadingMemberships(true);
+
+        try {
+            const memberships = new Set<string>();
+
+            // Check each user playlist
+            for (const playlist of userPlaylists) {
+                try {
+                    const tracks = await trackAPI.list(Number(playlist.id));
+                    const songInPlaylist = tracks.some(track => track.song.id === songId);
+                    if (songInPlaylist) {
+                        memberships.add(playlist.id);
+                    }
+                } catch {
+                    // Skip this playlist if fetch fails
+                    console.warn(`Could not fetch tracks for playlist ${playlist.id}`);
+                }
+            }
+
+            // Cache the result
+            setSongPlaylistMemberships(prev => new Map(prev).set(songId, memberships));
+            return memberships;
+        } catch (err) {
+            console.error('Failed to fetch song memberships:', err);
+            return new Set();
+        } finally {
+            setIsLoadingMemberships(false);
+        }
+    };
+
+    // Handle add to playlist
+    const handleAddToPlaylist = async (song: any, playlistId?: string) => {
+        try {
+            const songId = song.id || song.song?.id;
+
+            if (!playlistId) {
+                // Create new playlist
+                const newPlaylist = await playlistAPI.create({
+                    name: `My Playlist #${userPlaylists.length + 1}`,
+                    visibility: "private",
+                });
+                await trackAPI.add(newPlaylist.id, songId);
+
+                // Update memberships cache
+                setSongPlaylistMemberships(prev => {
+                    const next = new Map(prev);
+                    const memberships = next.get(songId) || new Set();
+                    memberships.add(String(newPlaylist.id));
+                    next.set(songId, memberships);
+                    return next;
+                });
+
+                setUserPlaylists(prev => [...prev, { id: String(newPlaylist.id), name: newPlaylist.name }]);
+                toast.success(`Created "${newPlaylist.name}" and added song`);
+            } else {
+                await trackAPI.add(Number(playlistId), songId);
+
+                // Update memberships cache
+                setSongPlaylistMemberships(prev => {
+                    const next = new Map(prev);
+                    const memberships = next.get(songId) || new Set();
+                    memberships.add(playlistId);
+                    next.set(songId, memberships);
+                    return next;
+                });
+
+                toast.success("Added to playlist");
+            }
+        } catch (err) {
+            console.error('Failed to add to playlist:', err);
+            toast.error("Failed to add to playlist");
+        }
     };
 
     const artistList = contextMenu?.songArtist?.split(", ").filter(Boolean) ?? [];
 
     // ── "All" view ──────────────────────────────────────────────────────────
 
-    const renderAll = () => (
+    const renderAll = () => {
+        if (loading) {
+            return (
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
+                </div>
+            );
+        }
+
+        if (error) {
+            return (
+                <div className="flex flex-col items-center justify-center py-20">
+                    <p className="text-white/60">{error}</p>
+                </div>
+            );
+        }
+
+        const hasResults = searchResults.songs.length > 0 ||
+                          searchResults.artists.length > 0 ||
+                          searchResults.albums.length > 0 ||
+                          searchResults.playlists.length > 0;
+
+        if (!hasResults && query) {
+            return (
+                <div className="flex flex-col items-center justify-center py-20">
+                    <SearchIcon className="w-16 h-16 text-white/20 mb-4" />
+                    <p className="text-white/60 text-lg">No results found for "{query}"</p>
+                    <p className="text-white/40 text-sm mt-2">Try different keywords</p>
+                </div>
+            );
+        }
+
+        return (
         <div className="space-y-10">
             {/* Top result + Songs */}
             <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
                 {/* Top result */}
                 <div>
                     <h2 className="text-2xl font-bold text-white mb-4 tracking-tight">Top result</h2>
-                    <div
-                        className="group relative p-6 rounded-2xl overflow-hidden
-                            border border-white/14 bg-white/[0.06] backdrop-blur-2xl
-                            shadow-[0_8px_32px_rgba(0,0,0,0.35)]
-                            hover:bg-white/[0.10] hover:border-white/24
-                            transition-all duration-300 cursor-pointer"
-                    >
-                        {/* Ambient glow */}
-                        <div className="absolute -top-12 -left-12 w-64 h-64 rounded-full blur-3xl
-                            bg-spotify-green/12 pointer-events-none" />
+                    {searchResults.songs.length > 0 && (
+                        <div
+                            className="group relative p-6 rounded-2xl overflow-hidden
+                                border border-white/14 bg-white/[0.06] backdrop-blur-2xl
+                                shadow-[0_8px_32px_rgba(0,0,0,0.35)]
+                                hover:bg-white/[0.10] hover:border-white/24
+                                transition-all duration-300 cursor-pointer"
+                        >
+                            {/* Ambient glow */}
+                            <div className="absolute -top-12 -left-12 w-64 h-64 rounded-full blur-3xl
+                                bg-spotify-green/12 pointer-events-none" />
 
-                        <div className="relative">
-                            {/* Art + title side by side */}
-                            <div className="flex gap-4 items-center mb-5">
-                                <div className="w-[110px] h-[110px] rounded-xl overflow-hidden shrink-0
-                                    shadow-[0_8px_24px_rgba(0,0,0,0.5)] border border-white/10">
-                                    <img
-                                        src={SONGS[0].imageUrl} alt={SONGS[0].title}
-                                        className="w-full h-full object-cover
-                                            transition-transform duration-500 group-hover:scale-105"
-                                    />
+                            <div className="relative">
+                                {/* Art + title side by side */}
+                                <div className="flex gap-4 items-center mb-5">
+                                    <div className="w-[110px] h-[110px] rounded-xl overflow-hidden shrink-0
+                                        shadow-[0_8px_24px_rgba(0,0,0,0.5)] border border-white/10">
+                                        <img
+                                            src={searchResults.songs[0].cover_url || searchResults.songs[0].imageUrl || IMG[0]}
+                                            alt={searchResults.songs[0].title}
+                                            className="w-full h-full object-cover
+                                                transition-transform duration-500 group-hover:scale-105"
+                                        />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <span className="inline-block px-2 py-0.5 rounded-full mb-2
+                                            bg-white/10 border border-white/15
+                                            text-[10px] font-bold uppercase tracking-widest text-white/60">
+                                            Song
+                                        </span>
+                                        <h3 className="text-[26px] font-bold text-white tracking-tight leading-tight truncate mb-1">
+                                            {searchResults.songs[0].title}
+                                        </h3>
+                                        <p className="text-sm text-white/55 truncate">
+                                            {typeof searchResults.songs[0].artist === 'string' ? searchResults.songs[0].artist : searchResults.songs[0].artist?.name || 'Unknown Artist'}
+                                            <span className="mx-1.5 text-white/25">·</span>
+                                            <span className="text-white/35">{typeof searchResults.songs[0].album === 'string' ? searchResults.songs[0].album : searchResults.songs[0].album?.name || searchResults.songs[0].album || 'Unknown Album'}</span>
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <span className="inline-block px-2 py-0.5 rounded-full mb-2
-                                        bg-white/10 border border-white/15
-                                        text-[10px] font-bold uppercase tracking-widest text-white/60">
-                                        Song
-                                    </span>
-                                    <h3 className="text-[26px] font-bold text-white tracking-tight leading-tight truncate mb-1">
-                                        {SONGS[0].title}
-                                    </h3>
-                                    <p className="text-sm text-white/55 truncate">
-                                        {SONGS[0].artist}
-                                        <span className="mx-1.5 text-white/25">·</span>
-                                        <span className="text-white/35">{SONGS[0].album}</span>
-                                    </p>
-                                </div>
-                            </div>
 
-                            {/* Actions */}
-                            <div className="flex items-center gap-3">
-                                <button className="flex items-center gap-2 px-4 py-2 rounded-full
-                                    bg-spotify-green text-black text-sm font-bold
-                                    hover:scale-105 active:scale-95 transition-transform
-                                    shadow-[0_4px_14px_rgba(30,185,84,0.4)]">
-                                    <Play size={14} fill="currentColor" />
-                                    Play
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); }}
-                                    className="w-8 h-8 rounded-full border border-white/30
-                                        flex items-center justify-center text-white/55
-                                        hover:text-white hover:border-white transition-colors"
-                                    aria-label="Save to Liked Songs">
-                                    <Plus size={15} />
-                                </button>
-                                <button
-                                    onClick={(e) => openContextMenu(e, SONGS[0])}
-                                    className="w-8 h-8 rounded-full flex items-center justify-center
-                                        text-white/35 hover:text-white transition-colors"
-                                    aria-label="More options">
-                                    <MoreHorizontal size={16} />
-                                </button>
+                                {/* Actions */}
+                                <div className="flex items-center gap-3">
+                                    <button className="flex items-center gap-2 px-4 py-2 rounded-full
+                                        bg-spotify-green text-black text-sm font-bold
+                                        hover:scale-105 active:scale-95 transition-transform
+                                        shadow-[0_4px_14px_rgba(30,185,84,0.4)]">
+                                        <Play size={14} fill="currentColor" />
+                                        Play
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); }}
+                                        className="w-8 h-8 rounded-full border border-white/30
+                                            flex items-center justify-center text-white/55
+                                            hover:text-white hover:border-white transition-colors"
+                                        aria-label="Save to Liked Songs">
+                                        <Plus size={15} />
+                                    </button>
+                                    <button
+                                        onClick={(e) => openContextMenu(e, {
+                                            id: searchResults.songs[0].id,
+                                            title: searchResults.songs[0].title,
+                                            artist: typeof searchResults.songs[0].artist === 'string' ? searchResults.songs[0].artist : searchResults.songs[0].artist?.name || 'Unknown Artist',
+                                            album: typeof searchResults.songs[0].album === 'string' ? searchResults.songs[0].album : searchResults.songs[0].album?.name || 'Unknown Album',
+                                            duration: searchResults.songs[0].duration || "3:20",
+                                            imageUrl: searchResults.songs[0].cover_url || searchResults.songs[0].imageUrl || IMG[0]
+                                        })}
+                                        className="w-8 h-8 rounded-full flex items-center justify-center
+                                            text-white/35 hover:text-white transition-colors"
+                                        aria-label="More options">
+                                        <MoreHorizontal size={16} />
+                                    </button>
                                 <span className="ml-auto flex items-center gap-1.5 text-[11px] text-white/30">
                                     <span className="w-1.5 h-1.5 rounded-full bg-spotify-green shrink-0" />
                                     5.2B streams
@@ -456,9 +718,11 @@ export const SearchPage: React.FC = () => {
                             </div>
                         </div>
                     </div>
+                        )}
                 </div>
 
                 {/* Songs column */}
+                {searchResults.songs.length > 0 && (
                 <div>
                     <SectionTitle
                         title="Songs"
@@ -466,19 +730,31 @@ export const SearchPage: React.FC = () => {
                         onShowAll={() => setActiveFilter("Songs")}
                     />
                     <div className="flex flex-col gap-0.5">
-                        {SONGS.slice(0, 4).map((song, idx) => (
+                        {searchResults.songs.slice(0, 4).map((song: any, idx: number) => (
                             <SongRow
                                 key={song.id}
-                                song={song}
+                                song={{
+                                    id: song.id,
+                                    title: song.title,
+                                    artist: typeof song.artist === 'string' ? song.artist : song.artist?.name || 'Unknown Artist',
+                                    album: typeof song.album === 'string' ? song.album : song.album?.name || 'Unknown Album',
+                                    duration: song.duration || "3:20",
+                                    imageUrl: song.cover_url || song.imageUrl || IMG[0]
+                                }}
                                 index={idx}
+                                showOrderNumber
                                 onContextMenu={openContextMenu}
+                                onToggleLike={handleToggleLike}
+                                isLiked={likedTrackSongIds.has(song.id)}
                             />
                         ))}
                     </div>
                 </div>
+                )}
             </div>
 
             {/* Artists shelf */}
+            {searchResults.artists.length > 0 && (
             <section>
                 <SectionTitle
                     title="Artists"
@@ -487,20 +763,22 @@ export const SearchPage: React.FC = () => {
                     onShowAll={() => setActiveFilter("Artists")}
                 />
                 <HorizontalShelf>
-                    {ARTISTS.map((a) => (
+                    {searchResults.artists.map((a: any) => (
                         <ArtistCard
                             key={a.id}
-                            imageUrl={a.imageUrl}
+                            imageUrl={a.image_url}
                             name={a.name}
-                            followers={a.followers}
+                            followers={`${a.monthly_listeners} followers`}
                             className="w-[160px] shrink-0"
                             onClick={() => navigate(`/artist/${toArtistRouteId(a.name)}`)}
                         />
                     ))}
                 </HorizontalShelf>
             </section>
+            )}
 
             {/* Albums shelf */}
+            {searchResults.albums.length > 0 && (
             <section>
                 <SectionTitle
                     title="Albums"
@@ -509,18 +787,20 @@ export const SearchPage: React.FC = () => {
                     onShowAll={() => setActiveFilter("Albums")}
                 />
                 <HorizontalShelf>
-                    {ALBUMS.map((al) => (
+                    {searchResults.albums.map((album: any) => (
                         <MediaCard
-                            key={al.id}
-                            imageUrl={al.imageUrl}
-                            title={al.title}
-                            subtitle={`${al.year} · ${al.artist}`}
+                            key={album.id}
+                            imageUrl={album.cover_url || album.imageUrl || IMG[0]}
+                            title={album.name}
+                            subtitle={`${album.release_year || album.year || '2024'} · ${typeof album.artist === 'string' ? album.artist : album.artist?.name || 'Unknown Artist'}`}
                         />
                     ))}
                 </HorizontalShelf>
             </section>
+            )}
 
             {/* Playlists shelf */}
+            {searchResults.playlists.length > 0 && (
             <section>
                 <SectionTitle
                     title="Playlists"
@@ -529,23 +809,42 @@ export const SearchPage: React.FC = () => {
                     onShowAll={() => setActiveFilter("Playlists")}
                 />
                 <HorizontalShelf>
-                    {PLAYLISTS.map((pl) => (
+                    {searchResults.playlists.map((playlist: any) => (
                         <MediaCard
-                            key={pl.id}
-                            imageUrl={pl.imageUrl}
-                            title={pl.title}
-                            subtitle={pl.description}
-                            onClick={() => navigate(getDemoPlaylistRoute())}
+                            key={playlist.id}
+                            imageUrl={playlist.cover_url || IMG[0]}
+                            title={playlist.name || playlist.title}
+                            subtitle={playlist.description || 'Playlist'}
+                            onClick={() => navigate(`/playlist/${playlist.id}`)}
                         />
                     ))}
                 </HorizontalShelf>
             </section>
+            )}
         </div>
-    );
+        );
+    };
 
     // ── "Songs" full view ───────────────────────────────────────────────────
 
-    const renderSongs = () => (
+    const renderSongs = () => {
+        if (loading) {
+            return (
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
+                </div>
+            );
+        }
+
+        if (searchResults.songs.length === 0) {
+            return (
+                <div className="flex flex-col items-center justify-center py-20">
+                    <p className="text-white/60">No songs found</p>
+                </div>
+            );
+        }
+
+        return (
         <div>
             {/* Table header */}
             <div className="flex items-center gap-3 px-3 pb-2 mb-1
@@ -560,67 +859,137 @@ export const SearchPage: React.FC = () => {
                 <span className="w-7 shrink-0" />
             </div>
             <div className="flex flex-col gap-0.5 mt-1">
-                {SONGS.map((song, idx) => (
+                {searchResults.songs.map((song: any, idx: number) => (
                     <SongRow
                         key={song.id}
-                        song={song}
+                        song={{
+                            id: song.id,
+                            title: song.title,
+                            artist: typeof song.artist === 'string' ? song.artist : song.artist?.name || 'Unknown Artist',
+                            album: typeof song.album === 'string' ? song.album : song.album?.name || 'Unknown Album',
+                            duration: song.duration || "3:20",
+                            imageUrl: song.cover_url || song.imageUrl || IMG[0]
+                        }}
                         index={idx}
                         showAlbumCol
                         showOrderNumber
                         onContextMenu={openContextMenu}
+                        onToggleLike={handleToggleLike}
+                        isLiked={likedTrackSongIds.has(song.id)}
                     />
                 ))}
             </div>
         </div>
-    );
+        );
+    };
 
     // ── "Artists" full view ─────────────────────────────────────────────────
 
-    const renderArtists = () => (
+    const renderArtists = () => {
+        if (loading) {
+            return (
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
+                </div>
+            );
+        }
+
+        if (searchResults.artists.length === 0) {
+            return (
+                <div className="flex flex-col items-center justify-center py-20">
+                    <p className="text-white/60">No artists found</p>
+                </div>
+            );
+        }
+
+        return (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
-            {ARTISTS.map((a) => (
+            {searchResults.artists.map((artist: any) => (
                 <ArtistCard
-                    key={a.id}
-                    imageUrl={a.imageUrl}
-                    name={a.name}
-                    followers={a.followers}
+                   
+                    key={artist.id}
+                   
+                    imageUrl={artist.image_url || artist.imageUrl || IMG[0]}
+                   
+                    name={artist.name}
+                   
+                    followers={`${artist.monthly_listeners ?? '0'} monthly listeners`}
+                   
                     className="w-full"
-                    onClick={() => navigate(`/artist/${toArtistRouteId(a.name)}`)}
+
+                    onClick={() => navigate(`/artist/${toArtistRouteId(artist.name)}`)}
                 />
             ))}
         </div>
-    );
+        );
+    };
 
     // ── "Albums" full view ──────────────────────────────────────────────────
 
-    const renderAlbums = () => (
+    const renderAlbums = () => {
+        if (loading) {
+            return (
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
+                </div>
+            );
+        }
+
+        if (searchResults.albums.length === 0) {
+            return (
+                <div className="flex flex-col items-center justify-center py-20">
+                    <p className="text-white/60">No albums found</p>
+                </div>
+            );
+        }
+
+        return (
         <MediaGrid>
-            {ALBUMS.map((al) => (
+            {searchResults.albums.map((album: any) => (
                 <GridCard
-                    key={al.id}
-                    imageUrl={al.imageUrl}
-                    title={al.title}
-                    subtitle={`${al.year} · ${al.artist}`}
+                    key={album.id}
+                    imageUrl={album.cover_url || album.imageUrl || IMG[0]}
+                    title={album.name}
+                    subtitle={`${album.release_year || album.year || '2024'} · ${typeof album.artist === 'string' ? album.artist : album.artist?.name || 'Unknown Artist'}`}
                 />
             ))}
         </MediaGrid>
-    );
+        );
+    };
 
     // ── "Playlists" full view ───────────────────────────────────────────────
 
-    const renderPlaylists = () => (
+    const renderPlaylists = () => {
+        if (loading) {
+            return (
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
+                </div>
+            );
+        }
+
+        if (searchResults.playlists.length === 0) {
+            return (
+                <div className="flex flex-col items-center justify-center py-20">
+                    <p className="text-white/60">No playlists found</p>
+                </div>
+            );
+        }
+
+        return (
         <MediaGrid>
-            {PLAYLISTS.map((pl) => (
+            {searchResults.playlists.map((playlist: any) => (
                 <GridCard
-                    key={pl.id}
-                    imageUrl={pl.imageUrl}
-                    title={pl.title}
-                    subtitle={pl.description}
-                    onClick={() => navigate(getDemoPlaylistRoute())}
+                    key={playlist.id}
+                    imageUrl={playlist.cover_url || IMG[0]}
+                    title={playlist.name || playlist.title}
+                    subtitle={playlist.description || 'Playlist'}
+                    onClick={() => navigate(`/playlist/${playlist.id}`)}
                 />
             ))}
         </MediaGrid>
-    );
+        );
+    };
 
     // ── Section header for non-All tabs ────────────────────────────────────
 
@@ -682,11 +1051,21 @@ export const SearchPage: React.FC = () => {
                 isOpen={Boolean(contextMenu)}
                 contextPos={contextMenu ? { top: contextMenu.top, left: contextMenu.left } : { top: 0, left: 0 }}
                 artists={artistList}
-                playlists={MY_PLAYLISTS}
+                playlists={userPlaylists}
+                song={contextMenu?.song}
+                songPlaylistIds={contextMenu?.song ? songPlaylistMemberships.get(contextMenu.song.id || contextMenu.song.song?.id) || new Set() : new Set()}
+                isLoadingMemberships={isLoadingMemberships}
                 onClose={closeAll}
                 onArtistSelect={(artist) => {
                     navigate(`/artist/${toArtistRouteId(artist)}`);
                 }}
+                onAddToPlaylist={(song, playlistId) => {
+                    handleAddToPlaylist(song, playlistId);
+                }}
+                onToggleLike={(song) => {
+                    handleToggleLike(song);
+                }}
+                isLiked={contextMenu?.song ? likedTrackSongIds.has(contextMenu.song.id || contextMenu.song.song?.id) : false}
             />
         </div>
     );

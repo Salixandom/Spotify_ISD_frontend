@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1774962247844,
+  "lastScanned": 1775077113976,
   "projectRoot": "/home/sakib/Projects/Spotify_ISD/spotify-collab-frontend",
   "techStack": {
     "languages": [
@@ -75,7 +75,7 @@
       "path": "dist",
       "purpose": "Distribution/build output",
       "fileCount": 3,
-      "lastAccessed": 1774962247830,
+      "lastAccessed": 1775077113940,
       "keyFiles": [
         "favicon.svg",
         "icons.svg",
@@ -86,7 +86,7 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 15,
-      "lastAccessed": 1774962247831,
+      "lastAccessed": 1775077113942,
       "keyFiles": [
         "AGENT-GUIDE.md",
         "API_RESPONSE_INTEGRATION.md",
@@ -99,7 +99,7 @@
       "path": "public",
       "purpose": "Public files",
       "fileCount": 2,
-      "lastAccessed": 1774962247837,
+      "lastAccessed": 1775077113960,
       "keyFiles": [
         "favicon.svg",
         "icons.svg"
@@ -109,7 +109,7 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 6,
-      "lastAccessed": 1774962247839,
+      "lastAccessed": 1775077113969,
       "keyFiles": [
         "App.css",
         "App.tsx",
@@ -121,18 +121,19 @@
     "dist/assets": {
       "path": "dist/assets",
       "purpose": "Static assets",
-      "fileCount": 2,
-      "lastAccessed": 1774962247841,
+      "fileCount": 3,
+      "lastAccessed": 1775077113970,
       "keyFiles": [
-        "index-C2Xe0JA4.js",
-        "index-Dm79nedz.css"
+        "favicon-C1nphcnE.svg",
+        "index-B-ptZ2yy.css",
+        "index-DbpJPOG6.js"
       ]
     },
     "src/api": {
       "path": "src/api",
       "purpose": "API routes",
-      "fileCount": 7,
-      "lastAccessed": 1774962247842,
+      "fileCount": 8,
+      "lastAccessed": 1775077113971,
       "keyFiles": [
         "auth.ts",
         "axios.ts",
@@ -143,7 +144,7 @@
       "path": "src/assets",
       "purpose": "Static assets",
       "fileCount": 3,
-      "lastAccessed": 1774962247842,
+      "lastAccessed": 1775077113972,
       "keyFiles": [
         "hero.png",
         "react.svg",
@@ -154,38 +155,56 @@
       "path": "src/components",
       "purpose": "UI components",
       "fileCount": 0,
-      "lastAccessed": 1774962247842,
+      "lastAccessed": 1775077113972,
       "keyFiles": []
     },
     "src/pages": {
       "path": "src/pages",
       "purpose": "Page components",
-      "fileCount": 8,
-      "lastAccessed": 1774962247842,
+      "fileCount": 10,
+      "lastAccessed": 1775077113973,
       "keyFiles": [
+        "ArtistPage.tsx",
         "BrowsePage.tsx",
-        "HomePage.tsx",
-        "LoginPage.tsx"
+        "HomePage.tsx"
       ]
     }
   },
   "hotPaths": [
     {
-      "path": "src/pages/SearchPage.tsx",
-      "accessCount": 26,
-      "lastAccessed": 1774974086560,
+      "path": "src/pages/ArtistPage.tsx",
+      "accessCount": 66,
+      "lastAccessed": 1775079273263,
       "type": "file"
     },
     {
-      "path": "src/pages/BrowsePage.tsx",
-      "accessCount": 4,
-      "lastAccessed": 1774974228490,
+      "path": "src/pages/PlaylistPage.tsx",
+      "accessCount": 28,
+      "lastAccessed": 1775077640653,
       "type": "file"
     },
     {
-      "path": "src/components/layout/Navbar.tsx",
+      "path": "src/components/modals/TrackContextMenu.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1775077527609,
+      "type": "file"
+    },
+    {
+      "path": "src/types/index.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775079042015,
+      "type": "file"
+    },
+    {
+      "path": "src/api/search.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775079031230,
+      "type": "file"
+    },
+    {
+      "path": "src/api/profile.ts",
       "accessCount": 1,
-      "lastAccessed": 1774973963374,
+      "lastAccessed": 1775077121860,
       "type": "file"
     }
   ],
