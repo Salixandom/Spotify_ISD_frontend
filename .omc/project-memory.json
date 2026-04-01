@@ -172,20 +172,38 @@
   "hotPaths": [
     {
       "path": "src/pages/HomePage.tsx",
-      "accessCount": 64,
-      "lastAccessed": 1774999568196,
+      "accessCount": 110,
+      "lastAccessed": 1775006060606,
       "type": "file"
     },
     {
       "path": "src/pages/SearchPage.tsx",
-      "accessCount": 46,
-      "lastAccessed": 1774999509300,
+      "accessCount": 67,
+      "lastAccessed": 1775002480276,
       "type": "file"
     },
     {
       "path": "src/components/layout/Navbar.tsx",
-      "accessCount": 32,
-      "lastAccessed": 1774999232112,
+      "accessCount": 45,
+      "lastAccessed": 1775000979205,
+      "type": "file"
+    },
+    {
+      "path": "src/components/layout/Sidebar.tsx",
+      "accessCount": 41,
+      "lastAccessed": 1775005385170,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/UserProfilePage.tsx",
+      "accessCount": 14,
+      "lastAccessed": 1775006914987,
+      "type": "file"
+    },
+    {
+      "path": "src/components/layout/SidebarLibraryList.tsx",
+      "accessCount": 11,
+      "lastAccessed": 1775004286523,
       "type": "file"
     },
     {
@@ -195,9 +213,57 @@
       "type": "file"
     },
     {
+      "path": "src/api/playlists.ts",
+      "accessCount": 5,
+      "lastAccessed": 1775005746086,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/GeneratePlaylistModal.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1775005466036,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/SearchTrackContextMenuModal.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775002382643,
+      "type": "file"
+    },
+    {
+      "path": "src/App.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775006285670,
+      "type": "file"
+    },
+    {
       "path": ".env",
       "accessCount": 2,
       "lastAccessed": 1774994509898,
+      "type": "file"
+    },
+    {
+      "path": "src/api/auth.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775000930549,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/PlaylistsPage.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775006312014,
+      "type": "file"
+    },
+    {
+      "path": "index.html",
+      "accessCount": 2,
+      "lastAccessed": 1775007079678,
+      "type": "file"
+    },
+    {
+      "path": "public/favicon.svg",
+      "accessCount": 2,
+      "lastAccessed": 1775007106466,
       "type": "file"
     },
     {
@@ -228,6 +294,30 @@
       "path": "src/types/index.ts",
       "accessCount": 1,
       "lastAccessed": 1774999255292,
+      "type": "file"
+    },
+    {
+      "path": "src/api/profile.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775000914078,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/SearchLibraryPlaylistsModal.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775002879064,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/CreatePlaylistModal.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775005354232,
+      "type": "file"
+    },
+    {
+      "path": "src/components/ui/Modal.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775005361915,
       "type": "file"
     }
   ],

@@ -1,6 +1,7 @@
 import api from './axios';
 import type { User, AuthTokens } from '../types';
 import { unwrapResponse } from '../utils/apiResponse';
+import { profileAPI } from './profile';
 
 export const authAPI = {
   register: async (username: string, password: string): Promise<User> => {
@@ -14,6 +15,21 @@ export const authAPI = {
 
     localStorage.setItem('access_token', tokens.access);
     localStorage.setItem('refresh_token', tokens.refresh);
+
+    // Fetch and save user profile to localStorage
+    try {
+      const profile = await profileAPI.getMyProfile();
+      localStorage.setItem('user', JSON.stringify({
+        id: profile.user_id,
+        username: profile.display_name,
+        displayName: profile.display_name,
+        bio: profile.bio,
+        avatar_url: profile.avatar_url,
+      }));
+    } catch (error) {
+      console.error('Failed to fetch user profile after login:', error);
+    }
+
     return tokens;
   },
 
@@ -25,5 +41,6 @@ export const authAPI = {
   logout: () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
   },
 };

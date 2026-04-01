@@ -17,6 +17,7 @@ export const playlistAPI = {
     order?: 'asc' | 'desc';
     filter?: 'followed' | 'liked';
     include_archived?: boolean;
+    is_system_generated?: 'true' | 'false';
   }): Promise<Playlist[]> => {
     const res = await api.get('/playlists/', { params });
     return unwrapResponse<Playlist[]>(res.data, 'Failed to fetch playlists');
@@ -98,6 +99,19 @@ export const playlistAPI = {
   duplicate: async (id: number, includeTracks = true): Promise<Playlist> => {
     const res = await api.post(`/playlists/${id}/duplicate/`, { include_tracks: includeTracks });
     return unwrapResponse<Playlist>(res.data, 'Failed to duplicate playlist');
+  },
+
+  // ─── Generate ──────────────────────────────────────────
+  generatePlaylist: async (data: {
+    generation_type: 'taste' | 'trending' | 'new_releases' | 'similar_song' | 'genre';
+    name?: string;
+    track_limit?: number;
+    genre?: string;
+    mood?: string;
+    song_id?: number;
+  }): Promise<Playlist> => {
+    const res = await api.post('/playlists/auto-generated/', data);
+    return unwrapResponse<Playlist>(res.data, 'Failed to generate playlist');
   },
 
   // ─── Import / Export ──────────────────────────────────

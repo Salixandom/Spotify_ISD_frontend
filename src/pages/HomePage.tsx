@@ -18,7 +18,7 @@ import type { Playlist, Song } from "../types";
 /**
  * Spotify-inspired homepage:
  * - API-first data source (playlists)
- * - graceful placeholder fallback when API is unavailable/empty
+ * - only shows real data from backend
  * - custom visual language aligned with Login/Register pages
  */
 
@@ -32,262 +32,7 @@ type HomeCard = {
     kind: "playlist" | "mix" | "daily" | "focus";
 };
 
-const PLACEHOLDER_COVERS = [
-    "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=600&h=600&fit=crop",
-    "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&h=600&fit=crop",
-    "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&h=600&fit=crop",
-    "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=600&h=600&fit=crop",
-    "https://images.unsplash.com/photo-1516280030429-27679b3dc9cf?w=600&h=600&fit=crop",
-    "https://images.unsplash.com/photo-1501612780327-45045538702b?w=600&h=600&fit=crop",
-    "https://images.unsplash.com/photo-1445985543470-41fba5c3144a?w=600&h=600&fit=crop",
-    "https://images.unsplash.com/photo-1458560871784-56d23406c091?w=600&h=600&fit=crop",
-];
-
-const PLACEHOLDER_QUICK_ACCESS: HomeCard[] = [
-    {
-        id: "qa-1",
-        title: "Daily Lift",
-        subtitle: "Your energy booster mix",
-        imageUrl: PLACEHOLDER_COVERS[0],
-        accentFrom: "#1db954",
-        accentTo: "#0d6b30",
-        kind: "daily",
-    },
-    {
-        id: "qa-2",
-        title: "Midnight Echo",
-        subtitle: "Late-night synth glow",
-        imageUrl: PLACEHOLDER_COVERS[1],
-        accentFrom: "#8b5cf6",
-        accentTo: "#4c1d95",
-        kind: "mix",
-    },
-    {
-        id: "qa-3",
-        title: "Focus Bloom",
-        subtitle: "Deep work soundscape",
-        imageUrl: PLACEHOLDER_COVERS[2],
-        accentFrom: "#06b6d4",
-        accentTo: "#0e7490",
-        kind: "focus",
-    },
-    {
-        id: "qa-4",
-        title: "Indie Horizon",
-        subtitle: "Fresh indie discoveries",
-        imageUrl: PLACEHOLDER_COVERS[3],
-        accentFrom: "#f97316",
-        accentTo: "#9a3412",
-        kind: "playlist",
-    },
-    {
-        id: "qa-5",
-        title: "Retro Nights",
-        subtitle: "Neon city throwbacks",
-        imageUrl: PLACEHOLDER_COVERS[4],
-        accentFrom: "#ec4899",
-        accentTo: "#9d174d",
-        kind: "mix",
-    },
-    {
-        id: "qa-6",
-        title: "Lo-Fi Station",
-        subtitle: "Calm beats, soft rain",
-        imageUrl: PLACEHOLDER_COVERS[5],
-        accentFrom: "#84cc16",
-        accentTo: "#3f6212",
-        kind: "focus",
-    },
-    {
-        id: "qa-7",
-        title: "Road Pulse",
-        subtitle: "Drive-time essentials",
-        imageUrl: PLACEHOLDER_COVERS[6],
-        accentFrom: "#ef4444",
-        accentTo: "#7f1d1d",
-        kind: "playlist",
-    },
-    {
-        id: "qa-8",
-        title: "Bedroom Pop",
-        subtitle: "Sweet and dreamy picks",
-        imageUrl: PLACEHOLDER_COVERS[7],
-        accentFrom: "#3b82f6",
-        accentTo: "#1e3a8a",
-        kind: "daily",
-    },
-];
-
-const PLACEHOLDER_MADE_FOR_YOU: HomeCard[] = [
-    {
-        id: "mfy-1",
-        title: "Your Top Replay",
-        subtitle: "Built from your vibe",
-        imageUrl: PLACEHOLDER_COVERS[2],
-        accentFrom: "#22c55e",
-        accentTo: "#166534",
-        kind: "daily",
-    },
-    {
-        id: "mfy-2",
-        title: "Sunset Sessions",
-        subtitle: "Warm, melodic, floating",
-        imageUrl: PLACEHOLDER_COVERS[6],
-        accentFrom: "#f59e0b",
-        accentTo: "#92400e",
-        kind: "mix",
-    },
-    {
-        id: "mfy-3",
-        title: "Night Drive",
-        subtitle: "Neon and basslines",
-        imageUrl: PLACEHOLDER_COVERS[1],
-        accentFrom: "#a855f7",
-        accentTo: "#581c87",
-        kind: "playlist",
-    },
-    {
-        id: "mfy-4",
-        title: "Soft Focus",
-        subtitle: "Instrumental flow state",
-        imageUrl: PLACEHOLDER_COVERS[5],
-        accentFrom: "#14b8a6",
-        accentTo: "#134e4a",
-        kind: "focus",
-    },
-    {
-        id: "mfy-5",
-        title: "Blue Hour",
-        subtitle: "Chill alt-electronica",
-        imageUrl: PLACEHOLDER_COVERS[0],
-        accentFrom: "#60a5fa",
-        accentTo: "#1e3a8a",
-        kind: "mix",
-    },
-    {
-        id: "mfy-6",
-        title: "Rhythm Theory",
-        subtitle: "Percussive and punchy",
-        imageUrl: PLACEHOLDER_COVERS[4],
-        accentFrom: "#f43f5e",
-        accentTo: "#881337",
-        kind: "playlist",
-    },
-];
-
-const PLACEHOLDER_TRENDING: HomeCard[] = [
-    {
-        id: "tr-1",
-        title: "Trending Global",
-        subtitle: "What everyone is spinning",
-        imageUrl: PLACEHOLDER_COVERS[7],
-        accentFrom: "#fb7185",
-        accentTo: "#9f1239",
-        kind: "playlist",
-    },
-    {
-        id: "tr-2",
-        title: "Viral Rhythms",
-        subtitle: "Fast-rising tracks",
-        imageUrl: PLACEHOLDER_COVERS[3],
-        accentFrom: "#34d399",
-        accentTo: "#065f46",
-        kind: "mix",
-    },
-    {
-        id: "tr-3",
-        title: "Chart Climbers",
-        subtitle: "This week’s hottest",
-        imageUrl: PLACEHOLDER_COVERS[1],
-        accentFrom: "#38bdf8",
-        accentTo: "#0c4a6e",
-        kind: "playlist",
-    },
-    {
-        id: "tr-4",
-        title: "Fresh Finds",
-        subtitle: "Breaking this month",
-        imageUrl: PLACEHOLDER_COVERS[6],
-        accentFrom: "#a3e635",
-        accentTo: "#365314",
-        kind: "daily",
-    },
-    {
-        id: "tr-5",
-        title: "Pulse Radar",
-        subtitle: "Live trend monitor",
-        imageUrl: PLACEHOLDER_COVERS[4],
-        accentFrom: "#c084fc",
-        accentTo: "#6b21a8",
-        kind: "mix",
-    },
-    {
-        id: "tr-6",
-        title: "Up Next",
-        subtitle: "Tomorrow’s favorites",
-        imageUrl: PLACEHOLDER_COVERS[0],
-        accentFrom: "#f97316",
-        accentTo: "#7c2d12",
-        kind: "playlist",
-    },
-];
-
-const PLACEHOLDER_RECENT: HomeCard[] = [
-    {
-        id: "rc-1",
-        title: "New in Library",
-        subtitle: "Recently saved sounds",
-        imageUrl: PLACEHOLDER_COVERS[5],
-        accentFrom: "#2dd4bf",
-        accentTo: "#0f766e",
-        kind: "playlist",
-    },
-    {
-        id: "rc-2",
-        title: "Quick Picks",
-        subtitle: "Fresh daily updates",
-        imageUrl: PLACEHOLDER_COVERS[2],
-        accentFrom: "#22d3ee",
-        accentTo: "#155e75",
-        kind: "daily",
-    },
-    {
-        id: "rc-3",
-        title: "After Hours",
-        subtitle: "Late evening textures",
-        imageUrl: PLACEHOLDER_COVERS[1],
-        accentFrom: "#818cf8",
-        accentTo: "#312e81",
-        kind: "mix",
-    },
-    {
-        id: "rc-4",
-        title: "Acoustic Corner",
-        subtitle: "Unplugged and intimate",
-        imageUrl: PLACEHOLDER_COVERS[3],
-        accentFrom: "#f59e0b",
-        accentTo: "#78350f",
-        kind: "focus",
-    },
-    {
-        id: "rc-5",
-        title: "Bassline Lab",
-        subtitle: "Experimental low-end",
-        imageUrl: PLACEHOLDER_COVERS[7],
-        accentFrom: "#f43f5e",
-        accentTo: "#881337",
-        kind: "playlist",
-    },
-    {
-        id: "rc-6",
-        title: "Cosmic Drift",
-        subtitle: "Ambient & atmospheric",
-        imageUrl: PLACEHOLDER_COVERS[0],
-        accentFrom: "#a78bfa",
-        accentTo: "#4c1d95",
-        kind: "mix",
-    },
-];
+const DEFAULT_COVER = "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=600&h=600&fit=crop";
 
 function getGreeting() {
     const hour = new Date().getHours();
@@ -316,7 +61,7 @@ function mapPlaylistsToCards(playlists: Playlist[]): HomeCard[] {
                 `${playlist.playlist_type} • ${playlist.visibility}`,
             imageUrl:
                 playlist.cover_url ||
-                PLACEHOLDER_COVERS[index % PLACEHOLDER_COVERS.length],
+                DEFAULT_COVER,
             accentFrom,
             accentTo,
             kind:
@@ -364,11 +109,12 @@ const SectionTitle: React.FC<{
     );
 };
 
-const QuickTile: React.FC<{ item: HomeCard }> = ({ item }) => {
+const QuickTile: React.FC<{ item: HomeCard; onClick?: () => void }> = ({ item, onClick }) => {
     const Icon = kindIcon[item.kind];
 
     return (
         <button
+            onClick={onClick}
             className="group relative h-[72px] rounded-xl overflow-hidden
                  border border-white/14 bg-white/[0.06] backdrop-blur-2xl
                  shadow-[0_6px_20px_rgba(0,0,0,0.25)]
@@ -413,11 +159,12 @@ const QuickTile: React.FC<{ item: HomeCard }> = ({ item }) => {
     );
 };
 
-const ShelfCard: React.FC<{ item: HomeCard }> = ({ item }) => {
+const ShelfCard: React.FC<{ item: HomeCard; onClick?: () => void }> = ({ item, onClick }) => {
     const Icon = kindIcon[item.kind];
 
     return (
         <button
+            onClick={onClick}
             className="group w-[196px] shrink-0 rounded-2xl p-3.5
                  border border-white/14 bg-white/[0.06] backdrop-blur-2xl
                  shadow-[0_8px_24px_rgba(0,0,0,0.25)]
@@ -468,6 +215,8 @@ const HorizontalShelf: React.FC<{
 }> = ({ items, totalItems = 0, onShowMore, onShowLess }) => {
     const hasMore = totalItems > items.length;
     const isShowingAll = items.length >= totalItems;
+    // Only show collapse button if we're showing more than 12 items (collapsed limit)
+    const canCollapse = items.length > 12;
 
     return (
         <div className="overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -508,7 +257,7 @@ const HorizontalShelf: React.FC<{
                         </div>
                     </button>
                 )}
-                {isShowingAll && onShowLess && (
+                {isShowingAll && canCollapse && onShowLess && (
                     <button
                         onClick={onShowLess}
                         className="group w-[196px] shrink-0 rounded-2xl p-3.5
@@ -574,11 +323,100 @@ const HomeSkeleton: React.FC = () => {
 export const HomePage: React.FC = () => {
     const [playlists, setPlaylists] = React.useState<Playlist[]>([]);
     const [recommendedPlaylists, setRecommendedPlaylists] = React.useState<Playlist[]>([]);
+    const [systemPlaylists, setSystemPlaylists] = React.useState<Playlist[]>([]);
     const [recommendedSongs, setRecommendedSongs] = React.useState<Song[]>([]);
     const [trendingSongs, setTrendingSongs] = React.useState<Song[]>([]);
     const [newReleases, setNewReleases] = React.useState<Song[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
-    const [hasApiError, setHasApiError] = React.useState(false);
+    //const [hasApiError, setHasApiError] = React.useState(false);
+    
+    const [displayName, setDisplayName] = React.useState("Buddy");
+    
+    React.useEffect(() => {
+        try {
+            // Adjust based on how you store user data
+            const user = JSON.parse(localStorage.getItem("user") || "null");
+    
+            if (user?.name) {
+                setDisplayName(user.name + "!");
+            } else if (user?.displayName) {
+                setDisplayName(user.displayName + "!");
+            } else {
+                setDisplayName("Buddy!");
+            }
+        } catch {
+            setDisplayName("Buddy!");
+        }
+    }, []);
+    
+    const messages = [
+        "bro came for one song and stayed for three hours",
+        "who gave you the aux this time",
+        "another day, another banger",
+        "main character music loading",
+        "sad songs? bold choice",
+        "we both know you’re skipping in 10 seconds",
+        "this playlist might fix you",
+        "dangerously close to finding your new obsession",
+        "one song away from changing your whole mood",
+        "the speakers are nervous",
+        "today’s personality: depends on the next track",
+        "you came here for vibes. respectable.",
+        "this app knows you need music right now",
+        "time to pretend life is a montage",
+        "your neighbors may not love this one",
+        "queueing bad decisions and great music",
+        "go on, romanticize your life a little",
+        "you’re either healing or making it worse",
+        "certified headphone moment",
+        "plot twist: this one actually slaps",
+        "just a casual search for your next obsession",
+        "locked in. volume up.",
+        "for legal reasons, this is too much heat",
+        "welcome back, professional song skipper",
+        "bro did NOT come here for silence",
+        "who let you have the aux",
+        "one more song won’t hurt. probably.",
+        "we both know you’re about to loop the same track",
+        "main character mode: activated",
+        "another peaceful day ruined by a banger",
+        "this app supports your music addiction",
+        "sad songs again? stay strong soldier",
+        "you’re either healing or spiraling",
+        "caught chasing vibes again",
+        "professional song skipper has arrived",
+        "bro’s building the most questionable queue ever",
+        "romanticize your life. press play.",
+        "this playlist has opinions",
+        "one tap away from being dramatic for no reason",
+        "you did not open this app to be normal",
+        "today’s mood depends on the next track",
+        "bad decisions. great soundtrack.",
+        "the speakers fear what you’re about to play",
+        "this app has seen your music choices. brave.",
+        "back to ignore your responsibilities with style?",
+        "one song in and suddenly you’re a philosopher",
+        "welcome back, curator of emotional damage",
+        "this queue is either elite or deeply concerning",
+        "you came for vibes and left with an identity crisis",
+        "the algorithm is judging softly",
+        "play something loud enough to defeat the plot",
+        "your headphones deserve an apology in advance",
+        "this next track might unnecessarily change your life",
+        "today’s forecast: 100% chance of replaying the same song",
+        "just you, your thoughts, and suspiciously good music",
+        "go ahead. make the whole day cinematic.",
+        "one dramatic track away from staring out a window",
+        "who needs stability when you have playlists",
+        "this session may contain bangers",
+        "you’re dangerously close to finding your new obsession",
+        "entering vibe management mode",
+        "let’s make bad timing sound amazing",
+    ];
+    
+    const randomMessage = React.useMemo(() => {
+        return messages[Math.floor(Math.random() * messages.length)];
+    }, []);
 
     // Track which sections are expanded to show more items
     const [expandedSections, setExpandedSections] = React.useState<Record<string, boolean>>({
@@ -600,13 +438,14 @@ export const HomePage: React.FC = () => {
 
         const load = async () => {
             setIsLoading(true);
-            setHasApiError(false);
+            //setHasApiError(false);
 
             try {
                 // Fetch all content in parallel
                 const [
                     playlistsData,
                     recommendedData,
+                    systemData,
                     recentPlaysData,
                     trendingData,
                     newReleasesData,
@@ -617,6 +456,10 @@ export const HomePage: React.FC = () => {
                     }),
                     playlistAPI.getRecommended().catch(err => {
                         console.info('Could not fetch recommended playlists:', err);
+                        return [];
+                    }),
+                    playlistAPI.list({ is_system_generated: 'true' }).catch(err => {
+                        console.info('Could not fetch system playlists:', err);
                         return [];
                     }),
                     historyAPI.getRecentPlays().catch(err => {
@@ -637,15 +480,17 @@ export const HomePage: React.FC = () => {
 
                 setPlaylists(Array.isArray(playlistsData) ? playlistsData : []);
                 setRecommendedPlaylists(Array.isArray(recommendedData) ? recommendedData : []);
+                setSystemPlaylists(Array.isArray(systemData) ? systemData : []);
                 setTrendingSongs(trendingData.songs || []);
                 setNewReleases(newReleasesData.songs || []);
                 setRecommendedSongs(recentPlaysData || []);
             } catch (error) {
                 console.error("Failed to load home content:", error);
                 if (!isMounted) return;
-                setHasApiError(true);
+                //setHasApiError(true);
                 setPlaylists([]);
                 setRecommendedPlaylists([]);
+                setSystemPlaylists([]);
                 setTrendingSongs([]);
                 setNewReleases([]);
                 setRecommendedSongs([]);
@@ -674,7 +519,7 @@ export const HomePage: React.FC = () => {
         id: `song-${song.id}`,
         title: song.title,
         subtitle: typeof song.artist === 'string' ? song.artist : song.artist?.name || 'Unknown Artist',
-        imageUrl: song.cover_url || PLACEHOLDER_COVERS[index % PLACEHOLDER_COVERS.length],
+        imageUrl: song.cover_url || DEFAULT_COVER,
         accentFrom: ['#1db954', '#8b5cf6', '#06b6d4', '#f97316'][index % 4],
         accentTo: ['#0d6b30', '#4c1d95', '#0e7490', '#9a3412'][index % 4],
         kind,
@@ -697,6 +542,12 @@ export const HomePage: React.FC = () => {
         [recommendedPlaylists],
     );
 
+    // Transform system playlists to cards
+    const systemPlaylistCards = React.useMemo(
+        () => mapPlaylistsToCards(systemPlaylists),
+        [systemPlaylists],
+    );
+
     // Transform recent plays to cards for Quick Access
     const allRecentPlayCards = React.useMemo(
         () => recommendedSongs.slice(0, 30).map((song, i) => songToCard(song, i, 'daily')),
@@ -712,31 +563,55 @@ export const HomePage: React.FC = () => {
             ? allRecentPlayCards
             : hasRealData
                 ? [...playlistCards.slice(0, 6), ...allTrendingCards.slice(0, 2)]
-                : PLACEHOLDER_QUICK_ACCESS;
+                : [];
 
         return expandedSections.quickAccess ? baseCards.slice(0, 30) : baseCards.slice(0, 8);
     }, [allRecentPlayCards, playlistCards, allTrendingCards, hasRealData, expandedSections.quickAccess]);
 
     // Made for You: Show 12 when collapsed, up to 30 when expanded
-    const madeForYou = React.useMemo(() => {
-        const baseCards = recommendedPlaylistCards.length > 0
-            ? recommendedPlaylistCards
+    const madeForYouCards = React.useMemo(() => {
+        // Combine system playlists with recommended playlists
+        const systemAndRecommended = [
+            ...systemPlaylistCards,
+            ...recommendedPlaylistCards.filter(
+                rp => !systemPlaylistCards.some(sp => sp.id === rp.id)
+            )
+        ];
+
+        const baseCards = systemAndRecommended.length > 0
+            ? systemAndRecommended
             : hasRealData && playlistCards.length > 0
                 ? playlistCards
-                : PLACEHOLDER_MADE_FOR_YOU;
+                : [];
 
         return expandedSections.madeForYou ? baseCards.slice(0, 30) : baseCards.slice(0, 12);
-    }, [recommendedPlaylistCards, playlistCards, hasRealData, expandedSections.madeForYou]);
+    }, [systemPlaylistCards, recommendedPlaylistCards, playlistCards, hasRealData, expandedSections.madeForYou]);
+
+    // Calculate total count for "See all" button
+    const madeForYouTotal = React.useMemo(() => {
+        const systemAndRecommended = [
+            ...systemPlaylistCards,
+            ...recommendedPlaylistCards.filter(
+                rp => !systemPlaylistCards.some(sp => sp.id === rp.id)
+            )
+        ];
+
+        return systemAndRecommended.length > 0
+            ? systemAndRecommended.length
+            : hasRealData && playlistCards.length > 0
+                ? playlistCards.length
+                : 0;
+    }, [systemPlaylistCards, recommendedPlaylistCards, playlistCards, hasRealData]);
 
     // Trending Now: Show 12 when collapsed, up to 30 when expanded
     const trendingNow = React.useMemo(() => {
-        const baseCards = allTrendingCards.length > 0 ? allTrendingCards : PLACEHOLDER_TRENDING;
+        const baseCards = allTrendingCards.length > 0 ? allTrendingCards : [];
         return expandedSections.trendingNow ? baseCards.slice(0, 30) : baseCards.slice(0, 12);
     }, [allTrendingCards, expandedSections.trendingNow]);
 
     // Recently Added: Show 12 when collapsed, up to 30 when expanded
     const recentlyAdded = React.useMemo(() => {
-        const baseCards = allNewReleaseCards.length > 0 ? allNewReleaseCards : PLACEHOLDER_RECENT;
+        const baseCards = allNewReleaseCards.length > 0 ? allNewReleaseCards : [];
         return expandedSections.recentlyAdded ? baseCards.slice(0, 30) : baseCards.slice(0, 12);
     }, [allNewReleaseCards, expandedSections.recentlyAdded]);
 
@@ -760,19 +635,20 @@ export const HomePage: React.FC = () => {
                     shadow-[0_10px_30px_rgba(0,0,0,0.28)] px-5 py-4"
                 >
                     <h1 className="text-white text-3xl md:text-4xl font-bold tracking-tight">
-                        {greeting}
+                        {greeting}, <span className="text-[#1DB954]">{displayName}</span>
                     </h1>
                     <p className="text-white/70 text-sm md:text-base">
-                        {hasRealData
+                        {/*{hasRealData
                             ? "Your latest playlists are ready."
-                            : "Backend unavailable — showing curated placeholders for now."}
+                            : "Backend unavailable — showing curated placeholders for now."}*/}
+                        {randomMessage}
                     </p>
-                    {hasApiError && (
+                    
                         <div className="inline-flex items-center gap-2 mt-1 px-3 py-1.5 rounded-full text-xs border border-amber-300/35 bg-amber-300/12 text-amber-100 backdrop-blur-xl">
                             <TrendingUp size={14} />
-                            Live API data is temporarily unavailable
+                            Your Tunes are ready
                         </div>
-                    )}
+                    
                 </header>
 
                 {isLoading ? (
@@ -814,14 +690,8 @@ export const HomePage: React.FC = () => {
                                 showToggleButton={false}
                             />
                             <HorizontalShelf
-                                items={expandedSections.madeForYou
-                                    ? (recommendedPlaylistCards.length > 0
-                                        ? recommendedPlaylistCards
-                                        : hasRealData && playlistCards.length > 0
-                                            ? playlistCards
-                                            : PLACEHOLDER_MADE_FOR_YOU)
-                                    : madeForYou}
-                                totalItems={recommendedPlaylistCards.length || (hasRealData && playlistCards.length) || PLACEHOLDER_MADE_FOR_YOU.length}
+                                items={madeForYouCards}
+                                totalItems={madeForYouTotal}
                                 onShowMore={() => toggleSection('madeForYou')}
                                 onShowLess={() => toggleSection('madeForYou')}
                             />
@@ -841,9 +711,9 @@ export const HomePage: React.FC = () => {
                             />
                             <HorizontalShelf
                                 items={expandedSections.trendingNow
-                                    ? (allTrendingCards.length > 0 ? allTrendingCards : PLACEHOLDER_TRENDING)
+                                    ? (allTrendingCards.length > 0 ? allTrendingCards : [])
                                     : trendingNow}
-                                totalItems={allTrendingCards.length || PLACEHOLDER_TRENDING.length}
+                                totalItems={allTrendingCards.length || 0}
                                 onShowMore={() => toggleSection('trendingNow')}
                                 onShowLess={() => toggleSection('trendingNow')}
                             />
@@ -863,9 +733,9 @@ export const HomePage: React.FC = () => {
                             />
                             <HorizontalShelf
                                 items={expandedSections.recentlyAdded
-                                    ? (allNewReleaseCards.length > 0 ? allNewReleaseCards : PLACEHOLDER_RECENT)
+                                    ? (allNewReleaseCards.length > 0 ? allNewReleaseCards : [])
                                     : recentlyAdded}
-                                totalItems={allNewReleaseCards.length || PLACEHOLDER_RECENT.length}
+                                totalItems={allNewReleaseCards.length || 0}
                                 onShowMore={() => toggleSection('recentlyAdded')}
                                 onShowLess={() => toggleSection('recentlyAdded')}
                             />
