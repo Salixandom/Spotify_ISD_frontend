@@ -3,6 +3,14 @@ import { unwrapResponse } from '../utils/apiResponse';
 import type { Collaborator, InviteLink, Playlist } from '../types';
 
 export const collabAPI = {
+  createShareLink: async (playlistId: number): Promise<{ token: string; expires_at: string }> => {
+    const res = await api.post(`/share/${playlistId}/create/`);
+    return unwrapResponse<{ token: string; expires_at: string }>(
+      res.data,
+      'Failed to create share link'
+    );
+  },
+
   generateInvite: async (playlistId: number): Promise<InviteLink> => {
     const res = await api.post(`/collab/${playlistId}/invite/`);
     return unwrapResponse<InviteLink>(res.data, 'Failed to generate invite link');

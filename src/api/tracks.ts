@@ -30,7 +30,7 @@ export const trackAPI = {
     field: TrackSortField,
     order: SortOrder = 'asc'
   ): Promise<PlaylistTrack[]> => {
-    const res = await api.put(`/tracks/${playlistId}/sort/`, { sort: field, order });
+    const res = await api.put(`/tracks/${playlistId}/sort/`, { sort_by: field, order });
     return unwrapResponse<PlaylistTrack[]>(res.data, 'Failed to sort tracks');
   },
 

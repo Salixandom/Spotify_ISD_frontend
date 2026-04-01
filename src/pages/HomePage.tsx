@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Play,
     Sparkles,
@@ -39,6 +40,14 @@ function getGreeting() {
     if (hour < 12) return "Good morning";
     if (hour < 18) return "Good afternoon";
     return "Good evening";
+}
+
+function toArtistRouteId(artistName: string): string {
+    return artistName
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
 }
 
 function mapPlaylistsToCards(playlists: Playlist[]): HomeCard[] {
@@ -212,7 +221,8 @@ const HorizontalShelf: React.FC<{
     totalItems?: number;
     onShowMore?: () => void;
     onShowLess?: () => void;
-}> = ({ items, totalItems = 0, onShowMore, onShowLess }) => {
+    onItemClick?: (item: HomeCard) => void;
+}> = ({ items, totalItems = 0, onShowMore, onShowLess, onItemClick }) => {
     const hasMore = totalItems > items.length;
     const isShowingAll = items.length >= totalItems;
     // Only show collapse button if we're showing more than 12 items (collapsed limit)
@@ -222,7 +232,7 @@ const HorizontalShelf: React.FC<{
         <div className="overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex gap-3 w-max">
                 {items.map((item) => (
-                    <ShelfCard key={item.id} item={item} />
+                    <ShelfCard key={item.id} item={item} onClick={() => onItemClick?.(item)} />
                 ))}
                 {!isShowingAll && hasMore && onShowMore && (
                     <button
@@ -321,6 +331,7 @@ const HomeSkeleton: React.FC = () => {
 };
 
 export const HomePage: React.FC = () => {
+    const navigate = useNavigate();
     const [playlists, setPlaylists] = React.useState<Playlist[]>([]);
     const [recommendedPlaylists, setRecommendedPlaylists] = React.useState<Playlist[]>([]);
     const [systemPlaylists, setSystemPlaylists] = React.useState<Playlist[]>([]);
@@ -329,7 +340,7 @@ export const HomePage: React.FC = () => {
     const [newReleases, setNewReleases] = React.useState<Song[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     //const [hasApiError, setHasApiError] = React.useState(false);
-    
+
     const [displayName, setDisplayName] = React.useState("Buddy");
     
     React.useEffect(() => {
@@ -671,7 +682,19 @@ export const HomePage: React.FC = () => {
                             />
                             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
                                 {quickAccess.map((item) => (
-                                    <QuickTile key={item.id} item={item} />
+                                    <QuickTile
+                                        key={item.id}
+                                        item={item}
+                                        onClick={() => {
+                                            if (item.id.startsWith('pl-')) {
+                                                const playlistId = item.id.replace('pl-', '');
+                                                navigate(`/playlist/${playlistId}`);
+                                            } else if (item.id.startsWith('song-')) {
+                                                const artistName = item.subtitle;
+                                                navigate(`/artist/${toArtistRouteId(artistName)}`);
+                                            }
+                                        }}
+                                    />
                                 ))}
                             </div>
                         </section>
@@ -694,6 +717,15 @@ export const HomePage: React.FC = () => {
                                 totalItems={madeForYouTotal}
                                 onShowMore={() => toggleSection('madeForYou')}
                                 onShowLess={() => toggleSection('madeForYou')}
+                                onItemClick={(item) => {
+                                    if (item.id.startsWith('pl-')) {
+                                        const playlistId = item.id.replace('pl-', '');
+                                        navigate(`/playlist/${playlistId}`);
+                                    } else if (item.id.startsWith('song-')) {
+                                        const artistName = item.subtitle;
+                                        navigate(`/artist/${toArtistRouteId(artistName)}`);
+                                    }
+                                }}
                             />
                         </section>
 
@@ -716,6 +748,15 @@ export const HomePage: React.FC = () => {
                                 totalItems={allTrendingCards.length || 0}
                                 onShowMore={() => toggleSection('trendingNow')}
                                 onShowLess={() => toggleSection('trendingNow')}
+                                onItemClick={(item) => {
+                                    if (item.id.startsWith('pl-')) {
+                                        const playlistId = item.id.replace('pl-', '');
+                                        navigate(`/playlist/${playlistId}`);
+                                    } else if (item.id.startsWith('song-')) {
+                                        const artistName = item.subtitle;
+                                        navigate(`/artist/${toArtistRouteId(artistName)}`);
+                                    }
+                                }}
                             />
                         </section>
 
@@ -738,6 +779,15 @@ export const HomePage: React.FC = () => {
                                 totalItems={allNewReleaseCards.length || 0}
                                 onShowMore={() => toggleSection('recentlyAdded')}
                                 onShowLess={() => toggleSection('recentlyAdded')}
+                                onItemClick={(item) => {
+                                    if (item.id.startsWith('pl-')) {
+                                        const playlistId = item.id.replace('pl-', '');
+                                        navigate(`/playlist/${playlistId}`);
+                                    } else if (item.id.startsWith('song-')) {
+                                        const artistName = item.subtitle;
+                                        navigate(`/artist/${toArtistRouteId(artistName)}`);
+                                    }
+                                }}
                             />
                         </section>
                     </>

@@ -23,8 +23,9 @@ export const playlistAPI = {
     return unwrapResponse<Playlist[]>(res.data, 'Failed to fetch playlists');
   },
 
-  get: async (id: number): Promise<Playlist> => {
-    const res = await api.get(`/playlists/${id}/`);
+  get: async (id: number, includeArchived?: boolean): Promise<Playlist> => {
+    const params = includeArchived ? { include_archived: 'true' } : undefined;
+    const res = await api.get(`/playlists/${id}/`, { params });
     return unwrapResponse<Playlist>(res.data, 'Failed to fetch playlist');
   },
 
@@ -63,8 +64,10 @@ export const playlistAPI = {
     return unwrapResponse<Playlist[]>(res.data, 'Failed to fetch similar playlists');
   },
 
-  getUserPlaylists: async (userId: number): Promise<Playlist[]> => {
-    const res = await api.get(`/playlists/users/${userId}/playlists/`);
+  getUserPlaylists: async (userId: number, includeArchived?: boolean): Promise<Playlist[]> => {
+    const res = await api.get(`/playlists/users/${userId}/playlists/`, {
+      params: includeArchived ? { include_archived: 'true' } : undefined
+    });
     return unwrapResponse<Playlist[]>(res.data, 'Failed to fetch user playlists');
   },
 

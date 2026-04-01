@@ -12,6 +12,7 @@ import { SidebarLibraryList } from "./SidebarLibraryList";
 
 export const Sidebar: React.FC = () => {
     const [playlists, setPlaylists] = useState<any[]>([]);
+    const [followedPlaylists, setFollowedPlaylists] = useState<any[]>([]);
     const [localDraftPlaylists, setLocalDraftPlaylists] = useState(
         getLocalDraftPlaylists()
     );
@@ -22,8 +23,8 @@ export const Sidebar: React.FC = () => {
     const [librarySearchQuery, setLibrarySearchQuery] = useState("");
     const librarySearchInputRef = React.useRef<HTMLInputElement>(null);
 
-    // Playlist filter: 'all' | 'spotify' | 'you'
-    const [playlistFilter, setPlaylistFilter] = React.useState<'all' | 'spotify' | 'you'>('all');
+    // Playlist filter: 'all' | 'spotify' | 'you' | 'hidden' | 'followed'
+    const [playlistFilter, setPlaylistFilter] = React.useState<'all' | 'spotify' | 'you' | 'hidden' | 'followed'>('all');
     const [showPlaylistFilters, setShowPlaylistFilters] = React.useState(false);
 
     const fetchPlaylists = async () => {
@@ -46,9 +47,30 @@ export const Sidebar: React.FC = () => {
             }
 
             // Fetch user's playlists using getUserPlaylists
-            const response = await playlistAPI.getUserPlaylists(userId) as any;
-            const playlistData = response?.playlists || [];
-            setPlaylists(Array.isArray(playlistData) ? playlistData : []);
+            const [unarchivedRes, allRes] = await Promise.all([
+                playlistAPI.getUserPlaylists(userId, false),
+                playlistAPI.getUserPlaylists(userId, true)
+            ]) as any;
+
+            const unarchived = Array.isArray(unarchivedRes?.playlists) ? unarchivedRes.playlists : [];
+            const all = Array.isArray(allRes?.playlists) ? allRes.playlists : [];
+
+            const unarchivedIds = new Set(unarchived.map((p: any) => p.id));
+            const playlistsWithArchiveFlag = all.map((p: any) => ({
+                ...p,
+                is_archived: !unarchivedIds.has(p.id)
+            }));
+
+            setPlaylists(playlistsWithArchiveFlag);
+
+            // Fetch followed playlists separately
+            try {
+                const followedRes = await playlistAPI.list({ filter: 'followed' }) as any;
+                const followed = Array.isArray(followedRes) ? followedRes : [];
+                setFollowedPlaylists(followed);
+            } catch {
+                setFollowedPlaylists([]);
+            }
         } catch (error) {
             console.error("Failed to fetch playlists:", error);
             setPlaylists([]);
@@ -76,32 +98,62 @@ export const Sidebar: React.FC = () => {
             isPrivate: playlist.visibility === "private",
             isSystemGenerated: false,
             isLikedSongs: false,
+            isArchived: false,
         }));
 
-        const apiItems = playlists.map((playlist: any) => ({
-            id: String(playlist.id),
-            title: playlist.name,
-            subtitle: `Playlist • ${playlist.playlist_type === "collaborative" ? "Collaborative" : "You"}`,
-            imageUrl: playlist.cover_url || undefined,
-            isCollaborative: playlist.playlist_type === "collaborative",
-            isPrivate: playlist.visibility === "private",
-            isSystemGenerated: playlist.is_system_generated || false,
-            isLikedSongs: playlist.is_liked_songs || false,
-        }));
+        const apiItems = playlists.map((playlist: any) => {
+            // Defensive: Check if playlist_type is an object (Artist) instead of string
+            const isCollaborative = typeof playlist.playlist_type === 'string'
+                ? playlist.playlist_type === "collaborative"
+                : false;
+
+            // Defensive: Ensure name is a string, not an object
+            const playlistName = typeof playlist.name === 'string'
+                ? playlist.name
+                : (playlist.name?.name || 'Untitled Playlist');
+
+            return {
+                id: String(playlist.id),
+                title: playlistName,
+                subtitle: `Playlist • ${isCollaborative ? "Collaborative" : "You"}`,
+                imageUrl: playlist.cover_url || undefined,
+                isCollaborative,
+                isPrivate: playlist.visibility === "private",
+                isSystemGenerated: playlist.is_system_generated || false,
+                isLikedSongs: playlist.is_liked_songs || false,
+                isArchived: playlist.is_archived || false,
+            };
+        });
 
         const allItems = [...draftItems, ...apiItems];
 
+        const archived = allItems.filter((p) => p.isArchived);
+        const activeItems = allItems.filter((p) => !p.isArchived);
+
         // Liked Songs (always at top if exists)
-        const likedSongs = allItems.filter((p) => p.isLikedSongs);
+        const likedSongs = activeItems.filter((p) => p.isLikedSongs);
 
         // By Spotify (system-generated but not Liked Songs)
-        const bySpotify = allItems.filter((p) => p.isSystemGenerated && !p.isLikedSongs);
+        const bySpotify = activeItems.filter((p) => p.isSystemGenerated && !p.isLikedSongs);
 
         // By You (user-created)
-        const byYou = allItems.filter((p) => !p.isSystemGenerated && !p.isLikedSongs);
+        const byYou = activeItems.filter((p) => !p.isSystemGenerated && !p.isLikedSongs);
 
-        return { likedSongs, bySpotify, byYou };
-    }, [playlists, localDraftPlaylists]);
+        // Followed playlists from other users
+        const followed = followedPlaylists.map((playlist: Record<string, unknown>) => ({
+            id: String(playlist.id),
+            title: typeof playlist.name === 'string' ? playlist.name : 'Untitled Playlist',
+            subtitle: `Playlist • Followed`,
+            imageUrl: typeof playlist.cover_url === 'string' ? playlist.cover_url : undefined,
+            isCollaborative: false,
+            isPrivate: playlist.visibility === 'private',
+            isSystemGenerated: false,
+            isLikedSongs: false,
+            isArchived: false,
+        }));
+
+        return { likedSongs, bySpotify, byYou, archived, followed };
+    }, [playlists, localDraftPlaylists, followedPlaylists]);
 
     useEffect(() => {
         if (isLibrarySearchOpen) {
@@ -152,7 +204,7 @@ export const Sidebar: React.FC = () => {
 
                         <button
                             onClick={() => setIsGenerateModalOpen(true)}
-                            className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/[0.06]"
+                            className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/6"
                             aria-label="Generate playlist"
                             title="Generate playlist with AI"
                         >
@@ -173,8 +225,8 @@ export const Sidebar: React.FC = () => {
                         }}
                         className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                             playlistFilter === 'all'
-                                ? 'bg-white/[0.10] text-white border-white/16'
-                                : 'bg-white/[0.06] text-white/80 border-white/12 hover:bg-white/[0.1]'
+                                ? 'bg-white/10 text-white border-white/16'
+                                : 'bg-white/6 text-white/80 border-white/12 hover:bg-white/10'
                         }`}
                     >
                         Playlists
@@ -187,8 +239,8 @@ export const Sidebar: React.FC = () => {
                                 onClick={() => setPlaylistFilter('spotify')}
                                 className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                                     playlistFilter === 'spotify'
-                                        ? 'bg-white/[0.10] text-white border-white/16'
-                                        : 'bg-white/[0.06] text-white/80 border-white/12 hover:bg-white/[0.1]'
+                                        ? 'bg-white/10 text-white border-white/16'
+                                        : 'bg-white/6 text-white/80 border-white/12 hover:bg-white/10'
                                 }`}
                             >
                                 By Spotify
@@ -202,6 +254,26 @@ export const Sidebar: React.FC = () => {
                                 }`}
                             >
                                 By You
+                            </button>
+                            <button
+                                onClick={() => setPlaylistFilter('hidden')}
+                                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                                    playlistFilter === 'hidden'
+                                        ? 'bg-white/[0.10] text-white border-white/16'
+                                        : 'bg-white/[0.06] text-white/80 border-white/12 hover:bg-white/[0.1]'
+                                }`}
+                            >
+                                Hidden
+                            </button>
+                            <button
+                                onClick={() => setPlaylistFilter('followed')}
+                                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                                    playlistFilter === 'followed'
+                                        ? 'bg-white/[0.10] text-white border-white/16'
+                                        : 'bg-white/[0.06] text-white/80 border-white/12 hover:bg-white/[0.1]'
+                                }`}
+                            >
+                                Followed
                             </button>
                         </>
                     )}

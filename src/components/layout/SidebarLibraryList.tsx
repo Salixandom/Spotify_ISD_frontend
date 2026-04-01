@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { Music, Heart } from "lucide-react";
-import { getDemoPlaylistRoute } from "../../utils/playlistRoutes";
+import { getPlaylistRoute } from "../../utils/playlistRoutes";
 
 interface PlaylistItem {
     id: string;
@@ -20,8 +20,10 @@ interface SidebarLibraryListProps {
         likedSongs: PlaylistItem[];
         bySpotify: PlaylistItem[];
         byYou: PlaylistItem[];
+        archived: PlaylistItem[];
+        followed: PlaylistItem[];
     };
-    filter: 'all' | 'spotify' | 'you';
+    filter: 'all' | 'spotify' | 'you' | 'hidden' | 'followed';
     searchQuery: string;
 }
 
@@ -36,14 +38,18 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
         let base: PlaylistItem[] = [];
 
         // First apply category filter
-        if (filter === 'spotify') {
+        if (filter === 'hidden') {
+            base = [...categories.archived];
+        } else if (filter === 'followed') {
+            base = [...categories.followed];
+        } else if (filter === 'spotify') {
             // Show Liked Songs + Spotify playlists
             base = [...categories.likedSongs, ...categories.bySpotify];
         } else if (filter === 'you') {
             // Show Liked Songs + User playlists
             base = [...categories.likedSongs, ...categories.byYou];
         } else {
-            // Show all
+            // Show all (excluding hidden)
             base = [
                 ...categories.likedSongs,
                 ...categories.bySpotify,
@@ -51,23 +57,35 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
             ];
         }
 
-        // Then apply search filter if any
+        let results: PlaylistItem[] = [];
         if (searchQuery.trim()) {
             const query = searchQuery.trim().toLowerCase();
-            return base.filter((playlist) =>
+            results = base.filter((playlist) =>
                 playlist.title.toLowerCase().includes(query) ||
                 playlist.subtitle.toLowerCase().includes(query)
             );
+        } else {
+            results = base;
         }
 
-        return base;
+        // Always pin Liked Songs to the top for all views except 'hidden'
+        // If we're already showing likedSongs via a category filter, don't duplicate them.
+        if (filter !== 'hidden') {
+            const likedSongs = categories.likedSongs.filter(ls => {
+                // Only add if not already in results
+                return !results.some(r => r.id === ls.id);
+            });
+            return [...likedSongs, ...results];
+        }
+
+        return results;
     }, [categories, filter, searchQuery]);
 
     if (isLoading) {
         return (
             <div className="space-y-1.5">
                 {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center gap-3 px-2.5 py-2 rounded-xl bg-white/[0.02]">
+                    <div key={i} className="flex items-center gap-3 px-2.5 py-2 rounded-xl bg-white/2">
                         <div className="w-12 h-12 rounded-md bg-white/[0.04] animate-pulse" />
                         <div className="flex-1">
                             <div className="h-3.5 w-3/4 bg-white/[0.04] rounded mb-1.5 animate-pulse" />
@@ -93,17 +111,17 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
                 {filteredPlaylists.map((playlist) => (
                     <NavLink
                         key={playlist.id}
-                        to={getDemoPlaylistRoute()}
+                        to={getPlaylistRoute(playlist.id)}
                         className={({ isActive }) =>
                             `flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all duration-200 ${
                                 isActive
-                                    ? "bg-white/[0.10] border border-white/14 text-white"
-                                    : "text-white/70 hover:text-white hover:bg-white/[0.06]"
+                                    ? "bg-white/10 border border-white/14 text-white"
+                                    : "text-white/70 hover:text-white hover:bg-white/6"
                             }`
                         }
                     >
                         {/* Cover / icon */}
-                        <div className="w-12 h-12 rounded-md overflow-hidden border border-white/10 bg-white/[0.04] shrink-0">
+                        <div className="w-12 h-12 rounded-md overflow-hidden border border-white/10 bg-white/4 shrink-0">
                             {playlist.isLikedSongs ? (
                                 <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-400 flex items-center justify-center">
                                     <Heart size={18} className="text-white" fill="currentColor" />

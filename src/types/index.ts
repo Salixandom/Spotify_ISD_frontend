@@ -57,6 +57,8 @@ export interface Playlist {
   playlist_type: 'solo' | 'collaborative';
   cover_url: string;
   snapshot_id: string;
+  is_liked_songs?: boolean;
+  is_system_generated?: boolean;
   created_at: string;
   updated_at: string;
 }
