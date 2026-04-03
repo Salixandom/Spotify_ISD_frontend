@@ -35,6 +35,7 @@ import {
   Trash2,
   Users,
   LogOut,
+  Crown,
   Heart,
 } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -301,6 +302,16 @@ export const PlaylistPage: React.FC = () => {
   const [sortConfig, setSortConfig] = React.useState<{ field: TrackSortField; order: SortOrder } | null>(null);
   const [isSorting, setIsSorting] = React.useState(false);
   const [isAdvancedSortOpen, setIsAdvancedSortOpen] = React.useState(false);
+
+  // Collaborators state
+  const [collaborators, setCollaborators] = React.useState<Collaborator[]>([]);
+  const [userRole, setUserRole] = React.useState<'owner' | 'collaborator' | null>(null);
+  const [selectedCollaborator, setSelectedCollaborator] = React.useState<Collaborator | null>(null);
+  const [isViewCollabModalOpen, setIsViewCollabModalOpen] = React.useState(false);
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = React.useState(false);
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = React.useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = React.useState(false);
+  const [userMap, setUserMap] = React.useState<Map<number, { username: string; display_name?: string }>>(new Map());
 
   const actionsMenuRef = React.useRef<HTMLDivElement>(null);
   const listMenuRef = React.useRef<HTMLDivElement>(null);
@@ -1003,6 +1014,72 @@ export const PlaylistPage: React.FC = () => {
     }
   };
 
+  const handleRemoveCollaborator = async () => {
+    if (!selectedCollaborator || !playlist) return;
+
+    const numericId = Number(playlist.id);
+    if (!Number.isFinite(numericId)) return;
+
+    try {
+      await collabAPI.removeCollaborator(numericId, selectedCollaborator.user_id);
+      // Refresh collaborators list
+      const updatedCollaborators = await collabAPI.getMembers(numericId);
+      setCollaborators(updatedCollaborators);
+      setIsRemoveModalOpen(false);
+      setSelectedCollaborator(null);
+    } catch (error) {
+      console.error("Failed to remove collaborator:", error);
+      // TODO: Show error toast
+    }
+  };
+
+  const handleLeavePlaylist = async () => {
+    if (!playlist) return;
+
+    const numericId = Number(playlist.id);
+    if (!Number.isFinite(numericId)) return;
+
+    try {
+      // If owner, must transfer ownership first
+      if (userRole === 'owner') {
+        setIsLeaveModalOpen(false);
+        setIsTransferModalOpen(true);
+        return;
+      }
+
+      await collabAPI.leavePlaylist(numericId);
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Failed to leave playlist:", error);
+      // TODO: Show error toast
+    }
+  };
+
+  const handleTransferOwnership = async (newOwnerId: number, stayAsCollaborator: boolean) => {
+    const numericId = Number(playlist?.id);
+    if (!Number.isFinite(numericId)) return;
+
+    try {
+      await collabAPI.leavePlaylist(numericId, {
+        new_owner_id: newOwnerId,
+        stay_as_collaborator: stayAsCollaborator,
+      });
+
+      if (stayAsCollaborator) {
+        // Stay as collaborator, refresh role
+        const role = await collabAPI.getUserRole(numericId);
+        setUserRole(role === 'owner' ? 'owner' : 'collaborator');
+        setIsTransferModalOpen(false);
+        setIsViewCollabModalOpen(false);
+      } else {
+        // Leave completely
+        navigate("/", { replace: true });
+      }
+    } catch (error) {
+      console.error("Failed to transfer ownership:", error);
+      // TODO: Show error toast
+    }
+  };
   const displayedTracks = isReorderMode ? reorderedTracks : tracks;
 
   if (isLoading || !playlist) {
@@ -1298,6 +1375,39 @@ export const PlaylistPage: React.FC = () => {
                     <Pencil size={16} className="text-white/60 shrink-0" />
                     <span className="flex-1">Edit details</span>
                   </button>
+
+                  {/* Collaborators menu items - only for collaborative playlists */}
+                  {userRole && (
+                    <>
+                      <div className="my-1 border-t border-white/10" />
+                      <button
+                        onClick={() => {
+                          setIsActionsOpen(false);
+                          setIsViewCollabModalOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-white/85 hover:bg-white/[0.08] rounded-md transition-colors"
+                      >
+                        <Users size={15} />
+                        View collaborators
+                      </button>
+
+                      {/* Leave playlist option - not for owners */}
+                      {userRole === 'collaborator' && (
+                        <button
+                          onClick={() => {
+                            setIsActionsOpen(false);
+                            setIsLeaveModalOpen(true);
+                          }}
+                          className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-red-300 hover:text-red-200 hover:bg-red-500/10 rounded-md transition-colors"
+                        >
+                          <LogOut size={15} />
+                          Leave playlist
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  <div className="my-1 border-t border-white/10" />
                   <button
                     onClick={() => {
                       setIsActionsOpen(false);
