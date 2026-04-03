@@ -1,7 +1,8 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MoreHorizontal, Clock3, Plus } from "lucide-react";
+import { MoreHorizontal, Clock3, Plus, Check } from "lucide-react";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
+import { TrackRowSkeleton } from "../components/ui/LoadingSkeleton";
 import { searchAPI } from "../api/search";
 import { playlistAPI } from "../api/playlists";
 import { trackAPI } from "../api/tracks";
@@ -159,8 +160,8 @@ async function fetchArtistData(artistSlug: string): Promise<ArtistPageData> {
                 id: String(song.id),
                 songId: song.id,
                 title: song.title,
-                artist: song.artist,
-                album: song.album,
+                artist: typeof song.artist === 'string' ? song.artist : song.artist.name,
+                album: typeof song.album === 'string' ? song.album : (song.album?.name ?? 'Unknown Album'),
                 plays: "N/A",
                 duration: `${Math.floor(song.duration_seconds / 60)}:${String(song.duration_seconds % 60).padStart(2, '0')}`,
                 imageUrl: song.cover_url,
@@ -185,6 +186,63 @@ async function fetchArtistData(artistSlug: string): Promise<ArtistPageData> {
     }
 }
 
+// ─── Artist Page Skeleton ───────────────────────────────────────────────────
+
+const ArtistPageSkeleton: React.FC = () => (
+    <div className="relative min-h-full pb-10">
+        <DynamicMusicBackground />
+
+        <div className="relative z-10 animate-pulse">
+            {/* Hero section skeleton */}
+            <section className="relative h-[340px] md:h-[400px] bg-white/[0.06] border-b border-white/10 rounded-b-2xl overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/40 to-[#152765]/90" />
+                <div className="absolute left-5 right-5 bottom-6">
+                    <div className="h-3 w-32 bg-white/20 rounded mb-3" />
+                    <div className="h-16 w-96 bg-white/20 rounded mb-3" />
+                    <div className="h-5 w-64 bg-white/15 rounded" />
+                </div>
+            </section>
+
+            <div className="px-5 md:px-8 pt-6 space-y-10">
+                {/* Popular tracks section skeleton */}
+                <section>
+                    <div className="h-10 w-32 bg-white/10 rounded-lg mb-4" />
+                    <div className="rounded-2xl border border-white/12 bg-white/[0.04] backdrop-blur-2xl overflow-hidden">
+                        {/* Table header skeleton */}
+                        <div className="px-4 py-2 border-b border-white/10 grid grid-cols-[38px_2fr_1.4fr_1fr_90px_68px] gap-3">
+                            <div className="h-3 bg-white/10 rounded" />
+                            <div className="h-3 bg-white/10 rounded" />
+                            <div className="h-3 bg-white/10 rounded" />
+                            <div className="h-3 bg-white/10 rounded" />
+                            <div className="h-3 bg-white/10 rounded" />
+                            <div className="h-3 bg-white/10 rounded" />
+                        </div>
+
+                        {/* Track rows skeleton */}
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <TrackRowSkeleton key={i} />
+                        ))}
+                    </div>
+                </section>
+
+                {/* Albums section skeleton */}
+                <section>
+                    <div className="h-10 w-24 bg-white/10 rounded-lg mb-4" />
+                    <div className="flex gap-4 overflow-hidden">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="w-[180px] shrink-0">
+                                <div className="aspect-square rounded-xl bg-white/10 mb-2" />
+                                <div className="h-4 bg-white/10 rounded mb-1" />
+                                <div className="h-3 bg-white/10 rounded w-3/4" />
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+);
+
 export const ArtistPage: React.FC = () => {
     const { id = "the-weeknd" } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -207,9 +265,10 @@ export const ArtistPage: React.FC = () => {
     const [likedTrackSongIds, setLikedTrackSongIds] = React.useState<Set<number>>(new Set());
     const [likedSongsPlaylistId, setLikedSongsPlaylistId] = React.useState<string | null>(null);
 
-    const handleAddToLikedSongs = async (track: ArtistTrack) => {
+    const handleToggleLike = async (track: ArtistTrack) => {
         try {
             let playlistId: string = likedSongsPlaylistId ?? "";
+            const isLiked = likedTrackSongIds.has(track.songId);
 
             // Create Liked Songs playlist if it doesn't exist
             if (!playlistId) {
@@ -223,12 +282,28 @@ export const ArtistPage: React.FC = () => {
                 setUserPlaylists(prev => [...prev, { id: playlistId, name: newPlaylist.name }]);
             }
 
-            // Add track to Liked Songs
-            await trackAPI.add(Number(playlistId), track.songId);
-            setLikedTrackSongIds(prev => new Set([...prev, track.songId]));
-            toast.success(`Added "${track.title}" to Liked Songs`);
+            if (isLiked) {
+                // Remove from Liked Songs - need to find the PlaylistTrack ID
+                const likedTracks = await trackAPI.list(Number(playlistId));
+                const trackToRemove = likedTracks.find((t: PlaylistTrack) => t.song.id === track.songId);
+
+                if (trackToRemove) {
+                    await trackAPI.remove(Number(playlistId), trackToRemove.id);
+                    setLikedTrackSongIds(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete(track.songId);
+                        return newSet;
+                    });
+                    toast.success(`Removed "${track.title}" from Liked Songs`);
+                }
+            } else {
+                // Add to Liked Songs
+                await trackAPI.add(Number(playlistId), track.songId);
+                setLikedTrackSongIds(prev => new Set([...prev, track.songId]));
+                toast.success(`Added "${track.title}" to Liked Songs`);
+            }
         } catch {
-            toast.error("Failed to add to Liked Songs");
+            toast.error("Failed to update Liked Songs");
         }
     };
 
@@ -301,16 +376,7 @@ export const ArtistPage: React.FC = () => {
     }, [contextMenu]);
 
     if (isLoading || !artist) {
-        return (
-            <div className="relative min-h-full p-6 md:p-8">
-                <DynamicMusicBackground />
-                <div className="relative z-10 animate-pulse space-y-4">
-                    <div className="h-56 rounded-2xl bg-white/[0.08] border border-white/10" />
-                    <div className="h-8 w-64 rounded bg-white/[0.08]" />
-                    <div className="h-24 rounded-xl bg-white/[0.06] border border-white/10" />
-                </div>
-            </div>
-        );
+        return <ArtistPageSkeleton />;
     }
 
     return (
@@ -375,12 +441,12 @@ export const ArtistPage: React.FC = () => {
                                         <button
                                             onClick={async (e) => {
                                                 e.stopPropagation();
-                                                await handleAddToLikedSongs(track);
+                                                await handleToggleLike(track);
                                             }}
                                             className="text-white/60 hover:text-spotify-green transition-colors flex items-center justify-center"
-                                            title="Add to Liked Songs"
+                                            title={likedTrackSongIds.has(track.songId) ? "Remove from Liked Songs" : "Add to Liked Songs"}
                                         >
-                                            <Plus size={16} />
+                                            {likedTrackSongIds.has(track.songId) ? <Check size={16} /> : <Plus size={16} />}
                                         </button>
                                         <button
                                             onClick={(e) => {
@@ -443,8 +509,20 @@ export const ArtistPage: React.FC = () => {
                         song: {
                             id: contextMenu.track.songId,
                             title: contextMenu.track.title,
-                            artist: contextMenu.track.artist,
-                            album: contextMenu.track.album,
+                            artist: {
+                                id: 0,
+                                name: contextMenu.track.artist,
+                            },
+                            album: {
+                                id: 0,
+                                name: contextMenu.track.album,
+                                artist: {
+                                    id: 0,
+                                    name: contextMenu.track.artist,
+                                },
+                                cover_url: contextMenu.track.imageUrl,
+                                release_year: null,
+                            },
                             genre: "",
                             release_year: null,
                             duration_seconds: 0,

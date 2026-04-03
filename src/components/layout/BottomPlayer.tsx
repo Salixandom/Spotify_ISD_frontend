@@ -122,7 +122,7 @@ export const BottomPlayer: React.FC = () => {
                             {trackTitle}
                         </p>
                         <p className="text-white/65 text-xs truncate">
-                            {trackArtist}
+                            {String(trackArtist)}
                         </p>
                     </div>
 

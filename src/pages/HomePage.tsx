@@ -337,7 +337,9 @@ export const HomePage: React.FC = () => {
     const [systemPlaylists, setSystemPlaylists] = React.useState<Playlist[]>([]);
     const [recommendedSongs, setRecommendedSongs] = React.useState<Song[]>([]);
     const [trendingSongs, setTrendingSongs] = React.useState<Song[]>([]);
+    const [trendingPlaylists, setTrendingPlaylists] = React.useState<Playlist[]>([]);
     const [newReleases, setNewReleases] = React.useState<Song[]>([]);
+    const [newReleasePlaylists, setNewReleasePlaylists] = React.useState<Playlist[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     //const [hasApiError, setHasApiError] = React.useState(false);
 
@@ -493,7 +495,9 @@ export const HomePage: React.FC = () => {
                 setRecommendedPlaylists(Array.isArray(recommendedData) ? recommendedData : []);
                 setSystemPlaylists(Array.isArray(systemData) ? systemData : []);
                 setTrendingSongs(trendingData.songs || []);
+                setTrendingPlaylists([]);
                 setNewReleases(newReleasesData.songs || []);
+                setNewReleasePlaylists([]);
                 setRecommendedSongs(recentPlaysData || []);
             } catch (error) {
                 console.error("Failed to load home content:", error);
@@ -503,7 +507,9 @@ export const HomePage: React.FC = () => {
                 setRecommendedPlaylists([]);
                 setSystemPlaylists([]);
                 setTrendingSongs([]);
+                setTrendingPlaylists([]);
                 setNewReleases([]);
+                setNewReleasePlaylists([]);
                 setRecommendedSongs([]);
             } finally {
                 if (isMounted) setIsLoading(false);
@@ -536,15 +542,33 @@ export const HomePage: React.FC = () => {
         kind,
     });
 
-    // Create all available cards (up to 30)
+    // Transform trending playlists to cards
+    const trendingPlaylistCards = React.useMemo(
+        () => mapPlaylistsToCards(trendingPlaylists),
+        [trendingPlaylists],
+    );
+
+    // Transform new release playlists to cards
+    const newReleasePlaylistCards = React.useMemo(
+        () => mapPlaylistsToCards(newReleasePlaylists),
+        [newReleasePlaylists],
+    );
+
+    // Create all available cards (up to 30) - combine songs and playlists
     const allTrendingCards = React.useMemo(
-        () => trendingSongs.slice(0, 30).map((song, i) => songToCard(song, i, 'daily')),
-        [trendingSongs],
+        () => [
+            ...trendingSongs.slice(0, 15).map((song, i) => songToCard(song, i, 'daily')),
+            ...trendingPlaylistCards.slice(0, 15)
+        ],
+        [trendingSongs, trendingPlaylistCards],
     );
 
     const allNewReleaseCards = React.useMemo(
-        () => newReleases.slice(0, 30).map((song, i) => songToCard(song, i, 'mix')),
-        [newReleases],
+        () => [
+            ...newReleases.slice(0, 15).map((song, i) => songToCard(song, i, 'mix')),
+            ...newReleasePlaylistCards.slice(0, 15)
+        ],
+        [newReleases, newReleasePlaylistCards],
     );
 
     // Transform recommended playlists to cards
