@@ -173,14 +173,26 @@
   "hotPaths": [
     {
       "path": "src/pages/PlaylistPage.tsx",
-      "accessCount": 85,
-      "lastAccessed": 1775205856969,
+      "accessCount": 93,
+      "lastAccessed": 1775212580907,
       "type": "file"
     },
     {
       "path": "src/pages/ArtistPage.tsx",
       "accessCount": 80,
       "lastAccessed": 1775205639842,
+      "type": "file"
+    },
+    {
+      "path": "src/components/layout/SidebarLibraryList.tsx",
+      "accessCount": 60,
+      "lastAccessed": 1775242026551,
+      "type": "file"
+    },
+    {
+      "path": "src/components/layout/Sidebar.tsx",
+      "accessCount": 20,
+      "lastAccessed": 1775241443036,
       "type": "file"
     },
     {
@@ -232,6 +244,36 @@
       "type": "file"
     },
     {
+      "path": "src/components/CommentSection.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775212193994,
+      "type": "file"
+    },
+    {
+      "path": "src/api",
+      "accessCount": 3,
+      "lastAccessed": 1775212294641,
+      "type": "directory"
+    },
+    {
+      "path": "src/components/comments/PlaylistComments.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775212910907,
+      "type": "file"
+    },
+    {
+      "path": "src/components",
+      "accessCount": 3,
+      "lastAccessed": 1775212974904,
+      "type": "directory"
+    },
+    {
+      "path": "src/components/layout",
+      "accessCount": 3,
+      "lastAccessed": 1775212999537,
+      "type": "directory"
+    },
+    {
       "path": "src/components/layout/BottomPlayer.tsx",
       "accessCount": 2,
       "lastAccessed": 1775174932815,
@@ -248,12 +290,6 @@
       "accessCount": 2,
       "lastAccessed": 1775174952271,
       "type": "file"
-    },
-    {
-      "path": "src/api",
-      "accessCount": 2,
-      "lastAccessed": 1775205759263,
-      "type": "directory"
     },
     {
       "path": "src/api/profile.ts",
@@ -289,6 +325,24 @@
       "path": "src/api/tracks.ts",
       "accessCount": 1,
       "lastAccessed": 1775173360641,
+      "type": "file"
+    },
+    {
+      "path": "src/components/layout/AppLayout.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775206236897,
+      "type": "file"
+    },
+    {
+      "path": "src/api/comments.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775212323834,
+      "type": "file"
+    },
+    {
+      "path": "src/utils/pinnedPlaylists.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775241266210,
       "type": "file"
     }
   ],
