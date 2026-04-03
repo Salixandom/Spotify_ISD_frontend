@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1775163089608,
+  "lastScanned": 1775077113976,
   "projectRoot": "/home/sakib/Projects/Spotify_ISD/spotify-collab-frontend",
   "techStack": {
     "languages": [
@@ -75,7 +75,7 @@
       "path": "dist",
       "purpose": "Distribution/build output",
       "fileCount": 3,
-      "lastAccessed": 1775163089593,
+      "lastAccessed": 1775077113940,
       "keyFiles": [
         "favicon.svg",
         "icons.svg",
@@ -86,7 +86,7 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 15,
-      "lastAccessed": 1775163089594,
+      "lastAccessed": 1775077113942,
       "keyFiles": [
         "AGENT-GUIDE.md",
         "API_RESPONSE_INTEGRATION.md",
@@ -99,7 +99,7 @@
       "path": "public",
       "purpose": "Public files",
       "fileCount": 2,
-      "lastAccessed": 1775163089602,
+      "lastAccessed": 1775077113960,
       "keyFiles": [
         "favicon.svg",
         "icons.svg"
@@ -109,7 +109,7 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 6,
-      "lastAccessed": 1775163089605,
+      "lastAccessed": 1775077113969,
       "keyFiles": [
         "App.css",
         "App.tsx",
@@ -122,18 +122,18 @@
       "path": "dist/assets",
       "purpose": "Static assets",
       "fileCount": 3,
-      "lastAccessed": 1775163089605,
+      "lastAccessed": 1775077113970,
       "keyFiles": [
         "favicon-C1nphcnE.svg",
-        "index-DoIB7vfp.js",
-        "index-Ds6Fvjzl.css"
+        "index-B-ptZ2yy.css",
+        "index-DbpJPOG6.js"
       ]
     },
     "src/api": {
       "path": "src/api",
       "purpose": "API routes",
       "fileCount": 8,
-      "lastAccessed": 1775163089606,
+      "lastAccessed": 1775077113971,
       "keyFiles": [
         "auth.ts",
         "axios.ts",
@@ -144,7 +144,7 @@
       "path": "src/assets",
       "purpose": "Static assets",
       "fileCount": 3,
-      "lastAccessed": 1775163089606,
+      "lastAccessed": 1775077113972,
       "keyFiles": [
         "hero.png",
         "react.svg",
@@ -155,14 +155,14 @@
       "path": "src/components",
       "purpose": "UI components",
       "fileCount": 0,
-      "lastAccessed": 1775163089606,
+      "lastAccessed": 1775077113972,
       "keyFiles": []
     },
     "src/pages": {
       "path": "src/pages",
       "purpose": "Page components",
       "fileCount": 10,
-      "lastAccessed": 1775163089606,
+      "lastAccessed": 1775077113973,
       "keyFiles": [
         "ArtistPage.tsx",
         "BrowsePage.tsx",
@@ -172,22 +172,124 @@
   },
   "hotPaths": [
     {
+      "path": "src/pages/ArtistPage.tsx",
+      "accessCount": 77,
+      "lastAccessed": 1775174993177,
+      "type": "file"
+    },
+    {
       "path": "src/pages/PlaylistPage.tsx",
-      "accessCount": 12,
-      "lastAccessed": 1775163158586,
+      "accessCount": 69,
+      "lastAccessed": 1775175049861,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/TrackContextMenu.tsx",
+      "accessCount": 9,
+      "lastAccessed": 1775174963441,
       "type": "file"
     },
     {
       "path": "src/types/index.ts",
-      "accessCount": 3,
-      "lastAccessed": 1775163198799,
-      "type": "directory"
+      "accessCount": 7,
+      "lastAccessed": 1775174900708,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/SearchPage.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1775173179777,
+      "type": "file"
     },
     {
       "path": "src/api/collaboration.ts",
-      "accessCount": 2,
-      "lastAccessed": 1775163186166,
+      "accessCount": 3,
+      "lastAccessed": 1775174409187,
       "type": "file"
+    },
+    {
+      "path": "src/components/layout/RightSidebar.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775174943215,
+      "type": "file"
+    },
+    {
+      "path": "src/api/search.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775175008467,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/HomePage.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775175014839,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/ViewCollaboratorsModal.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775164170776,
+      "type": "file"
+    },
+    {
+      "path": "src/components/layout/BottomPlayer.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775174932815,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/CreatePlaylistModal.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775174948135,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/EditPlaylistModal.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775174952271,
+      "type": "file"
+    },
+    {
+      "path": "src/api/profile.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775077121860,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/RemoveCollaboratorModal.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775163897516,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/LeavePlaylistModal.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775163905567,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/TransferOwnershipModal.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775163917643,
+      "type": "file"
+    },
+    {
+      "path": "src/api/playlists.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775172708508,
+      "type": "file"
+    },
+    {
+      "path": "src/api/tracks.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775173360641,
+      "type": "file"
+    },
+    {
+      "path": "src/api",
+      "accessCount": 1,
+      "lastAccessed": 1775175003322,
+      "type": "directory"
     }
   ],
   "userDirectives": []

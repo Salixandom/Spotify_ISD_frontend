@@ -35,7 +35,7 @@ export const RightSidebar: React.FC = () => {
     const artistName = currentTrack?.song?.artist || PLACEHOLDER_ARTIST.name;
     const artistInfo: ArtistInfo = {
         ...PLACEHOLDER_ARTIST,
-        name: artistName,
+        name: String(artistName),
     };
 
     return (
@@ -66,7 +66,7 @@ export const RightSidebar: React.FC = () => {
                             {songTitle}
                         </h4>
                         <p className="text-white/70 text-sm mt-1 truncate">
-                            {songArtist}
+                            {String(songArtist)}
                         </p>
                     </div>
                     <button

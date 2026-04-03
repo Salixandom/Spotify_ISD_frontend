@@ -4,16 +4,33 @@ import {
     Play, Plus, MoreHorizontal,
     Mic2, Disc3,
     Music2, Sparkles, Search as SearchIcon, Clock,
-    Loader2,
+    CheckCircle2,
 } from "lucide-react";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
 import { SearchTrackContextMenuModal } from "../components/modals/SearchTrackContextMenuModal";
+import { TrackRowSkeleton } from "../components/ui/LoadingSkeleton";
 import { searchAPI } from "../api/search";
 import { playlistAPI } from "../api/playlists";
+import { trackAPI } from "../api/tracks";
+import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Track = { id: string; title: string; artist: string; album: string; duration: string; imageUrl: string };
+type Track = {
+    id: string;
+    title: string;
+    artist: string;
+    album: string;
+    duration: string;
+    imageUrl: string;
+    song?: {
+        id: string;
+        title: string;
+        artist: string;
+        album: string;
+        cover_url: string;
+    };
+};
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -156,6 +173,131 @@ const HorizontalShelf: React.FC<{ children: React.ReactNode }> = ({ children }) 
     </div>
 );
 
+// ─── Skeleton Components ─────────────────────────────────────────────────────
+
+const AllViewSkeleton: React.FC = () => (
+    <div className="space-y-10 animate-pulse">
+        {/* Top result + Songs grid */}
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+            {/* Top result skeleton */}
+            <div>
+                <div className="h-8 w-32 bg-white/10 rounded-lg mb-4" />
+                <div className="p-6 rounded-2xl bg-white/[0.06] border border-white/14">
+                    <div className="flex gap-4 items-center mb-5">
+                        <div className="w-[110px] h-[110px] bg-white/10 rounded-xl" />
+                        <div className="flex-1">
+                            <div className="h-5 w-20 bg-white/10 rounded-full mb-2" />
+                            <div className="h-8 w-3/4 bg-white/10 rounded mb-2" />
+                            <div className="h-4 w-1/2 bg-white/10 rounded" />
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="h-9 w-20 bg-white/10 rounded-full" />
+                        <div className="w-8 h-8 bg-white/10 rounded-full" />
+                        <div className="w-8 h-8 bg-white/10 rounded-full" />
+                    </div>
+                </div>
+            </div>
+
+            {/* Songs column skeleton */}
+            <div>
+                <div className="h-7 w-24 bg-white/10 rounded-lg mb-4" />
+                <div className="flex flex-col gap-0.5">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <TrackRowSkeleton key={i} />
+                    ))}
+                </div>
+            </div>
+        </div>
+
+        {/* Artists shelf skeleton */}
+        <div>
+            <div className="h-7 w-28 bg-white/10 rounded-lg mb-4" />
+            <div className="flex gap-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="w-[160px] shrink-0">
+                        <div className="aspect-square rounded-full bg-white/10 mb-3" />
+                        <div className="h-4 bg-white/10 rounded mb-1" />
+                        <div className="h-3 bg-white/10 rounded w-3/4" />
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        {/* Albums shelf skeleton */}
+        <div>
+            <div className="h-7 w-24 bg-white/10 rounded-lg mb-4" />
+            <div className="flex gap-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="w-[160px] shrink-0">
+                        <div className="aspect-square rounded-xl bg-white/10 mb-3" />
+                        <div className="h-4 bg-white/10 rounded mb-1" />
+                        <div className="h-3 bg-white/10 rounded w-3/4" />
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        {/* Playlists shelf skeleton */}
+        <div>
+            <div className="h-7 w-28 bg-white/10 rounded-lg mb-4" />
+            <div className="flex gap-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="w-[160px] shrink-0">
+                        <div className="aspect-square rounded-xl bg-white/10 mb-3" />
+                        <div className="h-4 bg-white/10 rounded mb-1" />
+                        <div className="h-3 bg-white/10 rounded w-3/4" />
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
+);
+
+const SongsViewSkeleton: React.FC = () => (
+    <div className="animate-pulse">
+        {/* Table header skeleton */}
+        <div className="flex items-center gap-3 px-3 pb-2 mb-1 border-b border-white/10">
+            <div className="w-9 h-3 bg-white/10 rounded" />
+            <div className="flex-1 h-3 bg-white/10 rounded" />
+            <div className="hidden md:block w-[140px] h-3 bg-white/10 rounded" />
+            <div className="w-7 h-3 bg-white/10 rounded" />
+            <div className="w-9 h-3 bg-white/10 rounded" />
+            <div className="w-7 h-3 bg-white/10 rounded" />
+        </div>
+        {/* Song rows skeleton */}
+        <div className="flex flex-col gap-0.5 mt-1">
+            {Array.from({ length: 10 }).map((_, i) => (
+                <TrackRowSkeleton key={i} />
+            ))}
+        </div>
+    </div>
+);
+
+const ArtistsViewSkeleton: React.FC = () => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 animate-pulse">
+        {Array.from({ length: 15 }).map((_, i) => (
+            <div key={i} className="w-full">
+                <div className="aspect-square rounded-full bg-white/10 mb-3" />
+                <div className="h-4 bg-white/10 rounded mb-1" />
+                <div className="h-3 bg-white/10 rounded w-3/4" />
+            </div>
+        ))}
+    </div>
+);
+
+const AlbumsPlaylistsViewSkeleton: React.FC = () => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 animate-pulse">
+        {Array.from({ length: 15 }).map((_, i) => (
+            <div key={i} className="w-full">
+                <div className="aspect-square rounded-xl bg-white/10 mb-3" />
+                <div className="h-4 bg-white/10 rounded mb-1" />
+                <div className="h-3 bg-white/10 rounded w-3/4" />
+            </div>
+        ))}
+    </div>
+);
+
 // Grid view for full-tab display (Albums / Playlists)
 const MediaGrid: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -212,7 +354,9 @@ const SongRow: React.FC<{
     showAlbumCol?: boolean;
     showOrderNumber?: boolean;
     onContextMenu: (e: React.MouseEvent, song: Track) => void;
-}> = ({ song, index, showAlbumCol = false, showOrderNumber = false, onContextMenu }) => (
+    onToggleLike: (song: Track) => void;
+    isLiked: boolean;
+}> = ({ song, index, showAlbumCol = false, showOrderNumber = false, onContextMenu, onToggleLike, isLiked }) => (
     <div
         className="group flex items-center gap-3 px-3 py-2 rounded-xl
             border border-transparent
@@ -256,15 +400,18 @@ const SongRow: React.FC<{
 
         {/* + circle — left of duration */}
         <button
-            onClick={(e) => e.stopPropagation()}
-            className="opacity-0 group-hover:opacity-100 transition-all
+            onClick={(e) => {
+                e.stopPropagation();
+                onToggleLike(song);
+            }}
+            className={`opacity-0 group-hover:opacity-100 transition-all
                 w-7 h-7 rounded-full border border-white/35
                 hover:border-white hover:scale-105
-                flex items-center justify-center
-                text-white/65 hover:text-white shrink-0"
+                flex items-center justify-center shrink-0
+                ${isLiked ? "text-spotify-green border-spotify-green/50" : "text-white/65 hover:text-white"}`}
             aria-label="Save to Liked Songs"
         >
-            <Plus size={13} />
+            {isLiked ? <CheckCircle2 size={13} /> : <Plus size={13} />}
         </button>
 
         {/* Duration */}
@@ -308,9 +455,18 @@ export const SearchPage: React.FC = () => {
     // User's own playlists for context menu
     const [userPlaylists, setUserPlaylists] = useState<any[]>([]);
 
+    // Liked tracks state
+    const [likedTrackSongIds, setLikedTrackSongIds] = useState<Set<number>>(new Set());
+
+    // Track which playlists each song is in: Map<songId, Set<playlistId>>
+    const [songPlaylistMemberships, setSongPlaylistMemberships] = useState<Map<number, Set<string>>>(new Map());
+
+    // Loading state for fetching song memberships
+    const [isLoadingMemberships, setIsLoadingMemberships] = useState(false);
+
     // Context menu
     const [contextMenu, setContextMenu] = React.useState<{
-        id: string; top: number; left: number; songArtist?: string;
+        id: string; top: number; left: number; songArtist?: string; song?: any;
     } | null>(null);
 
     const closeAll = React.useCallback(() => {
@@ -345,10 +501,6 @@ export const SearchPage: React.FC = () => {
                 // Fetch user's own and collaborative playlists
                 const response = await playlistAPI.getUserPlaylists(userId) as any;
                 console.log('User playlists response:', response);
-
-                // Extract playlists array from response (API returns { playlists: [], total, ... })
-                const playlistArray = response?.playlists || [];
-                setUserPlaylists(playlistArray);
             } catch (err) {
                 console.error('Could not fetch user playlists:', err);
                 setUserPlaylists([]);
@@ -420,12 +572,150 @@ export const SearchPage: React.FC = () => {
     const openContextMenu = (e: React.MouseEvent, song: Track) => {
         e.stopPropagation();
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const songId = song.id || song.song?.id;
+
+        // Open menu immediately, fetch memberships in background
         setContextMenu({
             id: song.id,
             top: rect.bottom + 4,
             left: Math.min(rect.right - 224, window.innerWidth - 240),
             songArtist: song.artist,
+            song,
         });
+
+        // Fetch memberships asynchronously (don't block menu)
+        if (songId !== undefined) {
+            fetchSongMemberships(Number(songId));
+        }
+    };
+
+    // Handle toggle like
+    const handleToggleLike = async (song: any) => {
+        try {
+            const songId = song.id || song.song?.id;
+
+            // Find Liked Songs playlist
+            let likedPlaylist = userPlaylists.find(p => p.name === "Liked Songs");
+
+            if (likedTrackSongIds.has(songId)) {
+                // Unlike - remove from Liked Songs playlist
+                if (likedPlaylist) {
+                    // Find the track ID in that playlist
+                    const tracks = await trackAPI.list(Number(likedPlaylist.id));
+                    const track = tracks.find(t => t.song.id === songId);
+                    if (track) {
+                        await trackAPI.remove(Number(likedPlaylist.id), track.id);
+                        setLikedTrackSongIds(prev => {
+                            const next = new Set(prev);
+                            next.delete(songId);
+                            return next;
+                        });
+                        toast.success("Removed from Liked Songs");
+                    }
+                }
+            } else {
+                // Like - add to Liked Songs playlist
+                let playlistId = likedPlaylist?.id;
+
+                // Create Liked Songs playlist if it doesn't exist
+                if (!playlistId) {
+                    const newPlaylist = await playlistAPI.create({
+                        name: "Liked Songs",
+                        visibility: "private",
+                        is_liked_songs: true,
+                    });
+                    playlistId = String(newPlaylist.id);
+                    setUserPlaylists(prev => [...prev, { id: playlistId, name: newPlaylist.name }]);
+                }
+
+                await trackAPI.add(Number(playlistId), songId);
+                setLikedTrackSongIds(prev => new Set(prev).add(songId));
+                toast.success("Added to Liked Songs");
+            }
+        } catch {
+            toast.error("Failed to update liked songs");
+        }
+    };
+
+    // Fetch which playlists a song is already in
+    const fetchSongMemberships = async (songId: number): Promise<Set<string>> => {
+        // Check cache first
+        if (songPlaylistMemberships.has(songId)) {
+            return songPlaylistMemberships.get(songId)!;
+        }
+
+        setIsLoadingMemberships(true);
+
+        try {
+            const memberships = new Set<string>();
+
+            // Check each user playlist
+            for (const playlist of userPlaylists) {
+                try {
+                    const tracks = await trackAPI.list(Number(playlist.id));
+                    const songInPlaylist = tracks.some(track => track.song.id === songId);
+                    if (songInPlaylist) {
+                        memberships.add(playlist.id);
+                    }
+                } catch {
+                    // Skip this playlist if fetch fails
+                    console.warn(`Could not fetch tracks for playlist ${playlist.id}`);
+                }
+            }
+
+            // Cache the result
+            setSongPlaylistMemberships(prev => new Map(prev).set(songId, memberships));
+            return memberships;
+        } catch (err) {
+            console.error('Failed to fetch song memberships:', err);
+            return new Set();
+        } finally {
+            setIsLoadingMemberships(false);
+        }
+    };
+
+    // Handle add to playlist
+    const handleAddToPlaylist = async (song: any, playlistId?: string) => {
+        try {
+            const songId = song.id || song.song?.id;
+
+            if (!playlistId) {
+                // Create new playlist
+                const newPlaylist = await playlistAPI.create({
+                    name: `My Playlist #${userPlaylists.length + 1}`,
+                    visibility: "private",
+                });
+                await trackAPI.add(newPlaylist.id, songId);
+
+                // Update memberships cache
+                setSongPlaylistMemberships(prev => {
+                    const next = new Map(prev);
+                    const memberships = next.get(songId) || new Set();
+                    memberships.add(String(newPlaylist.id));
+                    next.set(songId, memberships);
+                    return next;
+                });
+
+                setUserPlaylists(prev => [...prev, { id: String(newPlaylist.id), name: newPlaylist.name }]);
+                toast.success(`Created "${newPlaylist.name}" and added song`);
+            } else {
+                await trackAPI.add(Number(playlistId), songId);
+
+                // Update memberships cache
+                setSongPlaylistMemberships(prev => {
+                    const next = new Map(prev);
+                    const memberships = next.get(songId) || new Set();
+                    memberships.add(playlistId);
+                    next.set(songId, memberships);
+                    return next;
+                });
+
+                toast.success("Added to playlist");
+            }
+        } catch (err) {
+            console.error('Failed to add to playlist:', err);
+            toast.error("Failed to add to playlist");
+        }
     };
 
     const artistList = contextMenu?.songArtist?.split(", ").filter(Boolean) ?? [];
@@ -434,11 +724,7 @@ export const SearchPage: React.FC = () => {
 
     const renderAll = () => {
         if (loading) {
-            return (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
-                </div>
-            );
+            return <AllViewSkeleton />;
         }
 
         if (error) {
@@ -574,7 +860,10 @@ export const SearchPage: React.FC = () => {
                                     imageUrl: song.cover_url || song.imageUrl || IMG[0]
                                 }}
                                 index={idx}
+                                showOrderNumber
                                 onContextMenu={openContextMenu}
+                                onToggleLike={handleToggleLike}
+                                isLiked={likedTrackSongIds.has(song.id)}
                             />
                         ))}
                     </div>
@@ -641,9 +930,10 @@ export const SearchPage: React.FC = () => {
                     {searchResults.playlists.map((playlist: any) => (
                         <MediaCard
                             key={playlist.id}
-                            imageUrl={playlist.cover_image || playlist.imageUrl || IMG[0]}
+                            imageUrl={playlist.cover_url || IMG[0]}
                             title={playlist.name || playlist.title}
                             subtitle={playlist.description || 'Playlist'}
+                            onClick={() => navigate(`/playlist/${playlist.id}`)}
                         />
                     ))}
                 </HorizontalShelf>
@@ -657,11 +947,7 @@ export const SearchPage: React.FC = () => {
 
     const renderSongs = () => {
         if (loading) {
-            return (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
-                </div>
-            );
+            return <SongsViewSkeleton />;
         }
 
         if (searchResults.songs.length === 0) {
@@ -702,6 +988,8 @@ export const SearchPage: React.FC = () => {
                         showAlbumCol
                         showOrderNumber
                         onContextMenu={openContextMenu}
+                        onToggleLike={handleToggleLike}
+                        isLiked={likedTrackSongIds.has(song.id)}
                     />
                 ))}
             </div>
@@ -713,11 +1001,7 @@ export const SearchPage: React.FC = () => {
 
     const renderArtists = () => {
         if (loading) {
-            return (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
-                </div>
-            );
+            return <ArtistsViewSkeleton />;
         }
 
         if (searchResults.artists.length === 0) {
@@ -754,11 +1038,7 @@ export const SearchPage: React.FC = () => {
 
     const renderAlbums = () => {
         if (loading) {
-            return (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
-                </div>
-            );
+            return <AlbumsPlaylistsViewSkeleton />;
         }
 
         if (searchResults.albums.length === 0) {
@@ -787,11 +1067,7 @@ export const SearchPage: React.FC = () => {
 
     const renderPlaylists = () => {
         if (loading) {
-            return (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
-                </div>
-            );
+            return <AlbumsPlaylistsViewSkeleton />;
         }
 
         if (searchResults.playlists.length === 0) {
@@ -807,9 +1083,10 @@ export const SearchPage: React.FC = () => {
             {searchResults.playlists.map((playlist: any) => (
                 <GridCard
                     key={playlist.id}
-                    imageUrl={playlist.cover_image || playlist.imageUrl || IMG[0]}
+                    imageUrl={playlist.cover_url || IMG[0]}
                     title={playlist.name || playlist.title}
                     subtitle={playlist.description || 'Playlist'}
+                    onClick={() => navigate(`/playlist/${playlist.id}`)}
                 />
             ))}
         </MediaGrid>
@@ -877,10 +1154,20 @@ export const SearchPage: React.FC = () => {
                 contextPos={contextMenu ? { top: contextMenu.top, left: contextMenu.left } : { top: 0, left: 0 }}
                 artists={artistList}
                 playlists={userPlaylists}
+                song={contextMenu?.song}
+                songPlaylistIds={contextMenu?.song ? songPlaylistMemberships.get(contextMenu.song.id || contextMenu.song.song?.id) || new Set() : new Set()}
+                isLoadingMemberships={isLoadingMemberships}
                 onClose={closeAll}
                 onArtistSelect={(artist) => {
                     navigate(`/artist/${toArtistRouteId(artist)}`);
                 }}
+                onAddToPlaylist={(song, playlistId) => {
+                    handleAddToPlaylist(song, playlistId);
+                }}
+                onToggleLike={(song) => {
+                    handleToggleLike(song);
+                }}
+                isLiked={contextMenu?.song ? likedTrackSongIds.has(contextMenu.song.id || contextMenu.song.song?.id) : false}
             />
         </div>
     );

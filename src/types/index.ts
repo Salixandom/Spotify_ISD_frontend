@@ -37,14 +37,33 @@ export interface UserStats {
 export interface Song {
   id: number;
   title: string;
-  artist: string;
-  album: string;
+  artist: {
+    id: number;
+    name: string;
+    image_url?: string;
+    bio?: string;
+    monthly_listeners?: number;
+    created_at?: string;
+  };
+  album: {
+    id: number;
+    name: string;
+    cover_url?: string;
+    release_year?: number | null;
+    artist?: {
+      id: number;
+      name: string;
+    };
+  } | null;
   genre: string;
   release_year: number | null;
   duration_seconds: number;
   cover_url: string;
   audio_url: string; // Supabase public URL
   storage_path: string; // Supabase bucket path (internal use)
+  release_date?: string;
+  is_explicit?: boolean;
+  popularity_score?: number;
 }
 
 // ─── Playlist ────────────────────────────────────────────
@@ -57,6 +76,8 @@ export interface Playlist {
   playlist_type: 'solo' | 'collaborative';
   cover_url: string;
   snapshot_id: string;
+  is_liked_songs?: boolean;
+  is_system_generated?: boolean;
   created_at: string;
   updated_at: string;
 }

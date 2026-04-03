@@ -32,7 +32,7 @@ export const RemoveCollaboratorModal: React.FC<Props> = ({
 
   const getUsername = () => {
     const userInfo = userMap.get(collaborator.user_id);
-    return userInfo?.username || userInfo?.display_name || 'Unknown User';
+    return userInfo?.username || userInfo?.display_name || collaborator.username || collaborator.display_name || 'Unknown User';
   };
 
   return (
