@@ -4,10 +4,11 @@ import {
     Play, Plus, MoreHorizontal,
     Mic2, Disc3,
     Music2, Sparkles, Search as SearchIcon, Clock,
-    Loader2, CheckCircle2,
+    CheckCircle2,
 } from "lucide-react";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
 import { SearchTrackContextMenuModal } from "../components/modals/SearchTrackContextMenuModal";
+import { TrackRowSkeleton } from "../components/ui/LoadingSkeleton";
 import { searchAPI } from "../api/search";
 import { playlistAPI } from "../api/playlists";
 import { trackAPI } from "../api/tracks";
@@ -169,6 +170,131 @@ const HorizontalShelf: React.FC<{ children: React.ReactNode }> = ({ children }) 
     <div className="overflow-x-auto pb-2
         [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex gap-3 w-max">{children}</div>
+    </div>
+);
+
+// ─── Skeleton Components ─────────────────────────────────────────────────────
+
+const AllViewSkeleton: React.FC = () => (
+    <div className="space-y-10 animate-pulse">
+        {/* Top result + Songs grid */}
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+            {/* Top result skeleton */}
+            <div>
+                <div className="h-8 w-32 bg-white/10 rounded-lg mb-4" />
+                <div className="p-6 rounded-2xl bg-white/[0.06] border border-white/14">
+                    <div className="flex gap-4 items-center mb-5">
+                        <div className="w-[110px] h-[110px] bg-white/10 rounded-xl" />
+                        <div className="flex-1">
+                            <div className="h-5 w-20 bg-white/10 rounded-full mb-2" />
+                            <div className="h-8 w-3/4 bg-white/10 rounded mb-2" />
+                            <div className="h-4 w-1/2 bg-white/10 rounded" />
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="h-9 w-20 bg-white/10 rounded-full" />
+                        <div className="w-8 h-8 bg-white/10 rounded-full" />
+                        <div className="w-8 h-8 bg-white/10 rounded-full" />
+                    </div>
+                </div>
+            </div>
+
+            {/* Songs column skeleton */}
+            <div>
+                <div className="h-7 w-24 bg-white/10 rounded-lg mb-4" />
+                <div className="flex flex-col gap-0.5">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <TrackRowSkeleton key={i} />
+                    ))}
+                </div>
+            </div>
+        </div>
+
+        {/* Artists shelf skeleton */}
+        <div>
+            <div className="h-7 w-28 bg-white/10 rounded-lg mb-4" />
+            <div className="flex gap-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="w-[160px] shrink-0">
+                        <div className="aspect-square rounded-full bg-white/10 mb-3" />
+                        <div className="h-4 bg-white/10 rounded mb-1" />
+                        <div className="h-3 bg-white/10 rounded w-3/4" />
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        {/* Albums shelf skeleton */}
+        <div>
+            <div className="h-7 w-24 bg-white/10 rounded-lg mb-4" />
+            <div className="flex gap-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="w-[160px] shrink-0">
+                        <div className="aspect-square rounded-xl bg-white/10 mb-3" />
+                        <div className="h-4 bg-white/10 rounded mb-1" />
+                        <div className="h-3 bg-white/10 rounded w-3/4" />
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        {/* Playlists shelf skeleton */}
+        <div>
+            <div className="h-7 w-28 bg-white/10 rounded-lg mb-4" />
+            <div className="flex gap-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="w-[160px] shrink-0">
+                        <div className="aspect-square rounded-xl bg-white/10 mb-3" />
+                        <div className="h-4 bg-white/10 rounded mb-1" />
+                        <div className="h-3 bg-white/10 rounded w-3/4" />
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
+);
+
+const SongsViewSkeleton: React.FC = () => (
+    <div className="animate-pulse">
+        {/* Table header skeleton */}
+        <div className="flex items-center gap-3 px-3 pb-2 mb-1 border-b border-white/10">
+            <div className="w-9 h-3 bg-white/10 rounded" />
+            <div className="flex-1 h-3 bg-white/10 rounded" />
+            <div className="hidden md:block w-[140px] h-3 bg-white/10 rounded" />
+            <div className="w-7 h-3 bg-white/10 rounded" />
+            <div className="w-9 h-3 bg-white/10 rounded" />
+            <div className="w-7 h-3 bg-white/10 rounded" />
+        </div>
+        {/* Song rows skeleton */}
+        <div className="flex flex-col gap-0.5 mt-1">
+            {Array.from({ length: 10 }).map((_, i) => (
+                <TrackRowSkeleton key={i} />
+            ))}
+        </div>
+    </div>
+);
+
+const ArtistsViewSkeleton: React.FC = () => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 animate-pulse">
+        {Array.from({ length: 15 }).map((_, i) => (
+            <div key={i} className="w-full">
+                <div className="aspect-square rounded-full bg-white/10 mb-3" />
+                <div className="h-4 bg-white/10 rounded mb-1" />
+                <div className="h-3 bg-white/10 rounded w-3/4" />
+            </div>
+        ))}
+    </div>
+);
+
+const AlbumsPlaylistsViewSkeleton: React.FC = () => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 animate-pulse">
+        {Array.from({ length: 15 }).map((_, i) => (
+            <div key={i} className="w-full">
+                <div className="aspect-square rounded-xl bg-white/10 mb-3" />
+                <div className="h-4 bg-white/10 rounded mb-1" />
+                <div className="h-3 bg-white/10 rounded w-3/4" />
+            </div>
+        ))}
     </div>
 );
 
@@ -375,10 +501,6 @@ export const SearchPage: React.FC = () => {
                 // Fetch user's own and collaborative playlists
                 const response = await playlistAPI.getUserPlaylists(userId) as any;
                 console.log('User playlists response:', response);
-
-                // Extract playlists array from response (API returns { playlists: [], total, ... })
-                const playlistArray = response?.playlists || [];
-                setUserPlaylists(playlistArray);
             } catch (err) {
                 console.error('Could not fetch user playlists:', err);
                 setUserPlaylists([]);
@@ -602,11 +724,7 @@ export const SearchPage: React.FC = () => {
 
     const renderAll = () => {
         if (loading) {
-            return (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
-                </div>
-            );
+            return <AllViewSkeleton />;
         }
 
         if (error) {
@@ -829,11 +947,7 @@ export const SearchPage: React.FC = () => {
 
     const renderSongs = () => {
         if (loading) {
-            return (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
-                </div>
-            );
+            return <SongsViewSkeleton />;
         }
 
         if (searchResults.songs.length === 0) {
@@ -887,11 +1001,7 @@ export const SearchPage: React.FC = () => {
 
     const renderArtists = () => {
         if (loading) {
-            return (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
-                </div>
-            );
+            return <ArtistsViewSkeleton />;
         }
 
         if (searchResults.artists.length === 0) {
@@ -928,11 +1038,7 @@ export const SearchPage: React.FC = () => {
 
     const renderAlbums = () => {
         if (loading) {
-            return (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
-                </div>
-            );
+            return <AlbumsPlaylistsViewSkeleton />;
         }
 
         if (searchResults.albums.length === 0) {
@@ -961,11 +1067,7 @@ export const SearchPage: React.FC = () => {
 
     const renderPlaylists = () => {
         if (loading) {
-            return (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-8 h-8 text-spotify-green animate-spin" />
-                </div>
-            );
+            return <AlbumsPlaylistsViewSkeleton />;
         }
 
         if (searchResults.playlists.length === 0) {

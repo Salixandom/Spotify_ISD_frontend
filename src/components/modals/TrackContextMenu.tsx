@@ -73,11 +73,8 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({
   // Extract individual artist names for the submenu
   const artists: string[] = (() => {
     const artist = track.song.artist;
-    if (typeof artist === "string") {
-      return artist.split(",").map((a) => a.trim()).filter(Boolean);
-    }
-    if (artist && typeof artist === "object") {
-      const name = (artist as Record<string, unknown>).name;
+    if (artist && typeof artist === "object" && "name" in artist) {
+      const name = artist.name;
       if (typeof name === "string") return [name];
     }
     return [];

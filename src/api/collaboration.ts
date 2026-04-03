@@ -50,4 +50,16 @@ export const collabAPI = {
       'Failed to fetch role'
     );
   },
+
+  removeCollaborator: async (playlistId: number, userId: number): Promise<void> => {
+    await api.delete(`/collab/${playlistId}/members/`, { data: { user_id: userId } });
+  },
+
+  leavePlaylist: async (
+    playlistId: number,
+    options?: { new_owner_id?: number; stay_as_collaborator?: boolean }
+  ): Promise<void> => {
+    const res = await api.post(`/collab/${playlistId}/leave/`, options);
+    return unwrapResponse<void>(res.data, 'Failed to leave playlist');
+  },
 };

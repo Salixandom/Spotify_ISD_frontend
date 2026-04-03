@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  ArrowRight,
   ChevronRight,
   Clock3,
   Copy,
@@ -11,12 +12,14 @@ import {
   Lock,
   MinusCircle,
   MoreHorizontal,
+  Music,
   Music2,
   Pencil,
   Play,
   Plus,
   PlusCircle,
   CheckCircle2,
+  Search,
   Share,
   Shuffle,
   UserMinus,
@@ -30,6 +33,9 @@ import {
   ArrowUpDown,
   SlidersHorizontal,
   Trash2,
+  Users,
+  LogOut,
+  Heart,
 } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -40,9 +46,10 @@ import { trackAPI } from "../api/tracks";
 import { collabAPI } from "../api/collaboration";
 import { profileAPI } from "../api/profile";
 import { searchAPI } from "../api/search";
-import type { Playlist, PlaylistTrack, TrackSortField, SortOrder } from "../types";
+import type { Playlist, PlaylistTrack, TrackSortField, SortOrder, Collaborator, Song } from "../types";
 import toast from "react-hot-toast";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
+import { TrackRowSkeleton } from "../components/ui/LoadingSkeleton";
 import {
   deleteLocalDraftPlaylistById,
   getLocalDraftPlaylistById,
@@ -50,6 +57,12 @@ import {
 import { Modal } from "../components/ui/Modal";
 import { EditPlaylistModal } from "../components/modals/EditPlaylistModal";
 import { TrackContextMenu } from "../components/modals/TrackContextMenu";
+import { ViewCollaboratorsModal } from "../components/modals/ViewCollaboratorsModal";
+import { RemoveCollaboratorModal } from "../components/modals/RemoveCollaboratorModal";
+import { LeavePlaylistModal } from "../components/modals/LeavePlaylistModal";
+import { TransferOwnershipModal } from "../components/modals/TransferOwnershipModal";
+import { ShareLinkModal } from "../components/modals/ShareLinkModal";
+import { CollabInviteModal } from "../components/modals/CollabInviteModal";
 import { Menu } from "lucide-react";
 import { getArtistName, getAlbumName } from "../utils/trackHelpers";
 
@@ -74,6 +87,7 @@ type PlaylistViewModel = {
   visibility: "public" | "private";
   playlistType: "solo" | "collaborative";
   ownerText: string;
+  owner_id?: number;
   coverUrl?: string;
   createdAt?: string;
   isLocalDraft?: boolean;
@@ -89,8 +103,8 @@ const PLACEHOLDER_TRACKS: PlaylistTrack[] = [
     song: {
       id: 501,
       title: "Ekta Chele",
-      artist: "Sahana",
-      album: "Jhalmuri, Vol. 1",
+      artist: { id: 1, name: "Sahana" },
+      album: { id: 1, name: "Jhalmuri, Vol. 1", artist: { id: 1, name: "Sahana" } },
       genre: "Pop",
       release_year: 2021,
       duration_seconds: 217,
@@ -108,8 +122,8 @@ const PLACEHOLDER_TRACKS: PlaylistTrack[] = [
     song: {
       id: 502,
       title: "Jao Pakhi Bolo Tare",
-      artist: "Krishnokoli Islam",
-      album: "Monpura",
+      artist: { id: 2, name: "Krishnokoli Islam" },
+      album: { id: 2, name: "Monpura", artist: { id: 2, name: "Krishnokoli Islam" } },
       genre: "Folk",
       release_year: 2020,
       duration_seconds: 208,
@@ -127,8 +141,8 @@ const PLACEHOLDER_TRACKS: PlaylistTrack[] = [
     song: {
       id: 503,
       title: "Kodom",
-      artist: "Blue Jeans",
-      album: "Numberella Charity Album",
+      artist: { id: 3, name: "Blue Jeans" },
+      album: { id: 3, name: "Numberella Charity Album", artist: { id: 3, name: "Blue Jeans" } },
       genre: "Alternative",
       release_year: 2021,
       duration_seconds: 247,
@@ -171,6 +185,69 @@ const SortableItem: React.FC<{
   );
 };
 
+// ─── Playlist Page Skeleton ──────────────────────────────────────────────────
+
+const PlaylistPageSkeleton: React.FC = () => (
+  <div className="relative min-h-full pb-10">
+    <DynamicMusicBackground
+      variant="mixed"
+      density="low"
+      showGrid={false}
+      showWave={false}
+      iconClassName="text-white/18"
+      orbOpacityClassName="opacity-70"
+    />
+
+    <div className="relative z-10 animate-pulse">
+      {/* Hero section with gradient */}
+      <section className="relative px-6 md:px-8 pt-8 pb-6" style={{ background: "linear-gradient(180deg, rgba(97, 61, 168, 0.48) 0%, rgba(58, 35, 108, 0.28) 52%, rgba(7, 10, 20, 0) 100%)" }}>
+        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+
+        <div className="relative flex flex-col md:flex-row md:items-end gap-5 md:gap-6">
+          {/* Cover art skeleton */}
+          <div className="w-40 h-40 md:w-52 md:h-52 rounded-md border border-white/15 bg-white/[0.05] shadow-[0_24px_48px_rgba(0,0,0,0.45)]" />
+
+          {/* Playlist info skeleton */}
+          <div className="min-w-0 flex-1">
+            <div className="h-3 w-32 bg-white/20 rounded mb-2" />
+            <div className="h-12 w-3/4 bg-white/20 rounded mb-3" />
+            <div className="h-4 w-full bg-white/15 rounded mb-1" />
+            <div className="h-4 w-2/3 bg-white/15 rounded mb-3" />
+            <div className="h-4 w-48 bg-white/15 rounded" />
+          </div>
+        </div>
+      </section>
+
+      {/* Action buttons skeleton */}
+      <div className="px-6 md:px-8 pt-6">
+        <section className="flex items-center gap-3 border-b border-white/10 pb-4">
+          <div className="w-14 h-14 rounded-full bg-spotify-green/30" />
+          <div className="w-9 h-9 rounded-full border border-white/20 bg-white/5" />
+          <div className="w-9 h-9 rounded-full border border-white/20 bg-white/5" />
+          <div className="w-9 h-9 rounded-full border border-white/20 bg-white/5" />
+        </section>
+
+        {/* Track list skeleton */}
+        <div className="mt-4">
+          {/* Table header */}
+          <div className="flex items-center gap-3 px-3 py-2 border-b border-white/10 text-xs uppercase tracking-wider text-white/40">
+            <div className="w-9 h-3 bg-white/10 rounded" />
+            <div className="flex-1 h-3 bg-white/10 rounded" />
+            <div className="w-20 h-3 bg-white/10 rounded hidden md:block" />
+            <div className="w-16 h-3 bg-white/10 rounded" />
+            <div className="w-9 h-3 bg-white/10 rounded" />
+          </div>
+
+          {/* Track rows */}
+          {Array.from({ length: 10 }).map((_, i) => (
+            <TrackRowSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 export const PlaylistPage: React.FC = () => {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -186,7 +263,7 @@ export const PlaylistPage: React.FC = () => {
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const [isListMenuOpen, setIsListMenuOpen] = React.useState(false);
   const [isShareSubmenuOpen, setIsShareSubmenuOpen] = React.useState(false);
-  const [viewMode, setViewMode] = React.useState<"normal" | "compact">("normal");
+  const [viewMode, setViewMode] = React.useState<"list" | "compact">("list");
   const [isArchived, setIsArchived] = React.useState(false);
   const [isOnProfile, setIsOnProfile] = React.useState(true); // true = followed/owned, false = not on profile
   const [likedSongsPlaylistId, setLikedSongsPlaylistId] = React.useState<string | null>(null);
@@ -194,6 +271,17 @@ export const PlaylistPage: React.FC = () => {
   const [likedSongTrackIdsMap, setLikedSongTrackIdsMap] = React.useState<Map<number, number>>(new Map()); // song_id -> track_id in Liked Songs
   const [userPlaylists, setUserPlaylists] = React.useState<{ id: string; name: string }[]>([]);
   const [userMap, setUserMap] = React.useState<Map<number, { id: number; username: string; display_name?: string; avatar_url?: string }>>(new Map());
+
+  // Collaborators state
+  const [collaborators, setCollaborators] = React.useState<Collaborator[]>([]);
+  const [userRole, setUserRole] = React.useState<'owner' | 'collaborator' | null>(null);
+  const [selectedCollaborator, setSelectedCollaborator] = React.useState<Collaborator | null>(null);
+  const [isViewCollabModalOpen, setIsViewCollabModalOpen] = React.useState(false);
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = React.useState(false);
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = React.useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = React.useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = React.useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = React.useState(false);
   const [contextMenu, setContextMenu] = React.useState<{
     isOpen: boolean;
     track: PlaylistTrack | null;
@@ -267,6 +355,12 @@ export const PlaylistPage: React.FC = () => {
   }, [getDisplayName]);
 
   const sortMenuRef = React.useRef<HTMLDivElement>(null);
+  const addSongsSectionRef = React.useRef<HTMLDivElement>(null);
+
+  // Add songs search state
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState<Song[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -532,6 +626,7 @@ export const PlaylistPage: React.FC = () => {
           visibility: playlistData.visibility,
           playlistType: isCollaborative ? "collaborative" : "solo",
           ownerText: isCollaborative ? "Collaborative" : "You",
+          owner_id: playlistData.owner_id,
           coverUrl: playlistData.cover_url || undefined,
           createdAt: playlistData.created_at,
         });
@@ -672,6 +767,211 @@ export const PlaylistPage: React.FC = () => {
     setDeleteError(null);
   }, [id]);
 
+  // Debounced search handler for Add Songs
+  React.useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      if (searchQuery.trim()) {
+        setIsSearching(true);
+        try {
+          const results = await searchAPI.searchSongs({ q: searchQuery.trim() });
+          setSearchResults(results.slice(0, 10)); // Only top 10
+        } catch (error) {
+          console.error('Search failed:', error);
+          setSearchResults([]);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Add song to playlist handler
+  const handleAddSong = async (song: Song) => {
+    if (!playlist || playlist.isLocalDraft) return;
+
+    const numericId = Number(playlist.id);
+    if (!Number.isFinite(numericId)) return;
+
+    try {
+      await trackAPI.add(numericId, song.id);
+      toast.success(`Added "${song.title}" to playlist`);
+
+      // Clear search
+      setSearchQuery('');
+      setSearchResults([]);
+
+      // Reload tracks to show the newly added track
+      if (window.location.pathname.startsWith('/playlists/')) {
+        window.location.reload(); // Simple reload to refresh track list
+      }
+    } catch (error) {
+      console.error('Failed to add song:', error);
+      toast.error('Failed to add song to playlist');
+    }
+  };
+
+  // Fetch user role and collaborators for non-local playlists
+  React.useEffect(() => {
+    if (!playlist || playlist.isLocalDraft || playlist.id.startsWith("local-")) {
+      setUserRole(null);
+      setCollaborators([]);
+      return;
+    }
+
+    const numericId = Number(playlist.id);
+    if (!Number.isFinite(numericId)) return;
+
+    const fetchCollabData = async () => {
+      try {
+        // Fetch user role
+        console.log('🔍 Fetching role for playlist:', numericId);
+        const roleResponse = await collabAPI.getMyRole(numericId);
+        console.log('🔍 Role response:', roleResponse);
+        console.log('🔍 Role value:', roleResponse.role);
+        setUserRole(roleResponse.role);
+
+        // Get owner ID from playlist
+        const ownerId = playlist?.owner_id;
+        if (!ownerId) {
+          console.error('No owner_id found in playlist');
+          return;
+        }
+
+        // Initialize userMap with owner's profile data
+        const map = new Map<number, { id: number; username: string; display_name?: string; avatar_url?: string }>();
+
+        // Fetch owner's profile data
+        try {
+          const ownerProfile = await profileAPI.getPublicProfile(ownerId);
+          map.set(ownerId, {
+            id: ownerId,
+            username: ownerProfile.display_name || `user${ownerId}`,
+            display_name: ownerProfile.display_name,
+            avatar_url: ownerProfile.avatar_url,
+          });
+        } catch (error) {
+          console.error('Failed to fetch profile for owner:', ownerId, error);
+          // Fallback
+          map.set(ownerId, {
+            id: ownerId,
+            username: `user${ownerId}`,
+            display_name: `User${ownerId}`,
+          });
+        }
+
+        // Fetch collaborators for collaborative playlists
+        if (roleResponse.role === 'owner' || roleResponse.role === 'collaborator') {
+          const members = await collabAPI.getMembers(numericId);
+          setCollaborators(members);
+
+          // Fetch profile data for each collaborator
+          await Promise.all(
+            members.map(async (member) => {
+              // Skip if already in map (owner might also be a collaborator in some cases)
+              if (map.has(member.user_id)) return;
+
+              try {
+                const profile = await profileAPI.getPublicProfile(member.user_id);
+                map.set(member.user_id, {
+                  id: member.user_id,
+                  username: profile.display_name || `user${member.user_id}`,
+                  display_name: profile.display_name,
+                  avatar_url: profile.avatar_url,
+                });
+              } catch (error) {
+                console.error('Failed to fetch profile for collaborator', member.user_id, ':', error);
+                // Fallback data
+                map.set(member.user_id, {
+                  id: member.user_id,
+                  username: `user${member.user_id}`,
+                  display_name: `User${member.user_id}`,
+                });
+              }
+            })
+          );
+        }
+
+        setUserMap(map);
+      } catch (error) {
+        console.error("Failed to fetch collaboration data:", error);
+      }
+    };
+
+    fetchCollabData();
+  }, [playlist, getCurrentUserId]);
+
+  const handleRemoveCollaborator = async () => {
+    if (!selectedCollaborator || !playlist) return;
+
+    const numericId = Number(playlist.id);
+    if (!Number.isFinite(numericId)) return;
+
+    try {
+      await collabAPI.removeCollaborator(numericId, selectedCollaborator.user_id);
+      // Refresh collaborators list
+      const updatedCollaborators = await collabAPI.getMembers(numericId);
+      setCollaborators(updatedCollaborators);
+      setIsRemoveModalOpen(false);
+      setSelectedCollaborator(null);
+    } catch (error) {
+      console.error("Failed to remove collaborator:", error);
+      toast.error("Failed to remove collaborator");
+    }
+  };
+
+  const handleLeavePlaylist = async () => {
+    if (!playlist) return;
+
+    const numericId = Number(playlist.id);
+    if (!Number.isFinite(numericId)) return;
+
+    try {
+      // If owner, must transfer ownership first
+      if (userRole === 'owner') {
+        setIsLeaveModalOpen(false);
+        setIsTransferModalOpen(true);
+        return;
+      }
+
+      await collabAPI.leavePlaylist(numericId);
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Failed to leave playlist:", error);
+      toast.error("Failed to leave playlist");
+    }
+  };
+
+  const handleTransferOwnership = async (newOwnerId: number, stayAsCollaborator: boolean) => {
+    const numericId = Number(playlist?.id);
+    if (!Number.isFinite(numericId)) return;
+
+    try {
+      await collabAPI.leavePlaylist(numericId, {
+        new_owner_id: newOwnerId,
+        stay_as_collaborator: stayAsCollaborator,
+      });
+
+      if (stayAsCollaborator) {
+        // Stay as collaborator, refresh role
+        const roleResponse = await collabAPI.getMyRole(numericId);
+        setUserRole(roleResponse.role);
+        setIsTransferModalOpen(false);
+        setIsViewCollabModalOpen(false);
+        toast.success("Ownership transferred successfully");
+      } else {
+        // Leave completely
+        navigate("/", { replace: true });
+      }
+    } catch (error) {
+      console.error("Failed to transfer ownership:", error);
+      toast.error("Failed to transfer ownership");
+    }
+  };
+
   const handleDeletePlaylist = async () => {
     if (!playlist) return;
 
@@ -706,23 +1006,7 @@ export const PlaylistPage: React.FC = () => {
   const displayedTracks = isReorderMode ? reorderedTracks : tracks;
 
   if (isLoading || !playlist) {
-    return (
-      <div className="relative min-h-full p-6 md:p-8">
-        <DynamicMusicBackground
-          variant="mixed"
-          density="low"
-          showGrid={false}
-          showWave={false}
-          iconClassName="text-white/18"
-          orbOpacityClassName="opacity-70"
-        />
-        <div className="relative z-10 animate-pulse space-y-4">
-          <div className="h-56 rounded-2xl bg-white/[0.08] border border-white/10" />
-          <div className="h-8 w-72 rounded-lg bg-white/[0.08]" />
-          <div className="h-56 rounded-2xl bg-white/[0.06] border border-white/10" />
-        </div>
-      </div>
-    );
+    return <PlaylistPageSkeleton />;
   }
 
   const heroGradient =
@@ -774,22 +1058,79 @@ export const PlaylistPage: React.FC = () => {
               </div>
 
               {playlist.playlistType === "collaborative" && (
-                <div className="flex items-center gap-2 mt-4">
+                <div className="flex items-center gap-3 mt-4">
                   <div className="flex -space-x-2">
-                    <div className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
-                      Y
-                    </div>
-                    <div className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold">
-                      A
-                    </div>
-                    <div className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white text-xs font-bold">
-                      S
-                    </div>
+                    {/* Show actual collaborators or just owner */}
+                    {collaborators.length > 0 ? (
+                      <>
+                        {/* Show up to 3 collaborators with avatars or initials */}
+                        {collaborators.slice(0, 3).map((collab) => {
+                          const avatarUrl = getAvatarUrl(collab.user_id);
+                          return avatarUrl ? (
+                            <img
+                              key={collab.user_id}
+                              src={avatarUrl}
+                              alt={getDisplayName(collab.user_id)}
+                              className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] object-cover"
+                              title={getDisplayName(collab.user_id)}
+                            />
+                          ) : (
+                            <div
+                              key={collab.user_id}
+                              className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold"
+                              title={getDisplayName(collab.user_id)}
+                            >
+                              {getInitials(collab.user_id)}
+                            </div>
+                          );
+                        })}
+                      </>
+                    ) : (
+                      /* No collaborators yet, show owner */
+                      (() => {
+                        const ownerId = getCurrentUserId();
+                        const ownerAvatar = getAvatarUrl(ownerId);
+                        return ownerAvatar ? (
+                          <img
+                            src={ownerAvatar}
+                            alt={getDisplayName(ownerId)}
+                            className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] object-cover"
+                            title={getDisplayName(ownerId)}
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
+                            {getInitials(ownerId)}
+                          </div>
+                        );
+                      })()
+                    )}
                   </div>
-                  <button className="w-8 h-8 rounded-full border border-white/20 bg-white/[0.05] text-white/70 hover:text-white hover:bg-white/[0.10] transition-colors flex items-center justify-center">
-                    <Plus size={16} />
-                  </button>
-                  <span className="text-white/65 text-xs ml-1">3 collaborators</span>
+                  {/* + button to invite collaborators - Only for owners and collaborators */}
+                  {(userRole === 'owner' || userRole === 'collaborator') && (
+                    <button
+                      onClick={() => {
+                        const numericId = Number(playlist.id);
+                        if (Number.isFinite(numericId) && !playlist.isLocalDraft) {
+                          setIsInviteModalOpen(true);
+                        }
+                      }}
+                      className="w-8 h-8 rounded-full border border-white/20 bg-white/5 text-white/70 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
+                      aria-label="Invite collaborators"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  )}
+                  <span className="text-white/75 text-xs">
+                    {collaborators.length === 0 ? (
+                      'No collaborators yet'
+                    ) : collaborators.length <= 3 ? (
+                      // Show all names when 3 or fewer
+                      collaborators.map((c) => getDisplayName(c.user_id)).join(', ')
+                    ) : (
+                      // Show first 2 names + count for others
+                      `${collaborators.slice(0, 2).map((c) => getDisplayName(c.user_id)).join(', ')} +${collaborators.length - 2} others`
+                    )}
+                  </span>
                 </div>
               )}
 
@@ -815,26 +1156,103 @@ export const PlaylistPage: React.FC = () => {
         </section>
 
         <div className="px-6 md:px-8 pt-6">
-          <section className="flex items-center gap-4 border-b border-white/10 pb-4">
-            <button className="w-14 h-14 rounded-full bg-spotify-green text-black flex items-center justify-center shadow-[0_10px_24px_rgba(30,185,84,0.38)] hover:scale-105 transition-transform">
-              <Play size={24} fill="currentColor" className="translate-x-[1px]" />
+          <section className="flex items-center gap-3 border-b border-white/10 pb-4">
+            {/* Play button */}
+            <button
+              className="w-14 h-14 rounded-full bg-spotify-green text-black flex items-center justify-center shadow-[0_10px_24px_rgba(30,185,84,0.38)] hover:scale-105 transition-transform"
+              title="Play"
+            >
+              <Play size={24} fill="currentColor" className="translate-x-px" />
             </button>
 
-            <button className="w-9 h-9 rounded-full border border-white/20 bg-white/[0.03] text-white/75 hover:text-white hover:bg-white/[0.08] transition-colors flex items-center justify-center">
-              <Plus size={18} />
+            {/* Follow/Unfollow button */}
+            <button
+              onClick={async () => {
+                const numericId = Number(playlist.id);
+                console.log('Follow button clicked, playlist.id:', playlist.id, 'numericId:', numericId, 'isLocalDraft:', playlist.isLocalDraft);
+
+                if (!Number.isFinite(numericId)) {
+                  console.error('Invalid playlist ID');
+                  toast.error('Invalid playlist ID');
+                  return;
+                }
+
+                if (playlist.isLocalDraft) {
+                  console.log('Cannot follow local draft');
+                  toast.error('Cannot follow local draft playlists');
+                  return;
+                }
+
+                try {
+                  console.log('Current follow status:', isOnProfile);
+                  if (isOnProfile) {
+                    console.log('Unfollowing playlist:', numericId);
+                    await playlistAPI.unfollow(numericId);
+                    setIsOnProfile(false);
+                    toast.success("Removed from your library");
+                  } else {
+                    console.log('Following playlist:', numericId);
+                    await playlistAPI.follow(numericId);
+                    setIsOnProfile(true);
+                    toast.success("Added to your library");
+                  }
+                } catch (error: any) {
+                  console.error('Follow/unfollow error:', error);
+                  // Backend will validate: regular users can't follow private playlists
+                  const errorMessage = error?.response?.data?.message || error?.message || 'Failed to follow playlist';
+                  toast.error(errorMessage);
+                }
+              }}
+              className="w-9 h-9 rounded-full border border-white/20 bg-white/3 text-white/75 hover:text-white hover:bg-white/8 transition-colors flex items-center justify-center"
+              aria-label={isOnProfile ? "Unfollow playlist" : "Follow playlist"}
+              title={isOnProfile ? "Unfollow playlist" : "Follow playlist"}
+            >
+              <Heart size={17} className={isOnProfile ? "fill-spotify-green text-spotify-green" : ""} />
             </button>
-            <button className="w-9 h-9 rounded-full border border-white/20 bg-white/[0.03] text-white/75 hover:text-white hover:bg-white/[0.08] transition-colors flex items-center justify-center">
+
+            {/* Shuffle button */}
+            <button
+              className="w-9 h-9 rounded-full border border-white/20 bg-white/3 text-white/75 hover:text-white hover:bg-white/8 transition-colors flex items-center justify-center"
+              title="Shuffle play"
+            >
               <Shuffle size={17} />
             </button>
-            <button className="w-9 h-9 rounded-full border border-white/20 bg-white/[0.03] text-white/75 hover:text-white hover:bg-white/[0.08] transition-colors flex items-center justify-center">
-              <UserPlus size={17} />
-            </button>
 
+            {/* Add songs button - Only for owners and collaborators */}
+            {(userRole === 'owner' || userRole === 'collaborator') && (
+              <button
+                onClick={() => addSongsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className="w-9 h-9 rounded-full border border-white/20 bg-white/3 text-white/75 hover:text-white hover:bg-white/8 transition-colors flex items-center justify-center"
+                title="Add song"
+              >
+                <Plus size={18} />
+              </button>
+            )}
+
+            {/* Invite collaborators button - Only for owners and collaborators */}
+            {(userRole === 'owner' || userRole === 'collaborator') && (
+              <button
+                onClick={() => {
+                  const numericId = Number(playlist.id);
+                  if (Number.isFinite(numericId) && !playlist.isLocalDraft) {
+                    setIsInviteModalOpen(true);
+                  }
+                }}
+                className="w-9 h-9 rounded-full border border-white/20 bg-white/3 text-white/75 hover:text-white hover:bg-white/8 transition-colors flex items-center justify-center"
+                aria-label="Invite collaborators"
+                title="Invite collaborators"
+              >
+                <UserPlus size={17} />
+              </button>
+            )}
+
+            {/* More actions menu */}
             <div className="relative" ref={actionsMenuRef}>
               <button
                 onClick={() => setIsActionsOpen((prev) => !prev)}
-                className="w-9 h-9 rounded-full border border-white/20 bg-white/[0.03] text-white/75 hover:text-white hover:bg-white/[0.08] transition-colors flex items-center justify-center"
+                className="w-9 h-9 rounded-full border border-white/20 bg-white/3 text-white/75 hover:text-white hover:bg-white/8 transition-colors flex items-center justify-center"
                 aria-label="Playlist actions"
+                title="More options"
               >
                 <MoreHorizontal size={18} />
               </button>
@@ -862,7 +1280,7 @@ export const PlaylistPage: React.FC = () => {
                                 toast.success("Added back to your profile");
                             }
                         } catch {
-                            toast.error(`Failed to ${isOnProfile ? 'remove from' : 'add to'} profile`);
+                            toast.error("Failed to update profile");
                         }
                     }}
                     className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors text-left"
@@ -901,9 +1319,9 @@ export const PlaylistPage: React.FC = () => {
                           await playlistAPI.update(numericId, { visibility: newVisibility });
                         }
                         setPlaylist(prev => prev ? { ...prev, visibility: newVisibility } : null);
-                        toast.success(`Playlist is now ${newVisibility}`);
+                        toast.success(`Playlist is now ${newVisibility === 'public' ? 'visible to everyone' : 'private'}`);
                       } catch {
-                        toast.error("Failed to update visibility");
+                        toast.error(`Failed to make playlist ${newVisibility}`);
                       }
                     }}
                     className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors text-left"
@@ -921,18 +1339,11 @@ export const PlaylistPage: React.FC = () => {
                     )}
                   </button>
                   <button
-                    onClick={async () => {
+                    onClick={() => {
                       setIsActionsOpen(false);
                       const numericId = Number(playlist.id);
                       if (Number.isFinite(numericId)) {
-                        try {
-                           const invite = await collabAPI.generateInvite(numericId);
-                           const inviteUrl = `${window.location.origin}/invite/${invite.token}`;
-                           await navigator.clipboard.writeText(inviteUrl);
-                           toast.success("Invite link copied to clipboard!");
-                        } catch {
-                           toast.error("Failed to generate invite link");
-                        }
+                        setIsInviteModalOpen(true);
                       }
                     }}
                     className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors text-left"
@@ -940,6 +1351,40 @@ export const PlaylistPage: React.FC = () => {
                     <UserPlus size={16} className="text-white/60 shrink-0" />
                     <span className="flex-1">Invite collaborators</span>
                   </button>
+
+                  {/* Collaborators menu items - only for collaborative playlists */}
+                  {(() => {
+                    console.log('🔍 Rendering menu, userRole:', userRole);
+                    return null;
+                  })()}
+                  {userRole && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setIsActionsOpen(false);
+                          setIsViewCollabModalOpen(true);
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors text-left"
+                      >
+                        <Users size={16} className="text-white/60 shrink-0" />
+                        <span className="flex-1">View collaborators</span>
+                      </button>
+
+                      {/* Leave playlist option - not for owners */}
+                      {userRole === 'collaborator' && (
+                        <button
+                          onClick={() => {
+                            setIsActionsOpen(false);
+                            setIsLeaveModalOpen(true);
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors text-left"
+                        >
+                          <LogOut size={16} className="text-white/60 shrink-0" />
+                          <span className="flex-1">Leave playlist</span>
+                        </button>
+                      )}
+                    </>
+                  )}
                   <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors text-left">
                     <XCircle size={16} className="text-white/60 shrink-0" />
                     <span className="flex-1">Exclude from your taste profile</span>
@@ -953,11 +1398,11 @@ export const PlaylistPage: React.FC = () => {
                                 if (isArchived) {
                                     await trackAPI.unarchivePlaylist(numericId);
                                     setIsArchived(false);
-                                    toast.success("Playlist unhidden from profile", { icon: "👁️" });
+                                    toast.success("Playlist unhidden from profile");
                                 } else {
                                     await trackAPI.archivePlaylist(numericId);
                                     setIsArchived(true);
-                                    toast.success("Playlist hidden from profile", { icon: "🙈" });
+                                    toast.success("Playlist hidden from profile");
                                 }
                                 window.dispatchEvent(new Event('local_playlists_updated'));
                             }
@@ -991,38 +1436,34 @@ export const PlaylistPage: React.FC = () => {
                           toast.error("Cannot share a hidden playlist");
                           return;
                         }
+                        if (playlist.visibility === 'private') {
+                          toast.error("Share links can only be created for public playlists");
+                          return;
+                        }
                         setIsShareSubmenuOpen((prev) => !prev);
                       }}
                       className={`w-full flex items-center px-3 py-2 text-sm text-left transition-colors ${
-                        isArchived
+                        isArchived || playlist.visibility === 'private'
                           ? "text-white/40 cursor-not-allowed bg-transparent"
                           : "text-white/80 hover:text-white hover:bg-white/5"
                       }`}
                     >
                       <div className="flex items-center gap-3 flex-1">
-                        <Share size={16} className={isArchived ? "text-white/30 shrink-0" : "text-white/60 shrink-0"} />
+                        <Share size={16} className={isArchived || playlist.visibility === 'private' ? "text-white/30 shrink-0" : "text-white/60 shrink-0"} />
                         <span>Share</span>
                       </div>
-                      <ChevronRight size={14} className={isArchived ? "text-white/20" : "text-white/40"} />
+                      <ChevronRight size={14} className={isArchived || playlist.visibility === 'private' ? "text-white/20" : "text-white/40"} />
                     </button>
 
-                    {isShareSubmenuOpen && (
+                    {isShareSubmenuOpen && playlist.visibility === 'public' && (
                       <div className="absolute left-full top-0 ml-1 z-50 w-56 py-1 bg-white/15 backdrop-blur-3xl rounded-lg shadow-[0_8px_30px_rgba(0,0,0,0.50)] border border-white/15 animate-in fade-in slide-in-from-left-1 duration-150">
                         <button
-                          onClick={async () => {
-                            try {
-                              const numericId = Number(playlist.id);
-                              if (Number.isFinite(numericId)) {
-                                const shareData = await collabAPI.createShareLink(numericId);
-                                const url = `${window.location.origin}/share/${shareData.token}`;
-                                await navigator.clipboard.writeText(url);
-                                toast.success("Share link copied to clipboard");
-                              }
-                            } catch {
-                              toast.error("Failed to generate share link");
-                            } finally {
-                              setIsShareSubmenuOpen(false);
-                              setIsActionsOpen(false);
+                          onClick={() => {
+                            setIsShareSubmenuOpen(false);
+                            setIsActionsOpen(false);
+                            const numericId = Number(playlist.id);
+                            if (Number.isFinite(numericId)) {
+                              setIsShareModalOpen(true);
                             }
                           }}
                           className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors text-left"
@@ -1050,9 +1491,10 @@ export const PlaylistPage: React.FC = () => {
                 className={`w-9 h-9 rounded-full border transition-colors flex items-center justify-center ${
                   sortConfig
                     ? 'border-white/30 bg-white/10 text-white'
-                    : 'border-white/20 bg-white/[0.03] text-white/75 hover:text-white hover:bg-white/[0.08]'
+                    : 'border-white/20 bg-white/3 text-white/75 hover:text-white hover:bg-white/8'
                 } disabled:opacity-40 disabled:cursor-not-allowed`}
                 aria-label="Sort"
+                title="Sort tracks"
               >
                 <SlidersHorizontal size={17} />
               </button>
@@ -1093,34 +1535,41 @@ export const PlaylistPage: React.FC = () => {
               )}
             </div>
 
-            {/* Reorder controls */}
-            {!isReorderMode ? (
-              <button
-                onClick={enterReorderMode}
-                disabled={tracks.length === 0 || isSorting || isPlaceholderMode}
-                className="w-9 h-9 rounded-full border border-white/20 bg-white/[0.03] text-white/75 hover:text-white hover:bg-white/[0.08] transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label="Reorder"
-              >
-                <GripVertical size={17} />
-              </button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={cancelReorderMode}
-                  disabled={isSavingOrder}
-                  className="px-4 py-2 rounded-full text-xs font-semibold border border-white/20 text-white/60 hover:text-white transition-colors disabled:opacity-40"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={saveReorder}
-                  disabled={isSavingOrder}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-spotify-green text-black hover:bg-spotify-green/90 transition-colors disabled:opacity-60"
-                >
-                  <Save size={12} />
-                  {isSavingOrder ? 'Saving…' : 'Save'}
-                </button>
-              </div>
+            {/* Reorder controls - Only for owners and collaborators */}
+            {(userRole === 'owner' || userRole === 'collaborator') && (
+              <>
+                {!isReorderMode ? (
+                  <button
+                    onClick={enterReorderMode}
+                    disabled={tracks.length === 0 || isSorting || isPlaceholderMode}
+                    className="w-9 h-9 rounded-full border border-white/20 bg-white/3 text-white/75 hover:text-white hover:bg-white/8 transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label="Reorder"
+                    title="Reorder tracks"
+                  >
+                    <GripVertical size={17} />
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={cancelReorderMode}
+                      disabled={isSavingOrder}
+                      className="px-4 py-2 rounded-full text-xs font-semibold border border-white/20 text-white/60 hover:text-white transition-colors disabled:opacity-40"
+                      title="Cancel reordering"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={saveReorder}
+                      disabled={isSavingOrder}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-spotify-green text-black hover:bg-spotify-green/90 transition-colors disabled:opacity-60"
+                      title="Save new order"
+                    >
+                      <Save size={12} />
+                      {isSavingOrder ? 'Saving…' : 'Save'}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
 
             <div className="relative ml-auto" ref={listMenuRef}>
@@ -1151,17 +1600,17 @@ export const PlaylistPage: React.FC = () => {
                   </button>
                   <button
                     onClick={() => {
-                      setViewMode("normal");
+                      setViewMode("list");
                       setIsListMenuOpen(false);
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors text-left ${
-                      viewMode === "normal"
+                      viewMode === "list"
                         ? "bg-white/10 text-white"
                         : "text-white/80 hover:text-white hover:bg-white/5"
                     }`}
                   >
-                    <span>Normal</span>
-                    {viewMode === "normal" && <span className="text-white/80">✓</span>}
+                    <span>List</span>
+                    {viewMode === "list" && <span className="text-white/80">✓</span>}
                   </button>
                 </div>
               )}
@@ -1346,6 +1795,119 @@ export const PlaylistPage: React.FC = () => {
               </DndContext>
             )}
           </section>
+
+          {/* Add Songs Section - Only for owners and collaborators */}
+          {!playlist.isLocalDraft && (userRole === 'owner' || userRole === 'collaborator') && (
+            <section ref={addSongsSectionRef} className="px-6 md:px-8 py-8 border-t border-white/10 mt-8">
+              <div className="max-w-5xl mx-auto">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-white">Find something you’ll love</h2>
+                  {searchResults.length > 0 && (
+                    <button
+                      onClick={() => {
+                        // Navigate to search page with query
+                        window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`;
+                      }}
+                      className="text-sm text-white/60 hover:text-white flex items-center gap-1 transition-colors"
+                    >
+                      See all results
+                      <ArrowRight size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative mb-6 mx-auto" style={{ width: '66.666%' }}>
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                    {isSearching ? (
+                      <div className="w-5 h-5 border-2 border-spotify-green border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Search size={20} />
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search music to match your mood"
+                    className="w-full pl-12 pr-5 py-3 bg-white/5 border border-white/10 rounded-full text-white placeholder-white/40 focus:outline-none focus:border-spotify-green/50 focus:bg-white/10 transition-all"
+                  />
+                </div>
+
+                {/* Search Results */}
+                {searchQuery && (
+                  <div className="space-y-2">
+                    {isSearching ? (
+                      // Skeleton Loading
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg border border-white/10 animate-pulse">
+                          <div className="w-10 h-10 bg-white/10 rounded flex-shrink-0" />
+                          <div className="flex-1 space-y-1.5">
+                            <div className="h-3.5 bg-white/10 rounded w-3/4" />
+                            <div className="h-2.5 bg-white/10 rounded w-1/2" />
+                          </div>
+                          <div className="w-1/4 h-2.5 bg-white/10 rounded" />
+                          <div className="w-12 h-6 bg-white/10 rounded-full" />
+                          <div className="w-14 h-2.5 bg-white/10 rounded" />
+                        </div>
+                      ))
+                    ) : searchResults.length > 0 ? (
+                      searchResults.map((song) => (
+                        <div
+                          key={song.id}
+                          className="flex items-center gap-3 p-2 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-colors group"
+                        >
+                          {/* Cover art */}
+                          <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-white/5">
+                            {song.cover_url ? (
+                              <img
+                                src={song.cover_url}
+                                alt={song.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                <Music size={16} className="text-white" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Song name with artist */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white font-medium text-sm truncate">{song.title}</p>
+                            <p className="text-white/60 text-xs truncate">{getArtistName(song.artist)}</p>
+                          </div>
+
+                          {/* Album name */}
+                          <div className="w-1/4 min-w-0">
+                            <p className="text-white/70 text-xs truncate">{getAlbumName(song.album)}</p>
+                          </div>
+
+                          {/* Add button */}
+                          <button
+                            onClick={() => handleAddSong(song)}
+                            className="px-3 py-1 bg-spotify-green text-black rounded-full text-xs font-semibold hover:bg-spotify-green/90 transition-colors flex items-center gap-1 opacity-0 group-hover:opacity-100"
+                          >
+                            <Plus size={12} />
+                            Add
+                          </button>
+
+                          {/* Duration */}
+                          <div className="w-14 text-right">
+                            <p className="text-white/70 text-xs">{formatDuration(song.duration_seconds)}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-12">
+                        <p className="text-white/60">No songs found</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
         </div>
       </div>
 
@@ -1379,6 +1941,81 @@ export const PlaylistPage: React.FC = () => {
         </div>
       </Modal>
 
+      {/* View Collaborators Modal */}
+      {playlist && (
+        <ViewCollaboratorsModal
+          isOpen={isViewCollabModalOpen}
+          onClose={() => setIsViewCollabModalOpen(false)}
+          playlistId={Number(playlist.id)}
+          userRole={userRole}
+          currentUserId={getCurrentUserId()}
+          onRemoveClick={(collaborator) => {
+            setSelectedCollaborator(collaborator);
+            setIsViewCollabModalOpen(false);
+            setIsRemoveModalOpen(true);
+          }}
+          onLeaveClick={() => {
+            setIsViewCollabModalOpen(false);
+            setIsLeaveModalOpen(true);
+          }}
+          userMap={new Map(Array.from(userMap.entries()).map(([id, data]) => [id, { username: data.username, display_name: data.display_name }]))}
+        />
+      )}
+
+      {/* Remove Collaborator Modal */}
+      {selectedCollaborator && (
+        <RemoveCollaboratorModal
+          isOpen={isRemoveModalOpen}
+          onClose={() => {
+            setIsRemoveModalOpen(false);
+            setSelectedCollaborator(null);
+          }}
+          onConfirm={handleRemoveCollaborator}
+          collaborator={selectedCollaborator}
+          userMap={new Map(Array.from(userMap.entries()).map(([id, data]) => [id, { username: data.username, display_name: data.display_name }]))}
+        />
+      )}
+
+      {/* Leave Playlist Modal */}
+      {playlist && (
+        <LeavePlaylistModal
+          isOpen={isLeaveModalOpen}
+          onClose={() => setIsLeaveModalOpen(false)}
+          onConfirm={handleLeavePlaylist}
+          playlistName={playlist.name}
+        />
+      )}
+
+      {/* Transfer Ownership Modal */}
+      {playlist && userRole === 'owner' && (
+        <TransferOwnershipModal
+          isOpen={isTransferModalOpen}
+          onClose={() => setIsTransferModalOpen(false)}
+          onConfirm={handleTransferOwnership}
+          collaborators={collaborators}
+          currentOwnerId={playlist.owner_id ? Number(playlist.owner_id) : getCurrentUserId()}
+          userMap={new Map(Array.from(userMap.entries()).map(([id, data]) => [id, { username: data.username, display_name: data.display_name }]))}
+        />
+      )}
+
+      {/* Share Link Modal */}
+      {playlist && (
+        <ShareLinkModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          playlistId={Number(playlist.id)}
+        />
+      )}
+
+      {/* Collab Invite Modal */}
+      {playlist && (
+        <CollabInviteModal
+          isOpen={isInviteModalOpen}
+          onClose={() => setIsInviteModalOpen(false)}
+          playlistId={Number(playlist.id)}
+        />
+      )}
+
       <EditPlaylistModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
@@ -1395,7 +2032,7 @@ export const PlaylistPage: React.FC = () => {
             }
           }
           setPlaylist((prev) => prev ? { ...prev, name, description, ...(coverUrl ? { coverUrl } : {}) } : null);
-          toast.success("Playlist details updated!");
+          toast.success("Playlist details updated");
         }}
       />
 
@@ -1417,10 +2054,12 @@ export const PlaylistPage: React.FC = () => {
                     await trackAPI.add(newPlaylist.id, track.song.id);
                     setUserPlaylists(prev => [...prev, { id: String(newPlaylist.id), name: newPlaylist.name }]);
                     window.dispatchEvent(new Event('local_playlists_updated'));
-                    toast.success(`Created "My Playlist" and added ${track.song.title}`);
+                    toast.success(`Created "My Playlist" and added "${track.song.title}"`);
                 } else {
                     await trackAPI.add(Number(playlistId), track.song.id);
-                    toast.success("Added to playlist");
+                    const targetPlaylist = userPlaylists.find(p => p.id === playlistId);
+                    const playlistName = targetPlaylist?.name || 'playlist';
+                    toast.success(`Added "${track.song.title}" to ${playlistName}`);
                 }
             } catch {
                 toast.error("Failed to add to playlist");
@@ -1430,7 +2069,7 @@ export const PlaylistPage: React.FC = () => {
             try {
                 await trackAPI.remove(Number(playlist.id), track.id);
                 setTracks(prev => prev.filter(t => t.id !== track.id));
-                toast.success("Removed from playlist");
+                toast.success(`Removed "${track.song.title}" from ${playlist.name}`);
             } catch {
                 toast.error("Failed to remove track");
             }
