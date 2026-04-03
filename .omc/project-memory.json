@@ -190,6 +190,12 @@
       "type": "file"
     },
     {
+      "path": "src/animations/InvalidInviteAnimation.tsx",
+      "accessCount": 21,
+      "lastAccessed": 1775252636424,
+      "type": "file"
+    },
+    {
       "path": "src/components/layout/Sidebar.tsx",
       "accessCount": 20,
       "lastAccessed": 1775241443036,
@@ -208,6 +214,12 @@
       "type": "file"
     },
     {
+      "path": "src/animations/ValidatingAnimation.tsx",
+      "accessCount": 7,
+      "lastAccessed": 1775253346956,
+      "type": "file"
+    },
+    {
       "path": "src/pages/SearchPage.tsx",
       "accessCount": 4,
       "lastAccessed": 1775173179777,
@@ -217,6 +229,12 @@
       "path": "src/components/modals/ViewCollaboratorsModal.tsx",
       "accessCount": 4,
       "lastAccessed": 1775205806901,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/LeavePlaylistModal.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1775254708921,
       "type": "file"
     },
     {
@@ -274,6 +292,12 @@
       "type": "directory"
     },
     {
+      "path": "src/pages/InvitePage.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775252933879,
+      "type": "file"
+    },
+    {
       "path": "src/components/layout/BottomPlayer.tsx",
       "accessCount": 2,
       "lastAccessed": 1775174932815,
@@ -292,6 +316,12 @@
       "type": "file"
     },
     {
+      "path": "src/pages/InviteErrorPage.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775251577243,
+      "type": "file"
+    },
+    {
       "path": "src/api/profile.ts",
       "accessCount": 1,
       "lastAccessed": 1775077121860,
@@ -301,12 +331,6 @@
       "path": "src/components/modals/RemoveCollaboratorModal.tsx",
       "accessCount": 1,
       "lastAccessed": 1775163897516,
-      "type": "file"
-    },
-    {
-      "path": "src/components/modals/LeavePlaylistModal.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1775163905567,
       "type": "file"
     },
     {
@@ -344,6 +368,18 @@
       "accessCount": 1,
       "lastAccessed": 1775241266210,
       "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 1,
+      "lastAccessed": 1775252703052,
+      "type": "directory"
+    },
+    {
+      "path": "src/pages",
+      "accessCount": 1,
+      "lastAccessed": 1775252708495,
+      "type": "directory"
     }
   ],
   "userDirectives": []

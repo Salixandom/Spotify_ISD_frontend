@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
     User,
     Lock,
@@ -19,6 +19,7 @@ import { Input } from "../components/ui/Input";
 
 export const LoginPage: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { setUser } = useAuthStore();
     const cardRef = useRef<HTMLDivElement>(null);
 
@@ -92,12 +93,17 @@ export const LoginPage: React.FC = () => {
             const user = await authAPI.me();
             setUser(user);
 
-            const redirectPath = sessionStorage.getItem("redirectAfterLogin");
+            // Check for redirect query parameter first, then fallback to sessionStorage
+            const params = new URLSearchParams(location.search);
+            const redirectTo = params.get('redirect');
+
+            const redirectPath = redirectTo || sessionStorage.getItem("redirectAfterLogin");
+
             if (redirectPath) {
                 sessionStorage.removeItem("redirectAfterLogin");
-                navigate(redirectPath);
+                navigate(redirectPath, { replace: true });
             } else {
-                navigate("/");
+                navigate("/", { replace: true });
             }
         } catch (err) {
             console.error("Login error:", err);
