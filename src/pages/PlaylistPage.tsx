@@ -35,7 +35,6 @@ import {
   Trash2,
   Users,
   LogOut,
-  Crown,
   Heart,
 } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -302,16 +301,6 @@ export const PlaylistPage: React.FC = () => {
   const [sortConfig, setSortConfig] = React.useState<{ field: TrackSortField; order: SortOrder } | null>(null);
   const [isSorting, setIsSorting] = React.useState(false);
   const [isAdvancedSortOpen, setIsAdvancedSortOpen] = React.useState(false);
-
-  // Collaborators state
-  const [collaborators, setCollaborators] = React.useState<Collaborator[]>([]);
-  const [userRole, setUserRole] = React.useState<'owner' | 'collaborator' | null>(null);
-  const [selectedCollaborator, setSelectedCollaborator] = React.useState<Collaborator | null>(null);
-  const [isViewCollabModalOpen, setIsViewCollabModalOpen] = React.useState(false);
-  const [isRemoveModalOpen, setIsRemoveModalOpen] = React.useState(false);
-  const [isLeaveModalOpen, setIsLeaveModalOpen] = React.useState(false);
-  const [isTransferModalOpen, setIsTransferModalOpen] = React.useState(false);
-  const [userMap, setUserMap] = React.useState<Map<number, { username: string; display_name?: string }>>(new Map());
 
   const actionsMenuRef = React.useRef<HTMLDivElement>(null);
   const listMenuRef = React.useRef<HTMLDivElement>(null);
@@ -1011,73 +1000,6 @@ export const PlaylistPage: React.FC = () => {
       setDeleteError("Could not delete this playlist. Please try again.");
     } finally {
       setIsDeleting(false);
-    }
-  };
-
-  const handleRemoveCollaborator = async () => {
-    if (!selectedCollaborator || !playlist) return;
-
-    const numericId = Number(playlist.id);
-    if (!Number.isFinite(numericId)) return;
-
-    try {
-      await collabAPI.removeCollaborator(numericId, selectedCollaborator.user_id);
-      // Refresh collaborators list
-      const updatedCollaborators = await collabAPI.getMembers(numericId);
-      setCollaborators(updatedCollaborators);
-      setIsRemoveModalOpen(false);
-      setSelectedCollaborator(null);
-    } catch (error) {
-      console.error("Failed to remove collaborator:", error);
-      // TODO: Show error toast
-    }
-  };
-
-  const handleLeavePlaylist = async () => {
-    if (!playlist) return;
-
-    const numericId = Number(playlist.id);
-    if (!Number.isFinite(numericId)) return;
-
-    try {
-      // If owner, must transfer ownership first
-      if (userRole === 'owner') {
-        setIsLeaveModalOpen(false);
-        setIsTransferModalOpen(true);
-        return;
-      }
-
-      await collabAPI.leavePlaylist(numericId);
-      navigate("/", { replace: true });
-    } catch (error) {
-      console.error("Failed to leave playlist:", error);
-      // TODO: Show error toast
-    }
-  };
-
-  const handleTransferOwnership = async (newOwnerId: number, stayAsCollaborator: boolean) => {
-    const numericId = Number(playlist?.id);
-    if (!Number.isFinite(numericId)) return;
-
-    try {
-      await collabAPI.leavePlaylist(numericId, {
-        new_owner_id: newOwnerId,
-        stay_as_collaborator: stayAsCollaborator,
-      });
-
-      if (stayAsCollaborator) {
-        // Stay as collaborator, refresh role
-        const role = await collabAPI.getUserRole(numericId);
-        setUserRole(role === 'owner' ? 'owner' : 'collaborator');
-        setIsTransferModalOpen(false);
-        setIsViewCollabModalOpen(false);
-      } else {
-        // Leave completely
-        navigate("/", { replace: true });
-      }
-    } catch (error) {
-      console.error("Failed to transfer ownership:", error);
-      // TODO: Show error toast
     }
   };
   const displayedTracks = isReorderMode ? reorderedTracks : tracks;

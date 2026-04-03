@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "../ui/Modal";
-import { Users, UserMinus, Star, Loader2 } from "lucide-react";
+import { Users, Star, Loader2 } from "lucide-react";
 import { collabAPI } from "../../api/collaboration";
 import type { Collaborator } from "../../types";
-import toast from "react-hot-toast";
 
 interface Props {
   isOpen: boolean;
