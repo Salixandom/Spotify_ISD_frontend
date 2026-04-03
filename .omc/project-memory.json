@@ -172,15 +172,15 @@
   },
   "hotPaths": [
     {
-      "path": "src/pages/ArtistPage.tsx",
-      "accessCount": 77,
-      "lastAccessed": 1775174993177,
+      "path": "src/pages/PlaylistPage.tsx",
+      "accessCount": 85,
+      "lastAccessed": 1775205856969,
       "type": "file"
     },
     {
-      "path": "src/pages/PlaylistPage.tsx",
-      "accessCount": 69,
-      "lastAccessed": 1775175049861,
+      "path": "src/pages/ArtistPage.tsx",
+      "accessCount": 80,
+      "lastAccessed": 1775205639842,
       "type": "file"
     },
     {
@@ -199,6 +199,12 @@
       "path": "src/pages/SearchPage.tsx",
       "accessCount": 4,
       "lastAccessed": 1775173179777,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/ViewCollaboratorsModal.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1775205806901,
       "type": "file"
     },
     {
@@ -226,12 +232,6 @@
       "type": "file"
     },
     {
-      "path": "src/components/modals/ViewCollaboratorsModal.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1775164170776,
-      "type": "file"
-    },
-    {
       "path": "src/components/layout/BottomPlayer.tsx",
       "accessCount": 2,
       "lastAccessed": 1775174932815,
@@ -248,6 +248,12 @@
       "accessCount": 2,
       "lastAccessed": 1775174952271,
       "type": "file"
+    },
+    {
+      "path": "src/api",
+      "accessCount": 2,
+      "lastAccessed": 1775205759263,
+      "type": "directory"
     },
     {
       "path": "src/api/profile.ts",
@@ -284,12 +290,6 @@
       "accessCount": 1,
       "lastAccessed": 1775173360641,
       "type": "file"
-    },
-    {
-      "path": "src/api",
-      "accessCount": 1,
-      "lastAccessed": 1775175003322,
-      "type": "directory"
     }
   ],
   "userDirectives": []

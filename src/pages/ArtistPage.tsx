@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MoreHorizontal, Clock3, Plus } from "lucide-react";
+import { MoreHorizontal, Clock3, Plus, Check } from "lucide-react";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
 import { TrackRowSkeleton } from "../components/ui/LoadingSkeleton";
 import { searchAPI } from "../api/search";
@@ -265,9 +265,10 @@ export const ArtistPage: React.FC = () => {
     const [likedTrackSongIds, setLikedTrackSongIds] = React.useState<Set<number>>(new Set());
     const [likedSongsPlaylistId, setLikedSongsPlaylistId] = React.useState<string | null>(null);
 
-    const handleAddToLikedSongs = async (track: ArtistTrack) => {
+    const handleToggleLike = async (track: ArtistTrack) => {
         try {
             let playlistId: string = likedSongsPlaylistId ?? "";
+            const isLiked = likedTrackSongIds.has(track.songId);
 
             // Create Liked Songs playlist if it doesn't exist
             if (!playlistId) {
@@ -281,12 +282,28 @@ export const ArtistPage: React.FC = () => {
                 setUserPlaylists(prev => [...prev, { id: playlistId, name: newPlaylist.name }]);
             }
 
-            // Add track to Liked Songs
-            await trackAPI.add(Number(playlistId), track.songId);
-            setLikedTrackSongIds(prev => new Set([...prev, track.songId]));
-            toast.success(`Added "${track.title}" to Liked Songs`);
+            if (isLiked) {
+                // Remove from Liked Songs - need to find the PlaylistTrack ID
+                const likedTracks = await trackAPI.list(Number(playlistId));
+                const trackToRemove = likedTracks.find((t: PlaylistTrack) => t.song.id === track.songId);
+
+                if (trackToRemove) {
+                    await trackAPI.remove(Number(playlistId), trackToRemove.id);
+                    setLikedTrackSongIds(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete(track.songId);
+                        return newSet;
+                    });
+                    toast.success(`Removed "${track.title}" from Liked Songs`);
+                }
+            } else {
+                // Add to Liked Songs
+                await trackAPI.add(Number(playlistId), track.songId);
+                setLikedTrackSongIds(prev => new Set([...prev, track.songId]));
+                toast.success(`Added "${track.title}" to Liked Songs`);
+            }
         } catch {
-            toast.error("Failed to add to Liked Songs");
+            toast.error("Failed to update Liked Songs");
         }
     };
 
@@ -424,12 +441,12 @@ export const ArtistPage: React.FC = () => {
                                         <button
                                             onClick={async (e) => {
                                                 e.stopPropagation();
-                                                await handleAddToLikedSongs(track);
+                                                await handleToggleLike(track);
                                             }}
                                             className="text-white/60 hover:text-spotify-green transition-colors flex items-center justify-center"
-                                            title="Add to Liked Songs"
+                                            title={likedTrackSongIds.has(track.songId) ? "Remove from Liked Songs" : "Add to Liked Songs"}
                                         >
-                                            <Plus size={16} />
+                                            {likedTrackSongIds.has(track.songId) ? <Check size={16} /> : <Plus size={16} />}
                                         </button>
                                         <button
                                             onClick={(e) => {
