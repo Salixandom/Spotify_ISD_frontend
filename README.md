@@ -18,6 +18,91 @@ This is the frontend application for the Spotify Collaborative Playlist system. 
 - ✅ Collaborative playlists
 - ✅ Advanced search & browse
 - ✅ Type-safe TypeScript codebase
+- ✅ Shareable collaboration invite links
+
+---
+
+## 🤝 Collaboration Invite Flow
+
+Users can invite others to collaborate on playlists via shareable invite links.
+
+### How It Works
+
+1. **Generate Invite Link**: Playlist owner clicks "Invite collaborators" button on playlist page
+2. **Share Link**: Owner shares the invite link with potential collaborators
+3. **Accept Invite**: When someone visits the link:
+   - If logged in: See invite modal on home page with Accept/Reject options
+   - If not logged in: Redirected to login/register, then see modal after authentication
+   - If already collaborator: See confirmation modal with "Go to Playlist" button
+   - If link expired: See error page with explanation
+
+### Invite Link Format
+
+```
+http://yourdomain.com/invite/{token}
+```
+
+Invite links expire after 24 hours for security.
+
+### User Flow Examples
+
+**New Collaborator (Logged In):**
+1. Visit `/invite/{token}`
+2. Redirects to `/?invite={token}`
+3. Modal opens with playlist name and collaboration benefits
+4. Click "Accept" → Redirected to playlist page as collaborator
+5. Click "Reject" → Modal closes, stays on home page
+
+**New Collaborator (Not Logged In):**
+1. Visit `/invite/{token}`
+2. Redirects to `/login?redirect=/invite/{token}`
+3. Log in or register
+4. Redirects back to `/invite/{token}`
+5. Flow continues as logged-in user
+
+**Already Collaborator:**
+1. Visit `/invite/{token}`
+2. Modal shows "You're already a collaborator" message
+3. Single "Go to Playlist" button
+4. Redirects to playlist page
+
+### Frontend Components
+
+- **InvitePage** (`src/pages/InvitePage.tsx`) - Entry point for invite links
+- **InviteModal** (`src/components/modals/InviteModal.tsx`) - Accept/reject modal
+- **InviteErrorPage** (`src/pages/InviteErrorPage.tsx`) - Error page for invalid/expired links
+- **HomePage** - Auto-detects invite URL params and opens modal
+
+### Backend API Endpoints
+
+- **POST** `/collab/{playlist_id}/invite/` - Generate invite token
+  - Request: `{"playlist_id": number}`
+  - Response: `{"token": "uuid", "expires_at": "timestamp"}`
+
+- **GET** `/collab/join/{token}/` - Validate invite token
+  - Response: `{"playlist_id": number, "playlist_name": string, "inviter_name": string, "collaborators": array, "is_collaborative": boolean, "owner_id": number, "valid": boolean}`
+
+- **POST** `/collab/join/{token}/` - Accept invite and join playlist
+  - Response: `Collaborator object` or `{"already_member": true}`
+
+### State Management
+
+The invite flow uses URL parameters for state management:
+- `?invite={token}` - Indicates pending invite
+- `&status=already_collaborator` - Indicates user is already a collaborator
+
+This approach:
+- ✅ Survives page refreshes
+- ✅ Survives authentication flow
+- ✅ No cleanup needed (params cleared when modal closes)
+- ✅ Easy to test manually
+
+### Security Considerations
+
+- Invite tokens expire after 24 hours
+- Tokens are single-use (can be reused but only for same playlist)
+- Authentication required for all actions
+- Backend validates tokens before allowing access
 
 ---
 

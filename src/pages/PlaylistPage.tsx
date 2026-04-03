@@ -620,13 +620,28 @@ export const PlaylistPage: React.FC = () => {
             // Ignore parse errors from localStorage and silent fetch failures
         }
 
+        // Determine owner display name
+        // For collaborative playlists, show the actual owner's name
+        // For solo playlists, show "You" if current user is owner, otherwise owner's name
+        const currentUserId = getCurrentUserId();
+        const ownerId = playlistData.owner_id;
+        let ownerDisplayName = 'Unknown';
+
+        if (ownerId === currentUserId) {
+          ownerDisplayName = 'You';
+        } else {
+          // For collaborative playlists, we'll fetch owner name later via profileAPI
+          // For now, use a placeholder that will be updated when userMap is populated
+          ownerDisplayName = isCollaborative ? `User ${ownerId}` : 'Unknown';
+        }
+
         setPlaylist({
           id: String(playlistData.id),
           name: playlistName,
           description: playlistData.description || "",
           visibility: playlistData.visibility,
           playlistType: isCollaborative ? "collaborative" : "solo",
-          ownerText: isCollaborative ? "Collaborative" : "You",
+          ownerText: ownerDisplayName,
           owner_id: playlistData.owner_id,
           coverUrl: playlistData.cover_url || undefined,
           createdAt: playlistData.created_at,
@@ -848,6 +863,7 @@ export const PlaylistPage: React.FC = () => {
         // Fetch owner's profile data
         try {
           const ownerProfile = await profileAPI.getPublicProfile(ownerId);
+
           map.set(ownerId, {
             id: ownerId,
             username: ownerProfile.display_name || `user${ownerId}`,
@@ -939,10 +955,15 @@ export const PlaylistPage: React.FC = () => {
       }
 
       await collabAPI.leavePlaylist(numericId);
-      navigate("/", { replace: true });
+      toast.success("Successfully left playlist");
+      setIsLeaveModalOpen(false);
+      // Small delay to allow modal to close before navigation
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 300);
     } catch (error) {
       console.error("Failed to leave playlist:", error);
-      toast.error("Failed to leave playlist");
+      toast.error("Failed to leave playlist. Please try again.");
     }
   };
 
@@ -1057,85 +1078,86 @@ export const PlaylistPage: React.FC = () => {
                 {playlist.description || " "}
               </div>
 
-              {playlist.playlistType === "collaborative" && (
-                <div className="flex items-center gap-3 mt-4">
-                  <div className="flex -space-x-2">
-                    {/* Show actual collaborators or just owner */}
-                    {collaborators.length > 0 ? (
-                      <>
-                        {/* Show up to 3 collaborators with avatars or initials */}
-                        {collaborators.slice(0, 3).map((collab) => {
-                          const avatarUrl = getAvatarUrl(collab.user_id);
-                          return avatarUrl ? (
-                            <img
-                              key={collab.user_id}
-                              src={avatarUrl}
-                              alt={getDisplayName(collab.user_id)}
-                              className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] object-cover"
-                              title={getDisplayName(collab.user_id)}
-                            />
-                          ) : (
-                            <div
-                              key={collab.user_id}
-                              className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold"
-                              title={getDisplayName(collab.user_id)}
-                            >
-                              {getInitials(collab.user_id)}
-                            </div>
-                          );
-                        })}
-                      </>
+              <div className="flex items-center gap-3 mt-4">
+                <div className="flex -space-x-2">
+                  {/* First, show the owner */}
+                  {(() => {
+                    const ownerId = playlist?.owner_id || getCurrentUserId();
+                    const ownerAvatar = getAvatarUrl(ownerId);
+                    return ownerAvatar ? (
+                      <img
+                        src={ownerAvatar}
+                        alt={getDisplayName(ownerId)}
+                        className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] object-cover"
+                        title={`${getDisplayName(ownerId)} (Owner)`}
+                      />
                     ) : (
-                      /* No collaborators yet, show owner */
-                      (() => {
-                        const ownerId = getCurrentUserId();
-                        const ownerAvatar = getAvatarUrl(ownerId);
-                        return ownerAvatar ? (
-                          <img
-                            src={ownerAvatar}
-                            alt={getDisplayName(ownerId)}
-                            className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] object-cover"
-                            title={getDisplayName(ownerId)}
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
-                            {getInitials(ownerId)}
-                          </div>
-                        );
-                      })()
-                    )}
-                  </div>
-                  {/* + button to invite collaborators - Only for owners and collaborators */}
-                  {(userRole === 'owner' || userRole === 'collaborator') && (
-                    <button
-                      onClick={() => {
-                        const numericId = Number(playlist.id);
-                        if (Number.isFinite(numericId) && !playlist.isLocalDraft) {
-                          setIsInviteModalOpen(true);
-                        }
-                      }}
-                      className="w-8 h-8 rounded-full border border-white/20 bg-white/5 text-white/70 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
-                      aria-label="Invite collaborators"
-                    >
-                      <Plus size={16} />
-                    </button>
-                  )}
-                  <span className="text-white/75 text-xs">
-                    {collaborators.length === 0 ? (
-                      'No collaborators yet'
-                    ) : collaborators.length <= 3 ? (
-                      // Show all names when 3 or fewer
-                      collaborators.map((c) => getDisplayName(c.user_id)).join(', ')
+                      <div
+                        className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold"
+                        title={`${getDisplayName(ownerId)} (Owner)`}
+                      >
+                        {getInitials(ownerId)}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Then show collaborators (only if collaborative) */}
+                  {playlist.playlistType === "collaborative" && collaborators.length > 0 && collaborators.slice(0, 2).map((collab) => {
+                    const avatarUrl = getAvatarUrl(collab.user_id);
+                    return avatarUrl ? (
+                      <img
+                        key={collab.user_id}
+                        src={avatarUrl}
+                        alt={getDisplayName(collab.user_id)}
+                        className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] object-cover"
+                        title={getDisplayName(collab.user_id)}
+                      />
                     ) : (
-                      // Show first 2 names + count for others
-                      `${collaborators.slice(0, 2).map((c) => getDisplayName(c.user_id)).join(', ')} +${collaborators.length - 2} others`
-                    )}
-                  </span>
+                      <div
+                        key={collab.user_id}
+                        className="w-8 h-8 rounded-full border-2 border-[#1a1a2e] bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold"
+                        title={getDisplayName(collab.user_id)}
+                      >
+                        {getInitials(collab.user_id)}
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
+
+                {/* + button to invite collaborators - Only for owners and collaborators */}
+                {(userRole === 'owner' || userRole === 'collaborator') && (
+                  <button
+                    onClick={() => {
+                      const numericId = Number(playlist.id);
+                      if (Number.isFinite(numericId) && !playlist.isLocalDraft) {
+                        setIsInviteModalOpen(true);
+                      }
+                    }}
+                    className="w-8 h-8 rounded-full border border-white/20 bg-white/5 text-white/70 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
+                    aria-label="Invite collaborators"
+                  >
+                    <Plus size={16} />
+                  </button>
+                )}
+
+                <span className="text-white/75 text-xs">
+                  {collaborators.length === 0 ? (
+                    // Solo playlist - just owner
+                    `${getDisplayName(playlist?.owner_id || getCurrentUserId())}`
+                  ) : collaborators.length <= 2 ? (
+                    // Show owner + all collaborators when 2 or fewer total
+                    [playlist?.owner_id || getCurrentUserId(), ...collaborators.map(c => c.user_id)]
+                      .map(id => getDisplayName(id))
+                      .join(', ')
+                  ) : (
+                    // Show owner + first 2 collaborators + count for others
+                    `${getDisplayName(playlist?.owner_id || getCurrentUserId())}, ${collaborators.slice(0, 2).map(c => getDisplayName(c.user_id)).join(', ')} +${collaborators.length - 2} others`
+                  )}
+                </span>
+              </div>
 
               <p className="text-white/75 text-xs md:text-sm mt-3 flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-white/90">{playlist.ownerText}</span>
+                <span className="font-semibold text-white/90">{playlist.playlistType === 'collaborative' ? 'Collaborative' : 'Solo'}</span>
                 <span>•</span>
                 <span>{tracks.length} songs, {durationLabel}</span>
                 {playlist.createdAt && (
@@ -1385,39 +1407,6 @@ export const PlaylistPage: React.FC = () => {
                     <span className="flex-1">Invite collaborators</span>
                   </button>
 
-                  {/* Collaborators menu items - only for collaborative playlists */}
-                  {(() => {
-                    console.log('🔍 Rendering menu, userRole:', userRole);
-                    return null;
-                  })()}
-                  {userRole && (
-                    <>
-                      <button
-                        onClick={() => {
-                          setIsActionsOpen(false);
-                          setIsViewCollabModalOpen(true);
-                        }}
-                        className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors text-left"
-                      >
-                        <Users size={16} className="text-white/60 shrink-0" />
-                        <span className="flex-1">View collaborators</span>
-                      </button>
-
-                      {/* Leave playlist option - not for owners */}
-                      {userRole === 'collaborator' && (
-                        <button
-                          onClick={() => {
-                            setIsActionsOpen(false);
-                            setIsLeaveModalOpen(true);
-                          }}
-                          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors text-left"
-                        >
-                          <LogOut size={16} className="text-white/60 shrink-0" />
-                          <span className="flex-1">Leave playlist</span>
-                        </button>
-                      )}
-                    </>
-                  )}
                   <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors text-left">
                     <XCircle size={16} className="text-white/60 shrink-0" />
                     <span className="flex-1">Exclude from your taste profile</span>
@@ -1996,6 +1985,7 @@ export const PlaylistPage: React.FC = () => {
           playlistId={Number(playlist.id)}
           userRole={userRole}
           currentUserId={getCurrentUserId()}
+          ownerId={playlist.owner_id ? Number(playlist.owner_id) : getCurrentUserId()}
           onRemoveClick={(collaborator) => {
             setSelectedCollaborator(collaborator);
             setIsViewCollabModalOpen(false);
@@ -2005,7 +1995,7 @@ export const PlaylistPage: React.FC = () => {
             setIsViewCollabModalOpen(false);
             setIsLeaveModalOpen(true);
           }}
-          userMap={new Map(Array.from(userMap.entries()).map(([id, data]) => [id, { username: data.username, display_name: data.display_name }]))}
+          userMap={new Map(Array.from(userMap.entries()).map(([id, data]) => [id, { username: data.username, display_name: data.display_name, avatar_url: data.avatar_url }]))}
         />
       )}
 
@@ -2019,7 +2009,7 @@ export const PlaylistPage: React.FC = () => {
           }}
           onConfirm={handleRemoveCollaborator}
           collaborator={selectedCollaborator}
-          userMap={new Map(Array.from(userMap.entries()).map(([id, data]) => [id, { username: data.username, display_name: data.display_name }]))}
+          userMap={new Map(Array.from(userMap.entries()).map(([id, data]) => [id, { username: data.username, display_name: data.display_name, avatar_url: data.avatar_url }]))}
         />
       )}
 
@@ -2041,7 +2031,7 @@ export const PlaylistPage: React.FC = () => {
           onConfirm={handleTransferOwnership}
           collaborators={collaborators}
           currentOwnerId={playlist.owner_id ? Number(playlist.owner_id) : getCurrentUserId()}
-          userMap={new Map(Array.from(userMap.entries()).map(([id, data]) => [id, { username: data.username, display_name: data.display_name }]))}
+          userMap={new Map(Array.from(userMap.entries()).map(([id, data]) => [id, { username: data.username, display_name: data.display_name, avatar_url: data.avatar_url }]))}
         />
       )}
 
