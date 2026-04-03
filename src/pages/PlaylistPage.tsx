@@ -1,26 +1,55 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  ChevronRight,
   Clock3,
-  Download,
+  Copy,
+  Globe,
+  GripVertical,
   List,
+  ListPlus,
+  Lock,
+  MinusCircle,
   MoreHorizontal,
   Music2,
+  Pencil,
   Play,
   Plus,
+  PlusCircle,
+  CheckCircle2,
+  Share,
   Shuffle,
-  Trash2,
+  UserMinus,
   UserPlus,
+  XCircle,
+  Eye,
+  EyeOff,
+  Save,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  SlidersHorizontal,
+  Trash2,
+  Users,
+  LogOut,
+  Crown,
 } from "lucide-react";
 import { playlistAPI } from "../api/playlists";
 import { trackAPI } from "../api/tracks";
-import type { PlaylistTrack } from "../types";
+import { collabAPI } from "../api/collaboration";
+import type { Playlist, PlaylistTrack, TrackSortField, SortOrder, Collaborator } from "../types";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
 import {
   deleteLocalDraftPlaylistById,
   getLocalDraftPlaylistById,
 } from "../utils/localPlaylists";
 import { Modal } from "../components/ui/Modal";
+import { EditPlaylistModal } from "../components/modals/EditPlaylistModal";
+import { TrackContextMenu } from "../components/modals/TrackContextMenu";
+import { ViewCollaboratorsModal } from "../components/modals/ViewCollaboratorsModal";
+import { RemoveCollaboratorModal } from "../components/modals/RemoveCollaboratorModal";
+import { LeavePlaylistModal } from "../components/modals/LeavePlaylistModal";
+import { TransferOwnershipModal } from "../components/modals/TransferOwnershipModal";
 
 type PlaylistViewModel = {
   id: string;
@@ -122,6 +151,16 @@ export const PlaylistPage: React.FC = () => {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
+
+  // Collaborators state
+  const [collaborators, setCollaborators] = React.useState<Collaborator[]>([]);
+  const [userRole, setUserRole] = React.useState<'owner' | 'collaborator' | null>(null);
+  const [selectedCollaborator, setSelectedCollaborator] = React.useState<Collaborator | null>(null);
+  const [isViewCollabModalOpen, setIsViewCollabModalOpen] = React.useState(false);
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = React.useState(false);
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = React.useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = React.useState(false);
+  const [userMap, setUserMap] = React.useState<Map<number, { username: string; display_name?: string }>>(new Map());
 
   const actionsMenuRef = React.useRef<HTMLDivElement>(null);
 
@@ -250,6 +289,46 @@ export const PlaylistPage: React.FC = () => {
     setDeleteError(null);
   }, [id]);
 
+  // Fetch user role and collaborators for non-local playlists
+  React.useEffect(() => {
+    if (!playlist || playlist.isLocalDraft || playlist.id.startsWith("local-")) {
+      setUserRole(null);
+      setCollaborators([]);
+      return;
+    }
+
+    const numericId = Number(playlist.id);
+    if (!Number.isFinite(numericId)) return;
+
+    const fetchCollabData = async () => {
+      try {
+        // Fetch user role
+        const role = await collabAPI.getUserRole(numericId);
+        setUserRole(role === 'owner' ? 'owner' : 'collaborator');
+
+        // Fetch collaborators for collaborative playlists
+        if (role === 'owner' || role === 'collaborator') {
+          const members = await collabAPI.getMembers(numericId);
+          setCollaborators(members);
+
+          // Build userMap from collaborator data
+          const map = new Map<number, { username: string; display_name?: string }>();
+          members.forEach(member => {
+            map.set(member.user_id, {
+              username: member.username,
+              display_name: member.display_name,
+            });
+          });
+          setUserMap(map);
+        }
+      } catch (error) {
+        console.error("Failed to fetch collaboration data:", error);
+      }
+    };
+
+    fetchCollabData();
+  }, [playlist]);
+
   const handleDeletePlaylist = async () => {
     if (!playlist) return;
 
@@ -278,6 +357,73 @@ export const PlaylistPage: React.FC = () => {
       setDeleteError("Could not delete this playlist. Please try again.");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleRemoveCollaborator = async () => {
+    if (!selectedCollaborator || !playlist) return;
+
+    const numericId = Number(playlist.id);
+    if (!Number.isFinite(numericId)) return;
+
+    try {
+      await collabAPI.removeCollaborator(numericId, selectedCollaborator.user_id);
+      // Refresh collaborators list
+      const updatedCollaborators = await collabAPI.getMembers(numericId);
+      setCollaborators(updatedCollaborators);
+      setIsRemoveModalOpen(false);
+      setSelectedCollaborator(null);
+    } catch (error) {
+      console.error("Failed to remove collaborator:", error);
+      // TODO: Show error toast
+    }
+  };
+
+  const handleLeavePlaylist = async () => {
+    if (!playlist) return;
+
+    const numericId = Number(playlist.id);
+    if (!Number.isFinite(numericId)) return;
+
+    try {
+      // If owner, must transfer ownership first
+      if (userRole === 'owner') {
+        setIsLeaveModalOpen(false);
+        setIsTransferModalOpen(true);
+        return;
+      }
+
+      await collabAPI.leavePlaylist(numericId);
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Failed to leave playlist:", error);
+      // TODO: Show error toast
+    }
+  };
+
+  const handleTransferOwnership = async (newOwnerId: number, stayAsCollaborator: boolean) => {
+    const numericId = Number(playlist?.id);
+    if (!Number.isFinite(numericId)) return;
+
+    try {
+      await collabAPI.leavePlaylist(numericId, {
+        new_owner_id: newOwnerId,
+        stay_as_collaborator: stayAsCollaborator,
+      });
+
+      if (stayAsCollaborator) {
+        // Stay as collaborator, refresh role
+        const role = await collabAPI.getUserRole(numericId);
+        setUserRole(role === 'owner' ? 'owner' : 'collaborator');
+        setIsTransferModalOpen(false);
+        setIsViewCollabModalOpen(false);
+      } else {
+        // Leave completely
+        navigate("/", { replace: true });
+      }
+    } catch (error) {
+      console.error("Failed to transfer ownership:", error);
+      // TODO: Show error toast
     }
   };
 
@@ -393,6 +539,38 @@ export const PlaylistPage: React.FC = () => {
                   <button className="w-full text-left px-3 py-2 text-sm text-white/85 hover:bg-white/[0.08] rounded-md transition-colors">
                     Edit details
                   </button>
+
+                  {/* Collaborators menu items - only for collaborative playlists */}
+                  {userRole && (
+                    <>
+                      <div className="my-1 border-t border-white/10" />
+                      <button
+                        onClick={() => {
+                          setIsActionsOpen(false);
+                          setIsViewCollabModalOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-white/85 hover:bg-white/[0.08] rounded-md transition-colors"
+                      >
+                        <Users size={15} />
+                        View collaborators
+                      </button>
+
+                      {/* Leave playlist option - not for owners */}
+                      {userRole === 'collaborator' && (
+                        <button
+                          onClick={() => {
+                            setIsActionsOpen(false);
+                            setIsLeaveModalOpen(true);
+                          }}
+                          className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-red-300 hover:text-red-200 hover:bg-red-500/10 rounded-md transition-colors"
+                        >
+                          <LogOut size={15} />
+                          Leave playlist
+                        </button>
+                      )}
+                    </>
+                  )}
+
                   <div className="my-1 border-t border-white/10" />
                   <button
                     onClick={() => {
@@ -500,6 +678,63 @@ export const PlaylistPage: React.FC = () => {
           </button>
         </div>
       </Modal>
+
+      {/* View Collaborators Modal */}
+      {playlist && (
+        <ViewCollaboratorsModal
+          isOpen={isViewCollabModalOpen}
+          onClose={() => setIsViewCollabModalOpen(false)}
+          playlistId={Number(playlist.id)}
+          userRole={userRole}
+          currentUserId={1} // TODO: Get from auth context
+          onRemoveClick={(collaborator) => {
+            setSelectedCollaborator(collaborator);
+            setIsViewCollabModalOpen(false);
+            setIsRemoveModalOpen(true);
+          }}
+          onLeaveClick={() => {
+            setIsViewCollabModalOpen(false);
+            setIsLeaveModalOpen(true);
+          }}
+          userMap={userMap}
+        />
+      )}
+
+      {/* Remove Collaborator Modal */}
+      {selectedCollaborator && (
+        <RemoveCollaboratorModal
+          isOpen={isRemoveModalOpen}
+          onClose={() => {
+            setIsRemoveModalOpen(false);
+            setSelectedCollaborator(null);
+          }}
+          onConfirm={handleRemoveCollaborator}
+          collaborator={selectedCollaborator}
+          userMap={userMap}
+        />
+      )}
+
+      {/* Leave Playlist Modal */}
+      {playlist && (
+        <LeavePlaylistModal
+          isOpen={isLeaveModalOpen}
+          onClose={() => setIsLeaveModalOpen(false)}
+          onConfirm={handleLeavePlaylist}
+          playlistName={playlist.name}
+        />
+      )}
+
+      {/* Transfer Ownership Modal */}
+      {playlist && userRole === 'owner' && (
+        <TransferOwnershipModal
+          isOpen={isTransferModalOpen}
+          onClose={() => setIsTransferModalOpen(false)}
+          onConfirm={handleTransferOwnership}
+          collaborators={collaborators}
+          currentOwnerId={1} // TODO: Get from auth context
+          userMap={userMap}
+        />
+      )}
     </div>
   );
 };

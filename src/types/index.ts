@@ -76,6 +76,8 @@ export interface Collaborator {
   id: number;
   playlist_id: number;
   user_id: number;
+  username?: string;
+  display_name?: string;
   role: 'collaborator'; // owner is never stored here
   joined_at: string;
 }
