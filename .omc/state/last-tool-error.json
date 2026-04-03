@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"npm run build\",\"timeout\":120000,\"description\":\"Check current build status\"}",
-  "error": "Exit code 2\n\n> client@0.0.0 build\n> tsc -b && vite build\n\nsrc/components/modals/ViewCollaboratorsModal.tsx(3,17): error TS6133: 'UserMinus' is declared but its value is never read.\nsrc/components/modals/ViewCollaboratorsModal.tsx(6,1): error TS6133: 'toast' is declared but its value is never read.\nsrc/pages/PlaylistPage.tsx(38,3): error TS6133: 'Crown' is declared but its value is never read.",
-  "timestamp": "2026-04-03T08:43:02.798Z",
+  "tool_input_preview": "{\"command\":\"pkill -f \\\"vite\\\"\",\"description\":\"Kill the running Vite dev server\"}",
+  "error": "Exit code 144",
+  "timestamp": "2026-04-03T10:50:48.907Z",
   "retry_count": 1
 }

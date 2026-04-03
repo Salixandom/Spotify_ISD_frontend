@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { Music, Heart } from "lucide-react";
+import { Music, Heart, Lock, Pin } from "lucide-react";
 import { getPlaylistRoute } from "../../utils/playlistRoutes";
 
 interface PlaylistItem {
@@ -25,6 +25,7 @@ interface SidebarLibraryListProps {
     };
     filter: 'all' | 'spotify' | 'you' | 'hidden' | 'followed';
     searchQuery: string;
+    INITIAL_DISPLAY_COUNT?: number;
 }
 
 export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
@@ -32,7 +33,10 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
     categories,
     filter,
     searchQuery,
+    INITIAL_DISPLAY_COUNT = 50,
 }) => {
+    const [displayCount, setDisplayCount] = React.useState(INITIAL_DISPLAY_COUNT);
+
     // Determine which playlists to show based on filter and search query
     const filteredPlaylists = React.useMemo(() => {
         let base: PlaylistItem[] = [];
@@ -83,13 +87,33 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
 
     if (isLoading) {
         return (
-            <div className="space-y-1.5">
-                {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center gap-3 px-2.5 py-2 rounded-xl bg-white/2">
-                        <div className="w-12 h-12 rounded-md bg-white/[0.04] animate-pulse" />
-                        <div className="flex-1">
-                            <div className="h-3.5 w-3/4 bg-white/[0.04] rounded mb-1.5 animate-pulse" />
-                            <div className="h-2.5 w-1/2 bg-white/[0.04] rounded animate-pulse" />
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-1.5">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                    <div
+                        key={i}
+                        className="flex items-center gap-3 px-2.5 py-2 rounded-xl bg-white/2"
+                    >
+                        {/* Cover placeholder */}
+                        <div className="w-12 h-12 rounded-md overflow-hidden border border-white/10 bg-white/4 shrink-0">
+                            <div className="w-full h-full bg-gradient-to-br from-white/[0.08] to-white/[0.02] animate-pulse" />
+                        </div>
+
+                        {/* Text placeholders with staggered animation */}
+                        <div className="min-w-0 flex-1">
+                            <div
+                                className="h-3.5 bg-white/[0.06] rounded mb-1.5 animate-pulse"
+                                style={{
+                                    width: `${Math.max(40, Math.random() * 80)}%`,
+                                    animationDelay: `${i * 50}ms`,
+                                }}
+                            />
+                            <div
+                                className="h-2.5 bg-white/[0.04] rounded animate-pulse"
+                                style={{
+                                    width: `${Math.max(30, Math.random() * 60)}%`,
+                                    animationDelay: `${i * 50 + 100}ms`,
+                                }}
+                            />
                         </div>
                     </div>
                 ))}
@@ -105,10 +129,67 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
         );
     }
 
+    // Row renderer for react-window
+    const Row = React.memo(({ index, style, data }: ListChildComponentProps) => {
+        const playlist = data[index];
+        const navigate = React.useMemo(() => (id: string) => {
+            window.location.href = getPlaylistRoute(id);
+        }, []);
+
+        return (
+            <div
+                style={style}
+                className="pr-1"
+                onClick={() => navigate(playlist.id)}
+            >
+                <div className="flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all duration-200 cursor-pointer text-white/70 hover:text-white hover:bg-white/6">
+                    {/* Cover / icon */}
+                    <div className="w-12 h-12 rounded-md overflow-hidden border border-white/10 bg-white/4 shrink-0">
+                        {playlist.isLikedSongs ? (
+                            <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-400 flex items-center justify-center">
+                                <Heart size={18} className="text-white" fill="currentColor" />
+                            </div>
+                        ) : playlist.imageUrl ? (
+                            <img
+                                src={playlist.imageUrl}
+                                alt={playlist.title}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                                <Music size={18} className="text-white/55" />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Title + subtitle */}
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                            <p className="truncate text-sm font-medium">{playlist.title}</p>
+                            {playlist.isLikedSongs && (
+                                <Pin size={14} className="text-spotify-green shrink-0" style={{ transform: 'rotate(45deg)' }} />
+                            )}
+                        </div>
+                        <p className="truncate text-xs text-white/65">{playlist.subtitle}</p>
+                    </div>
+
+                    {playlist.isPrivate && (
+                        <Lock size={12} className="text-white/50 shrink-0" />
+                    )}
+                </div>
+            </div>
+        );
+    });
+
+    // Simple pagination: show initial count + "Show more" button
+    const visiblePlaylists = filteredPlaylists.slice(0, displayCount);
+    const hasMore = filteredPlaylists.length > displayCount;
+
     return (
         <div className="flex-1 min-h-0 overflow-y-auto pr-1">
             <div className="space-y-1.5">
-                {filteredPlaylists.map((playlist) => (
+                {visiblePlaylists.map((playlist) => (
                     <NavLink
                         key={playlist.id}
                         to={getPlaylistRoute(playlist.id)}
@@ -142,15 +223,30 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
 
                         {/* Title + subtitle */}
                         <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium">{playlist.title}</p>
+                            <div className="flex items-center gap-1.5">
+                                <p className="truncate text-sm font-medium">{playlist.title}</p>
+                                {playlist.isLikedSongs && (
+                                    <Pin size={14} className="text-spotify-green shrink-0" style={{ transform: 'rotate(45deg)' }} />
+                                )}
+                            </div>
                             <p className="truncate text-xs text-white/65">{playlist.subtitle}</p>
                         </div>
 
                         {playlist.isPrivate && (
-                            <span className="text-[10px] opacity-70">🔒</span>
+                            <Lock size={12} className="text-white/50 shrink-0" />
                         )}
                     </NavLink>
                 ))}
+
+                {/* Show more button */}
+                {hasMore && (
+                    <button
+                        onClick={() => setDisplayCount(prev => prev + INITIAL_DISPLAY_COUNT)}
+                        className="w-full text-center text-xs text-white/55 hover:text-white py-2 px-2.5 rounded-xl hover:bg-white/5 transition-all"
+                    >
+                        Show {Math.min(INITIAL_DISPLAY_COUNT, filteredPlaylists.length - displayCount)} more playlists...
+                    </button>
+                )}
             </div>
         </div>
     );

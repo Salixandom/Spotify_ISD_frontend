@@ -63,6 +63,7 @@ import { LeavePlaylistModal } from "../components/modals/LeavePlaylistModal";
 import { TransferOwnershipModal } from "../components/modals/TransferOwnershipModal";
 import { ShareLinkModal } from "../components/modals/ShareLinkModal";
 import { CollabInviteModal } from "../components/modals/CollabInviteModal";
+import { PlaylistComments } from "../components/comments/PlaylistComments";
 import { Menu } from "lucide-react";
 import { getArtistName, getAlbumName } from "../utils/trackHelpers";
 
@@ -1833,7 +1834,10 @@ export const PlaylistPage: React.FC = () => {
             <section ref={addSongsSectionRef} className="px-6 md:px-8 py-8 border-t border-white/10 mt-8">
               <div className="max-w-5xl mx-auto">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-white">Find something you’ll love</h2>
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Search size={22} />
+                    Find something you’ll love
+                  </h2>
                   {searchResults.length > 0 && (
                     <button
                       onClick={() => {
@@ -1939,6 +1943,17 @@ export const PlaylistPage: React.FC = () => {
                 )}
               </div>
             </section>
+          )}
+
+          {/* Comments Section */}
+          {!playlist.isLocalDraft && playlist.id && (
+            <PlaylistComments
+              playlistId={Number(playlist.id)}
+              currentUserId={getCurrentUserId()}
+              userRole={userRole}
+              ownerId={playlist.owner_id ? Number(playlist.owner_id) : getCurrentUserId()}
+              userMap={userMap}
+            />
           )}
         </div>
       </div>
