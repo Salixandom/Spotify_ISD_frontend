@@ -2,6 +2,7 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import { Music, Heart, Lock, Pin } from "lucide-react";
 import { getPlaylistRoute } from "../../utils/playlistRoutes";
+import { togglePlaylistPin } from "../../utils/pinnedPlaylists";
 
 interface PlaylistItem {
     id: string;
@@ -12,6 +13,7 @@ interface PlaylistItem {
     isPrivate?: boolean;
     isSystemGenerated?: boolean;
     isLikedSongs?: boolean;
+    isPinned?: boolean;
 }
 
 interface SidebarLibraryListProps {
@@ -25,6 +27,9 @@ interface SidebarLibraryListProps {
     };
     filter: 'all' | 'spotify' | 'you' | 'hidden' | 'followed';
     searchQuery: string;
+    sortBy: 'recents' | 'alphabetical' | 'reverseAlphabetical' | 'creator';
+    viewMode: 'default-list' | 'compact-list' | 'default-grid' | 'compact-grid';
+    pinnedPlaylistIds: Set<string>;
     INITIAL_DISPLAY_COUNT?: number;
 }
 
@@ -33,9 +38,27 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
     categories,
     filter,
     searchQuery,
+    sortBy,
+    viewMode,
+    pinnedPlaylistIds,
     INITIAL_DISPLAY_COUNT = 50,
 }) => {
     const [displayCount, setDisplayCount] = React.useState(INITIAL_DISPLAY_COUNT);
+    const [contextMenuPlaylist, setContextMenuPlaylist] = React.useState<PlaylistItem | null>(null);
+    const [contextMenuPosition, setContextMenuPosition] = React.useState<{ x: number; y: number } | null>(null);
+
+    // Close context menu when clicking outside
+    React.useEffect(() => {
+        const handleClickOutside = () => {
+            setContextMenuPlaylist(null);
+            setContextMenuPosition(null);
+        };
+
+        if (contextMenuPosition) {
+            document.addEventListener('click', handleClickOutside);
+            return () => document.removeEventListener('click', handleClickOutside);
+        }
+    }, [contextMenuPosition]);
 
     // Determine which playlists to show based on filter and search query
     const filteredPlaylists = React.useMemo(() => {
@@ -72,18 +95,35 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
             results = base;
         }
 
+        // Mark pinned playlists
+        results = results.map(p => ({
+            ...p,
+            isPinned: pinnedPlaylistIds.has(p.id),
+        }));
+
+        // Separate pinned and unpinned (excluding Liked Songs from pinning logic)
+        const likedSongs = results.filter(p => p.isLikedSongs);
+        const pinned = results.filter(p => p.isPinned && !p.isLikedSongs);
+        const unpinned = results.filter(p => !p.isPinned && !p.isLikedSongs);
+
+        // Sort unpinned playlists
+        let sortedUnpinned = [...unpinned];
+        if (sortBy === 'alphabetical') {
+            sortedUnpinned.sort((a, b) => a.title.localeCompare(b.title));
+        } else if (sortBy === 'reverseAlphabetical') {
+            sortedUnpinned.sort((a, b) => b.title.localeCompare(a.title));
+        } else if (sortBy === 'creator') {
+            sortedUnpinned.sort((a, b) => a.subtitle.localeCompare(b.subtitle));
+        }
+        // 'recents' keep original order (already sorted by last played from API)
+
         // Always pin Liked Songs to the top for all views except 'hidden'
-        // If we're already showing likedSongs via a category filter, don't duplicate them.
         if (filter !== 'hidden') {
-            const likedSongs = categories.likedSongs.filter(ls => {
-                // Only add if not already in results
-                return !results.some(r => r.id === ls.id);
-            });
-            return [...likedSongs, ...results];
+            return [...likedSongs, ...pinned, ...sortedUnpinned];
         }
 
-        return results;
-    }, [categories, filter, searchQuery]);
+        return [...pinned, ...sortedUnpinned];
+    }, [categories, filter, searchQuery, sortBy, pinnedPlaylistIds]);
 
     if (isLoading) {
         return (
@@ -129,83 +169,81 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
         );
     }
 
-    // Row renderer for react-window
-    const Row = React.memo(({ index, style, data }: ListChildComponentProps) => {
-        const playlist = data[index];
-        const navigate = React.useMemo(() => (id: string) => {
-            window.location.href = getPlaylistRoute(id);
-        }, []);
-
-        return (
-            <div
-                style={style}
-                className="pr-1"
-                onClick={() => navigate(playlist.id)}
-            >
-                <div className="flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all duration-200 cursor-pointer text-white/70 hover:text-white hover:bg-white/6">
-                    {/* Cover / icon */}
-                    <div className="w-12 h-12 rounded-md overflow-hidden border border-white/10 bg-white/4 shrink-0">
-                        {playlist.isLikedSongs ? (
-                            <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-400 flex items-center justify-center">
-                                <Heart size={18} className="text-white" fill="currentColor" />
-                            </div>
-                        ) : playlist.imageUrl ? (
-                            <img
-                                src={playlist.imageUrl}
-                                alt={playlist.title}
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                            />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                                <Music size={18} className="text-white/55" />
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Title + subtitle */}
-                    <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                            <p className="truncate text-sm font-medium">{playlist.title}</p>
-                            {playlist.isLikedSongs && (
-                                <Pin size={14} className="text-spotify-green shrink-0" style={{ transform: 'rotate(45deg)' }} />
-                            )}
-                        </div>
-                        <p className="truncate text-xs text-white/65">{playlist.subtitle}</p>
-                    </div>
-
-                    {playlist.isPrivate && (
-                        <Lock size={12} className="text-white/50 shrink-0" />
-                    )}
-                </div>
-            </div>
-        );
-    });
-
     // Simple pagination: show initial count + "Show more" button
     const visiblePlaylists = filteredPlaylists.slice(0, displayCount);
     const hasMore = filteredPlaylists.length > displayCount;
 
+    // Determine layout based on viewMode
+    const isGridView = viewMode.includes('grid');
+    const isCompact = viewMode.includes('compact');
+
+    // Grid vs List container classes
+    const containerClass = isGridView
+        ? `grid gap-2 pr-2 ${isCompact ? 'grid-cols-3' : 'grid-cols-2'}`
+        : "space-y-1.5 pr-1";
+
+    // Handle context menu
+    const handleContextMenu = (e: React.MouseEvent, playlist: PlaylistItem) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenuPlaylist(playlist);
+        setContextMenuPosition({ x: e.pageX, y: e.pageY });
+    };
+
+    const closeContextMenu = () => {
+        setContextMenuPlaylist(null);
+        setContextMenuPosition(null);
+    };
+
+    const handleTogglePin = () => {
+        if (contextMenuPlaylist) {
+            togglePlaylistPin(contextMenuPlaylist.id, contextMenuPlaylist.title);
+            closeContextMenu();
+        }
+    };
+
     return (
-        <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-            <div className="space-y-1.5">
+        <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className={`${containerClass} pb-2`}>
                 {visiblePlaylists.map((playlist) => (
-                    <NavLink
+                    <div
                         key={playlist.id}
-                        to={getPlaylistRoute(playlist.id)}
-                        className={({ isActive }) =>
-                            `flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all duration-200 ${
-                                isActive
-                                    ? "bg-white/10 border border-white/14 text-white"
-                                    : "text-white/70 hover:text-white hover:bg-white/6"
-                            }`
+                        onContextMenu={(e) => handleContextMenu(e, playlist)}
+                    >
+                        <NavLink
+                            to={getPlaylistRoute(playlist.id)}
+                            className={({ isActive }) => {
+                            const baseClasses = "transition-all duration-200 relative group";
+                            const activeClasses = isActive
+                                ? "bg-white/10 border border-white/14 text-white"
+                                : "text-white/70 hover:text-white hover:bg-white/6";
+
+                            if (isGridView && isCompact) {
+                                // Compact grid - card style
+                                return `${baseClasses} ${activeClasses} rounded-lg p-2 flex flex-col gap-2 border border-white/8 hover:border-white/12 h-full`;
+                            } else if (isGridView && !isCompact) {
+                                // Default grid - larger card style
+                                return `${baseClasses} ${activeClasses} rounded-lg p-3 flex flex-col gap-2.5 border border-white/8 hover:border-white/12 h-full`;
+                            } else if (isCompact) {
+                                // Compact list layout
+                                return `${baseClasses} ${activeClasses} flex items-center gap-2 px-2.5 py-1.5 rounded-xl`;
+                            } else {
+                                // Default list layout
+                                return `${baseClasses} ${activeClasses} flex items-center gap-3 px-2.5 py-2 rounded-xl`;
+                            }
+                        }
                         }
                     >
                         {/* Cover / icon */}
-                        <div className="w-12 h-12 rounded-md overflow-hidden border border-white/10 bg-white/4 shrink-0">
+                        <div className={`
+                            rounded-md overflow-hidden border border-white/10 bg-white/4 shrink-0
+                            ${isGridView ? 'w-full aspect-square' : ''}
+                            ${!isGridView && isCompact ? 'w-10 h-10' : ''}
+                            ${!isGridView && !isCompact ? 'w-12 h-12' : ''}
+                        `}>
                             {playlist.isLikedSongs ? (
                                 <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-400 flex items-center justify-center">
-                                    <Heart size={18} className="text-white" fill="currentColor" />
+                                    <Heart size={isGridView ? 28 : 18} className="text-white" fill="currentColor" />
                                 </div>
                             ) : playlist.imageUrl ? (
                                 <img
@@ -216,30 +254,63 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
                                 />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center">
-                                    <Music size={18} className="text-white/55" />
+                                    <Music size={isGridView ? 28 : 18} className="text-white/55" />
                                 </div>
                             )}
                         </div>
 
                         {/* Title + subtitle */}
-                        <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                                <p className="truncate text-sm font-medium">{playlist.title}</p>
-                                {playlist.isLikedSongs && (
-                                    <Pin size={14} className="text-spotify-green shrink-0" style={{ transform: 'rotate(45deg)' }} />
-                                )}
+                        {isGridView ? (
+                            // Grid view - show info below image
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-1">
+                                    <p className="truncate text-xs font-semibold leading-tight">
+                                        {playlist.title}
+                                    </p>
+                                    {playlist.isPrivate && (
+                                        <Lock size={10} className="text-white/50 shrink-0" />
+                                    )}
+                                </div>
+                                <p className="truncate text-[10px] text-white/55 mt-0.5">
+                                    {playlist.subtitle}
+                                </p>
                             </div>
-                            <p className="truncate text-xs text-white/65">{playlist.subtitle}</p>
-                        </div>
+                        ) : isCompact ? (
+                            // Compact list - show title only
+                            <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1">
+                                    <p className="truncate text-xs font-medium">{playlist.title}</p>
+                                    {playlist.isLikedSongs && (
+                                        <Pin size={12} className="text-spotify-green shrink-0" style={{ transform: 'rotate(45deg)' }} />
+                                    )}
+                                    {playlist.isPrivate && (
+                                        <Lock size={10} className="text-white/50 shrink-0" />
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            // Default list - show full details
+                            <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                    <p className="truncate text-sm font-medium">{playlist.title}</p>
+                                    {playlist.isLikedSongs && (
+                                        <Pin size={14} className="text-spotify-green shrink-0" style={{ transform: 'rotate(45deg)' }} />
+                                    )}
+                                </div>
+                                <p className="truncate text-xs text-white/65">{playlist.subtitle}</p>
+                            </div>
+                        )}
 
-                        {playlist.isPrivate && (
+                        {/* Lock icon for default list */}
+                        {!isGridView && !isCompact && playlist.isPrivate && (
                             <Lock size={12} className="text-white/50 shrink-0" />
                         )}
-                    </NavLink>
+                        </NavLink>
+                    </div>
                 ))}
 
-                {/* Show more button */}
-                {hasMore && (
+                {/* Show more button - full width in list view */}
+                {hasMore && !isGridView && (
                     <button
                         onClick={() => setDisplayCount(prev => prev + INITIAL_DISPLAY_COUNT)}
                         className="w-full text-center text-xs text-white/55 hover:text-white py-2 px-2.5 rounded-xl hover:bg-white/5 transition-all"
@@ -248,6 +319,32 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
                     </button>
                 )}
             </div>
+
+            {/* Context Menu */}
+            {contextMenuPosition && contextMenuPlaylist && (
+                <>
+                    <div
+                        className="fixed inset-0 z-50"
+                        onClick={closeContextMenu}
+                    />
+                    <div
+                        className="fixed z-[100] bg-[#282828]/95 backdrop-blur-xl rounded-lg shadow-xl border border-white/10 py-1 min-w-[180px]"
+                        style={{
+                            left: `${contextMenuPosition.x}px`,
+                            top: `${contextMenuPosition.y}px`,
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={handleTogglePin}
+                            className="w-full text-left px-3 py-2 text-xs font-medium text-white/70 hover:text-white hover:bg-white/5 flex items-center gap-2 transition-colors"
+                        >
+                            <Pin size={14} className={contextMenuPlaylist.isPinned ? "text-spotify-green" : ""} />
+                            {contextMenuPlaylist.isPinned ? 'Unpin from Library' : 'Pin to Library'}
+                        </button>
+                    </div>
+                </>
+            )}
         </div>
     );
 };

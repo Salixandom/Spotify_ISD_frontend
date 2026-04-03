@@ -185,8 +185,14 @@
     },
     {
       "path": "src/components/layout/SidebarLibraryList.tsx",
-      "accessCount": 23,
-      "lastAccessed": 1775213771323,
+      "accessCount": 60,
+      "lastAccessed": 1775242026551,
+      "type": "file"
+    },
+    {
+      "path": "src/components/layout/Sidebar.tsx",
+      "accessCount": 20,
+      "lastAccessed": 1775241443036,
       "type": "file"
     },
     {
@@ -286,12 +292,6 @@
       "type": "file"
     },
     {
-      "path": "src/components/layout/Sidebar.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1775212992318,
-      "type": "file"
-    },
-    {
       "path": "src/api/profile.ts",
       "accessCount": 1,
       "lastAccessed": 1775077121860,
@@ -337,6 +337,12 @@
       "path": "src/api/comments.ts",
       "accessCount": 1,
       "lastAccessed": 1775212323834,
+      "type": "file"
+    },
+    {
+      "path": "src/utils/pinnedPlaylists.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775241266210,
       "type": "file"
     }
   ],

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Library, Plus, Search, List, Wand2 } from "lucide-react";
+import { Library, Plus, Search, List, Wand2, ChevronDown, LayoutGrid, LayoutList, Grid3x3, ArrowUpAZ, ArrowUpZA, Music } from "lucide-react";
 import { playlistAPI } from "../../api/playlists";
 import { CreatePlaylistModal } from "../modals/CreatePlaylistModal";
 import { GeneratePlaylistModal } from "../modals/GeneratePlaylistModal";
@@ -8,6 +8,10 @@ import {
     LOCAL_PLAYLISTS_UPDATED_EVENT,
 } from "../../utils/localPlaylists";
 import { SidebarLibraryList } from "./SidebarLibraryList";
+import {
+    getPinnedPlaylists,
+    PINNED_PLAYLISTS_UPDATED_EVENT,
+} from "../../utils/pinnedPlaylists";
 
 
 export const Sidebar: React.FC = () => {
@@ -15,6 +19,9 @@ export const Sidebar: React.FC = () => {
     const [followedPlaylists, setFollowedPlaylists] = useState<any[]>([]);
     const [localDraftPlaylists, setLocalDraftPlaylists] = useState(
         getLocalDraftPlaylists()
+    );
+    const [pinnedPlaylistIds, setPinnedPlaylistIds] = useState<Set<string>>(
+        new Set(getPinnedPlaylists().map(p => p.id))
     );
     const [isLoading, setIsLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -26,6 +33,12 @@ export const Sidebar: React.FC = () => {
     // Playlist filter: 'all' | 'spotify' | 'you' | 'hidden' | 'followed'
     const [playlistFilter, setPlaylistFilter] = React.useState<'all' | 'spotify' | 'you' | 'hidden' | 'followed'>('all');
     const [showPlaylistFilters, setShowPlaylistFilters] = React.useState(false);
+
+    // Sort and view options
+    const [showSortMenu, setShowSortMenu] = React.useState(false);
+    const [sortBy, setSortBy] = React.useState<'recents' | 'alphabetical' | 'reverseAlphabetical' | 'creator'>('recents');
+    const [viewMode, setViewMode] = React.useState<'default-list' | 'compact-list' | 'default-grid' | 'compact-grid'>('default-list');
+    const sortMenuRef = React.useRef<HTMLDivElement>(null);
 
     const fetchPlaylists = async () => {
         setIsLoading(true);
@@ -163,17 +176,41 @@ export const Sidebar: React.FC = () => {
         }
     }, [isLibrarySearchOpen]);
 
+    // Close sort menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
+                setShowSortMenu(false);
+            }
+        };
+
+        if (showSortMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showSortMenu]);
+
     useEffect(() => {
         const syncDrafts = () => {
             setLocalDraftPlaylists(getLocalDraftPlaylists());
         };
 
+        const syncPinned = () => {
+            const pinned = getPinnedPlaylists();
+            setPinnedPlaylistIds(new Set(pinned.map(p => p.id)));
+        };
+
         window.addEventListener(LOCAL_PLAYLISTS_UPDATED_EVENT, syncDrafts);
         window.addEventListener("storage", syncDrafts);
+        window.addEventListener(PINNED_PLAYLISTS_UPDATED_EVENT, syncPinned);
 
         return () => {
             window.removeEventListener(LOCAL_PLAYLISTS_UPDATED_EVENT, syncDrafts);
             window.removeEventListener("storage", syncDrafts);
+            window.removeEventListener(PINNED_PLAYLISTS_UPDATED_EVENT, syncPinned);
         };
     }, []);
 
@@ -279,7 +316,7 @@ export const Sidebar: React.FC = () => {
                     )}
                 </div>
 
-                {/* Search + sort row (visual-only for now) */}
+                {/* Search + sort row */}
                 <div className="flex items-center justify-between mb-3 px-1">
                     <div className="flex items-center gap-2 min-w-0">
                         <button
@@ -314,13 +351,164 @@ export const Sidebar: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    <button
-                        className="inline-flex items-center gap-1 text-white/60 hover:text-white transition-colors text-xs font-medium"
-                        title="Sort"
-                        aria-label="Sort"
-                    >
-                        Recents <List size={14} />
-                    </button>
+
+                    {/* Sort dropdown */}
+                    <div className="relative" ref={sortMenuRef}>
+                        <button
+                            onClick={() => setShowSortMenu((prev) => !prev)}
+                            className={`inline-flex items-center gap-1 transition-colors text-xs font-medium ${
+                                showSortMenu
+                                    ? "text-white bg-white/[0.08] px-2 py-1 rounded"
+                                    : "text-white/60 hover:text-white px-2 py-1 rounded hover:bg-white/[0.06]"
+                            }`}
+                            title="Sort and view options"
+                            aria-label="Sort and view options"
+                        >
+                            {sortBy === 'recents' && 'Recents'}
+                            {sortBy === 'alphabetical' && 'Alphabetical'}
+                            {sortBy === 'reverseAlphabetical' && 'Reverse Alpha'}
+                            {sortBy === 'creator' && 'Creator'}
+                            <ChevronDown size={12} className={`transition-transform ${showSortMenu ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {showSortMenu && (
+                            <div className="absolute top-full right-0 mt-1 w-56 bg-[#282828]/95 backdrop-blur-xl rounded-lg shadow-xl border border-white/10 overflow-hidden z-50">
+                                {/* Sort by section */}
+                                <div className="p-1">
+                                    <div className="px-2 py-1.5 text-[11px] font-semibold text-white/40 uppercase tracking-wider">
+                                        Sort by
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setSortBy('recents');
+                                            setShowSortMenu(false);
+                                        }}
+                                        className={`w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-2 ${
+                                            sortBy === 'recents'
+                                                ? 'bg-white/10 text-white'
+                                                : 'text-white/70 hover:text-white hover:bg-white/5'
+                                        }`}
+                                    >
+                                        <List size={14} />
+                                        Recents
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setSortBy('alphabetical');
+                                            setShowSortMenu(false);
+                                        }}
+                                        className={`w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-2 ${
+                                            sortBy === 'alphabetical'
+                                                ? 'bg-white/10 text-white'
+                                                : 'text-white/70 hover:text-white hover:bg-white/5'
+                                        }`}
+                                    >
+                                        <ArrowUpAZ size={14} />
+                                        Alphabetical
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setSortBy('reverseAlphabetical');
+                                            setShowSortMenu(false);
+                                        }}
+                                        className={`w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-2 ${
+                                            sortBy === 'reverseAlphabetical'
+                                                ? 'bg-white/10 text-white'
+                                                : 'text-white/70 hover:text-white hover:bg-white/5'
+                                        }`}
+                                    >
+                                        <ArrowUpZA size={14} />
+                                        Reverse Alphabetical
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setSortBy('creator');
+                                            setShowSortMenu(false);
+                                        }}
+                                        className={`w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-2 ${
+                                            sortBy === 'creator'
+                                                ? 'bg-white/10 text-white'
+                                                : 'text-white/70 hover:text-white hover:bg-white/5'
+                                        }`}
+                                    >
+                                        <Music size={14} />
+                                        Creator
+                                    </button>
+                                </div>
+
+                                <div className="h-px bg-white/10 mx-1" />
+
+                                {/* View as section */}
+                                <div className="p-1">
+                                    <div className="px-2 py-1.5 text-[11px] font-semibold text-white/40 uppercase tracking-wider">
+                                        View as
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-0.5">
+                                        <button
+                                            onClick={() => {
+                                                setViewMode('compact-list');
+                                                setShowSortMenu(false);
+                                            }}
+                                            className={`flex flex-col items-center justify-center gap-1 p-2 rounded transition-colors ${
+                                                viewMode === 'compact-list'
+                                                    ? 'bg-white/10 text-white'
+                                                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                                            }`}
+                                            title="Compact list"
+                                        >
+                                            <List size={16} />
+                                            <span className="text-[9px] font-medium">Compact</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setViewMode('default-list');
+                                                setShowSortMenu(false);
+                                            }}
+                                            className={`flex flex-col items-center justify-center gap-1 p-2 rounded transition-colors ${
+                                                viewMode === 'default-list'
+                                                    ? 'bg-white/10 text-white'
+                                                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                                            }`}
+                                            title="Default list"
+                                        >
+                                            <LayoutList size={16} />
+                                            <span className="text-[9px] font-medium">List</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setViewMode('compact-grid');
+                                                setShowSortMenu(false);
+                                            }}
+                                            className={`flex flex-col items-center justify-center gap-1 p-2 rounded transition-colors ${
+                                                viewMode === 'compact-grid'
+                                                    ? 'bg-white/10 text-white'
+                                                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                                            }`}
+                                            title="Compact grid"
+                                        >
+                                            <Grid3x3 size={16} />
+                                            <span className="text-[9px] font-medium">Grid</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setViewMode('default-grid');
+                                                setShowSortMenu(false);
+                                            }}
+                                            className={`flex flex-col items-center justify-center gap-1 p-2 rounded transition-colors ${
+                                                viewMode === 'default-grid'
+                                                    ? 'bg-white/10 text-white'
+                                                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                                            }`}
+                                            title="Default grid"
+                                        >
+                                            <LayoutGrid size={16} />
+                                            <span className="text-[9px] font-medium">Cards</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Library list */}
@@ -329,6 +517,9 @@ export const Sidebar: React.FC = () => {
                     categories={playlistCategories}
                     filter={playlistFilter}
                     searchQuery={librarySearchQuery}
+                    sortBy={sortBy}
+                    viewMode={viewMode}
+                    pinnedPlaylistIds={pinnedPlaylistIds}
                 />
             </aside>
 
