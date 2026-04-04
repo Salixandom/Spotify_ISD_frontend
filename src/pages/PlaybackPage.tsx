@@ -151,6 +151,49 @@ export const PlaybackPage: React.FC = () => {
   const bass = clamp(audioMetrics.bass, 0, 1);
   const mid = clamp(audioMetrics.mid, 0, 1);
   const treble = clamp(audioMetrics.treble, 0, 1);
+  const spectrum = audioMetrics.spectrum.length
+    ? audioMetrics.spectrum
+    : Array.from({ length: 24 }, () => 0);
+
+  const p1x = Math.round(8 + spectrum[2] * 62);
+  const p1y = Math.round(10 + spectrum[6] * 62);
+  const p2x = Math.round(28 + spectrum[10] * 62);
+  const p2y = Math.round(54 + spectrum[14] * 42);
+  const p3x = Math.round(60 + spectrum[18] * 34);
+  const p3y = Math.round(18 + spectrum[22] * 64);
+  const p4x = Math.round(72 + spectrum[4] * 24);
+  const p4y = Math.round(56 + spectrum[12] * 34);
+
+  const bloomA = Math.round(38 + bass * 32);
+  const bloomB = Math.round(34 + mid * 34);
+  const bloomC = Math.round(32 + treble * 34);
+  const bloomD = Math.round(30 + energy * 30);
+
+  const hueSpin = Math.round(14 + bass * 18 + mid * 12 + treble * 10);
+  const bubbleStrength = clamp((bass * 0.5 + mid * 0.3 + treble * 0.2), 0, 1);
+  const bubbleSeeds = [1, 4, 7, 10, 13, 16, 19, 22];
+  const bubbles = bubbleSeeds.map((idx, i) => {
+    const amp = spectrum[idx] ?? 0;
+    const size = 120 + amp * 180 + (i % 3) * 24;
+    const left = 8 + ((i * 11) % 84);
+    const top = 10 + ((i * 13) % 78);
+    const sway = (spectrum[(idx + 2) % spectrum.length] - 0.5) * 22;
+    const lift = (spectrum[(idx + 5) % spectrum.length] - 0.5) * 22;
+    const opacity = 0.16 + amp * 0.28;
+
+    return {
+      id: `bubble-${i}`,
+      size,
+      left,
+      top,
+      sway,
+      lift,
+      opacity,
+      anim: i % 2 === 0 ? "playback-bubble-a" : "playback-bubble-b",
+      duration: `${8 + i * 1.2}s`,
+      delay: `${i * 0.25}s`,
+    };
+  });
 
   return (
     <div
@@ -175,45 +218,134 @@ export const PlaybackPage: React.FC = () => {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
           }
+          @keyframes playback-wave-a {
+            0% { transform: translate3d(-5%, 0, 0) scaleY(1); }
+            50% { transform: translate3d(5%, 0, 0) scaleY(1.08); }
+            100% { transform: translate3d(-5%, 0, 0) scaleY(1); }
+          }
+          @keyframes playback-wave-b {
+            0% { transform: translate3d(6%, 0, 0) scaleY(1); }
+            50% { transform: translate3d(-6%, 0, 0) scaleY(1.1); }
+            100% { transform: translate3d(6%, 0, 0) scaleY(1); }
+          }
+          @keyframes playback-bubble-a {
+            0% { transform: translate3d(0, 0, 0) scale(1); }
+            50% { transform: translate3d(0, -14px, 0) scale(1.08); }
+            100% { transform: translate3d(0, 0, 0) scale(1); }
+          }
+          @keyframes playback-bubble-b {
+            0% { transform: translate3d(0, 0, 0) scale(1); }
+            50% { transform: translate3d(0, 12px, 0) scale(1.06); }
+            100% { transform: translate3d(0, 0, 0) scale(1); }
+          }
         `}
       </style>
 
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
-          className="absolute -left-32 -top-8 w-[32rem] h-[32rem] rounded-full blur-[95px]"
+          className="absolute inset-[-14%]"
           style={{
-            background: palette.base,
-            opacity: 0.45 + bass * 0.4,
-            animation: "playback-float-a 12s ease-in-out infinite",
-            animationPlayState: isPlaying ? "running" : "paused",
+            background: `
+              radial-gradient(circle at ${p1x}% ${p1y}%, ${palette.base} 0%, transparent ${bloomA}%),
+              radial-gradient(circle at ${p2x}% ${p2y}%, ${palette.accent} 0%, transparent ${bloomB}%),
+              radial-gradient(circle at ${p3x}% ${p3y}%, ${palette.contrast} 0%, transparent ${bloomC}%),
+              radial-gradient(circle at ${p4x}% ${p4y}%, rgba(255,255,255,${0.1 + energy * 0.18}) 0%, transparent ${bloomD}%)
+            `,
+            opacity: 0.78 + energy * 0.24,
+            filter: `saturate(${1.2 + energy * 0.52}) blur(${14 - energy * 3}px)`,
+            transform: `scale(${1.06 + energy * 0.05}) rotate(${isPlaying ? hueSpin : 0}deg)`,
+            transition: "transform 280ms ease, filter 180ms linear, opacity 180ms linear",
           }}
         />
+
+        {bubbles.map((bubble) => (
+          <div
+            key={bubble.id}
+            className="absolute rounded-full"
+            style={{
+              width: `${bubble.size}px`,
+              height: `${bubble.size}px`,
+              left: `${bubble.left}%`,
+              top: `${bubble.top}%`,
+              background: `radial-gradient(circle at 32% 30%, rgba(255,255,255,${0.22 + bubbleStrength * 0.24}), rgba(255,255,255,0.02) 42%, rgba(255,255,255,0) 72%)`,
+              border: `1px solid rgba(255,255,255,${0.08 + bubbleStrength * 0.1})`,
+              boxShadow: `0 0 ${26 + bubbleStrength * 42}px rgba(255,255,255,${0.08 + bubble.opacity * 0.35})`,
+              opacity: bubble.opacity,
+              filter: `blur(${2 + bubbleStrength * 2}px) saturate(${1.08 + bubbleStrength * 0.35})`,
+              transform: `translate3d(${bubble.sway}px, ${bubble.lift}px, 0)`,
+              animation: `${bubble.anim} ${bubble.duration} ease-in-out infinite`,
+              animationPlayState: isPlaying ? "running" : "paused",
+              animationDelay: bubble.delay,
+            }}
+          />
+        ))}
+
         <div
-          className="absolute right-[-120px] bottom-[-100px] w-[32rem] h-[32rem] rounded-full blur-[105px]"
+          className="absolute inset-x-[-14%] top-[14%] h-[28%]"
           style={{
-            background: palette.accent,
-            opacity: 0.42 + mid * 0.4,
-            animation: "playback-float-b 14s ease-in-out infinite",
+            background: `radial-gradient(92% 130% at 50% 100%, rgba(255,255,255,${0.08 + bass * 0.18}), rgba(255,255,255,0) 72%)`,
+            mixBlendMode: "screen",
+            opacity: 0.64 + bass * 0.26,
+            filter: `blur(${8 + (1 - bass) * 8}px)`,
+            animation: "playback-wave-a 8.5s ease-in-out infinite",
             animationPlayState: isPlaying ? "running" : "paused",
           }}
         />
+
         <div
-          className="absolute left-[34%] top-[30%] w-[26rem] h-[26rem] rounded-full blur-[120px]"
+          className="absolute inset-x-[-14%] bottom-[10%] h-[32%]"
           style={{
-            background: palette.contrast,
-            opacity: 0.24 + treble * 0.38,
-            animation: "playback-float-a 16s ease-in-out infinite",
-            animationDirection: "reverse",
+            background: `radial-gradient(94% 130% at 50% 0%, rgba(255,255,255,${0.08 + treble * 0.2}), rgba(255,255,255,0) 74%)`,
+            mixBlendMode: "screen",
+            opacity: 0.58 + treble * 0.3,
+            filter: `blur(${9 + (1 - treble) * 7}px)`,
+            animation: "playback-wave-b 9.2s ease-in-out infinite",
             animationPlayState: isPlaying ? "running" : "paused",
           }}
         />
+
+        <div
+          className="absolute inset-[-8%]"
+          style={{
+            background: `conic-gradient(from ${Math.round(120 + spectrum[8] * 220)}deg at 50% 52%,
+              rgba(255,255,255,${0.04 + energy * 0.07}),
+              rgba(255,255,255,0),
+              rgba(255,255,255,${0.03 + bass * 0.05}),
+              rgba(255,255,255,0),
+              rgba(255,255,255,${0.03 + treble * 0.05})
+            )`,
+            mixBlendMode: "screen",
+            opacity: 0.55 + energy * 0.3,
+            animation: "playback-float-b 18s ease-in-out infinite",
+            animationPlayState: isPlaying ? "running" : "paused",
+          }}
+        />
+
         <div
           className="absolute inset-0"
           style={{
-            background: `radial-gradient(circle at 50% 52%, rgba(255,255,255,${0.02 + energy * 0.06}), transparent 62%)`,
+            background: `linear-gradient(125deg,
+              rgba(255,255,255,${0.04 + bass * 0.06}) 0%,
+              rgba(255,255,255,0.01) 28%,
+              rgba(255,255,255,${0.03 + treble * 0.05}) 62%,
+              rgba(255,255,255,0.02) 100%)`,
           }}
         />
-        <div className="absolute inset-0 backdrop-blur-[26px]" />
+
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `radial-gradient(circle at 50% 52%, rgba(255,255,255,${0.03 + energy * 0.07}), transparent 66%)`,
+          }}
+        />
+
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(165deg, rgba(10,12,22,0.3), rgba(6,8,18,0.52))",
+            backdropFilter: `blur(${17 + (1 - energy) * 6}px) saturate(${1.08 + energy * 0.26})`,
+          }}
+        />
       </div>
 
       <div className="relative z-10 h-full flex items-center justify-center px-3 md:px-8">

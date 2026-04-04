@@ -46,58 +46,57 @@ export const AppLayout: React.FC = () => {
                 }}
             />
 
-            {isPlaybackMode ? (
-                <div className="relative z-10 h-full flex flex-col">
+            <div className="relative z-10 h-full flex flex-col">
+                {isPlaybackMode ? (
                     <main className="flex-1 min-h-0">
                         <div className="h-full overflow-hidden">
                             <Outlet />
                         </div>
                     </main>
-
-                    <div className="mx-2 mb-2 rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden">
-                        <BottomPlayer />
-                    </div>
-                </div>
-            ) : (
-                <div className="relative z-10 h-full p-2 md:p-3 flex flex-col gap-2 md:gap-3">
-                    {/* Top navigation */}
-                    <div className="rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-visible">
-                        <Navbar />
-                    </div>
-
-                    {/* Main shell body */}
-                    <div className="flex-1 min-h-0 flex gap-2 md:gap-3">
-                        {/* Left column */}
-                        <div className="w-[320px] xl:w-[340px] min-w-[300px]">
-                            <div className="h-full rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
-                                <Sidebar />
-                            </div>
+                ) : (
+                    <div className="flex-1 min-h-0 p-2 md:p-3 flex flex-col gap-2 md:gap-3">
+                        {/* Top navigation */}
+                        <div className="rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-visible">
+                            <Navbar />
                         </div>
 
-                        {/* Center content */}
-                        <main className="flex-1 min-w-0">
-                            <div className="h-full rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
-                                <div className="h-full overflow-y-auto">
-                                    <Outlet />
-                                    {location.pathname !== "/profile" && <PageFooter />}
+                        {/* Main shell body */}
+                        <div className="flex-1 min-h-0 flex gap-2 md:gap-3">
+                            {/* Left column */}
+                            <div className="w-[320px] xl:w-[340px] min-w-[300px]">
+                                <div className="h-full rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
+                                    <Sidebar />
                                 </div>
                             </div>
-                        </main>
 
-                        {/* Right column */}
-                        <div className="w-[340px] xl:w-[360px] min-w-[320px] hidden lg:block">
-                            <div className="h-full rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
-                                <RightSidebar />
+                            {/* Center content */}
+                            <main className="flex-1 min-w-0">
+                                <div className="h-full rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
+                                    <div className="h-full overflow-y-auto">
+                                        <Outlet />
+                                        {location.pathname !== "/profile" && <PageFooter />}
+                                    </div>
+                                </div>
+                            </main>
+
+                            {/* Right column */}
+                            <div className="w-[340px] xl:w-[360px] min-w-[320px] hidden lg:block">
+                                <div className="h-full rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
+                                    <RightSidebar />
+                                </div>
                             </div>
                         </div>
                     </div>
+                )}
 
-                    {/* Bottom player */}
-                    <div className="rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden">
-                        <BottomPlayer />
-                    </div>
+                <div
+                    className={isPlaybackMode
+                        ? "mx-2 mb-2 rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden"
+                        : "mx-2 mb-2 md:mx-3 md:mb-3 rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden"}
+                >
+                    <BottomPlayer />
                 </div>
-            )}
+            </div>
         </div>
     );
 };
