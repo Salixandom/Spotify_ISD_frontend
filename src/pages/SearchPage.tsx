@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
@@ -12,24 +13,20 @@ import { TrackRowSkeleton } from "../components/ui/LoadingSkeleton";
 import { searchAPI } from "../api/search";
 import { playlistAPI } from "../api/playlists";
 import { trackAPI } from "../api/tracks";
+import { usePlayerStore } from "../store/playerStore";
+import { toPlayerTrack } from "../utils/playerTrack";
 import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Track = {
-    id: string;
+    id: number;
     title: string;
     artist: string;
     album: string;
     duration: string;
     imageUrl: string;
-    song?: {
-        id: string;
-        title: string;
-        artist: string;
-        album: string;
-        cover_url: string;
-    };
+    song?: any;
 };
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -353,15 +350,17 @@ const SongRow: React.FC<{
     index: number;
     showAlbumCol?: boolean;
     showOrderNumber?: boolean;
+    onPlay: (song: Track, index: number) => void;
     onContextMenu: (e: React.MouseEvent, song: Track) => void;
     onToggleLike: (song: Track) => void;
     isLiked: boolean;
-}> = ({ song, index, showAlbumCol = false, showOrderNumber = false, onContextMenu, onToggleLike, isLiked }) => (
+}> = ({ song, index, showAlbumCol = false, showOrderNumber = false, onPlay, onContextMenu, onToggleLike, isLiked }) => (
     <div
         className="group flex items-center gap-3 px-3 py-2 rounded-xl
             border border-transparent
             hover:bg-white/[0.07] hover:border-white/10
             transition-all duration-200 cursor-pointer"
+        onClick={() => onPlay(song, index)}
         onMouseDown={(e) => e.stopPropagation()}
     >
         {showOrderNumber && (
@@ -441,6 +440,7 @@ export const SearchPage: React.FC = () => {
     const query = searchParams.get("q") || "";
 
     const [activeFilter, setActiveFilter] = React.useState("All");
+    const { setQueue, playTrack } = usePlayerStore();
 
     // API data state
     const [searchResults, setSearchResults] = useState<{
@@ -466,7 +466,7 @@ export const SearchPage: React.FC = () => {
 
     // Context menu
     const [contextMenu, setContextMenu] = React.useState<{
-        id: string; top: number; left: number; songArtist?: string; song?: any;
+        id: string | number; top: number; left: number; songArtist?: string; song?: any;
     } | null>(null);
 
     const closeAll = React.useCallback(() => {
@@ -541,7 +541,7 @@ export const SearchPage: React.FC = () => {
                     try {
                         const playlistData = await playlistAPI.list();
                         playlists = playlistData || [];
-                    } catch (playlistErr) {
+                    } catch {
                         // Silently fail if not authenticated - playlists will be empty
                         console.info('Playlists require authentication, skipping for now');
                     }
@@ -606,7 +606,7 @@ export const SearchPage: React.FC = () => {
             const songId = song.id || song.song?.id;
 
             // Find Liked Songs playlist
-            let likedPlaylist = userPlaylists.find(p => p.name === "Liked Songs");
+            const likedPlaylist = userPlaylists.find(p => p.name === "Liked Songs");
 
             if (likedTrackSongIds.has(songId)) {
                 // Unlike - remove from Liked Songs playlist
@@ -731,6 +731,23 @@ export const SearchPage: React.FC = () => {
 
     const artistList = contextMenu?.songArtist?.split(", ").filter(Boolean) ?? [];
 
+    const handlePlaySong = React.useCallback((songLike: any, index = 0, queueSource?: any[]) => {
+        const source = queueSource ?? searchResults.songs;
+        const currentSongId = Number(songLike?.id ?? songLike?.song?.id);
+
+        if (Array.isArray(source) && source.length > 0) {
+            const queue = source.map((s: any, i: number) => toPlayerTrack(s, 0, i + 1));
+            const startIndex = Math.max(
+                0,
+                source.findIndex((s: any) => Number(s?.id ?? s?.song?.id) === currentSongId)
+            );
+            setQueue(queue, startIndex >= 0 ? startIndex : index);
+            return;
+        }
+
+        playTrack(toPlayerTrack(songLike));
+    }, [searchResults.songs, setQueue, playTrack]);
+
     // ── "All" view ──────────────────────────────────────────────────────────
 
     const renderAll = () => {
@@ -814,7 +831,11 @@ export const SearchPage: React.FC = () => {
                                     <button className="flex items-center gap-2 px-4 py-2 rounded-full
                                         bg-spotify-green text-black text-sm font-bold
                                         hover:scale-105 active:scale-95 transition-transform
-                                        shadow-[0_4px_14px_rgba(30,185,84,0.4)]">
+                                        shadow-[0_4px_14px_rgba(30,185,84,0.4)]"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handlePlaySong(searchResults.songs[0], 0, searchResults.songs);
+                                        }}>
                                         <Play size={14} fill="currentColor" />
                                         Play
                                     </button>
@@ -868,10 +889,12 @@ export const SearchPage: React.FC = () => {
                                     artist: typeof song.artist === 'string' ? song.artist : song.artist?.name || 'Unknown Artist',
                                     album: typeof song.album === 'string' ? song.album : song.album?.name || 'Unknown Album',
                                     duration: song.duration || "3:20",
-                                    imageUrl: song.cover_url || song.imageUrl || IMG[0]
+                                    imageUrl: song.cover_url || song.imageUrl || IMG[0],
+                                    song,
                                 }}
                                 index={idx}
                                 showOrderNumber
+                                onPlay={(selectedSong) => handlePlaySong(selectedSong.song ?? selectedSong, idx, searchResults.songs)}
                                 onContextMenu={openContextMenu}
                                 onToggleLike={handleToggleLike}
                                 isLiked={likedTrackSongIds.has(song.id)}
@@ -993,11 +1016,13 @@ export const SearchPage: React.FC = () => {
                             artist: typeof song.artist === 'string' ? song.artist : song.artist?.name || 'Unknown Artist',
                             album: typeof song.album === 'string' ? song.album : song.album?.name || 'Unknown Album',
                             duration: song.duration || "3:20",
-                            imageUrl: song.cover_url || song.imageUrl || IMG[0]
+                            imageUrl: song.cover_url || song.imageUrl || IMG[0],
+                            song,
                         }}
                         index={idx}
                         showAlbumCol
                         showOrderNumber
+                        onPlay={(selectedSong) => handlePlaySong(selectedSong.song ?? selectedSong, idx, searchResults.songs)}
                         onContextMenu={openContextMenu}
                         onToggleLike={handleToggleLike}
                         isLiked={likedTrackSongIds.has(song.id)}

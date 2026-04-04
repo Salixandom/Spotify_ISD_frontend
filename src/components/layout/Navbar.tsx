@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createPortal } from "react-dom";

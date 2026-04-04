@@ -1,6 +1,7 @@
 import React from "react";
 import { PlusCircle, ExternalLink } from "lucide-react";
 import { usePlayerStore } from "../../store/playerStore";
+import { getArtistName } from "../../utils/trackHelpers";
 
 type ArtistInfo = {
     name: string;
@@ -28,11 +29,11 @@ export const RightSidebar: React.FC = () => {
     const { currentTrack } = usePlayerStore();
 
     const songTitle = currentTrack?.song?.title || PLACEHOLDER_SONG.title;
-    const songArtist = currentTrack?.song?.artist || PLACEHOLDER_SONG.artist;
+    const songArtist = getArtistName(currentTrack?.song?.artist) || PLACEHOLDER_SONG.artist;
     const songCover =
         currentTrack?.song?.cover_url || PLACEHOLDER_SONG.coverUrl;
 
-    const artistName = currentTrack?.song?.artist || PLACEHOLDER_ARTIST.name;
+    const artistName = getArtistName(currentTrack?.song?.artist) || PLACEHOLDER_ARTIST.name;
     const artistInfo: ArtistInfo = {
         ...PLACEHOLDER_ARTIST,
         name: String(artistName),

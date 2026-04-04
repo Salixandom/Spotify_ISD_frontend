@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import { Heart, MessageCircle, Send, Trash2, Edit3, X, CornerDownRight } from "lucide-react";
 import { commentsAPI, type PlaylistComment } from "../../api/comments";

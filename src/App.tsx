@@ -11,6 +11,7 @@ import { PlaylistPage } from "./pages/PlaylistPage";
 import { PlaylistsPage } from "./pages/PlaylistsPage";
 import { ArtistPage } from "./pages/ArtistPage";
 import { UserProfilePage } from "./pages/UserProfilePage";
+import { PlaybackPage } from "./pages/PlaybackPage";
 import { InvitePage } from "./pages/InvitePage";
 import { useAuth } from "./hooks/useAuth";
 
@@ -67,6 +68,7 @@ const AppRoutes: React.FC = () => {
                 <Route path="browse" element={<BrowsePage />} />
                 <Route path="playlists" element={<PlaylistsPage />} />
                 <Route path="playlist/:id" element={<PlaylistPage />} />
+                <Route path="playback" element={<PlaybackPage />} />
                 <Route path="artist/:id" element={<ArtistPage />} />
                 <Route path="profile" element={<UserProfilePage />} />
             </Route>

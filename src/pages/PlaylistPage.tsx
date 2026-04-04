@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -66,6 +67,7 @@ import { CollabInviteModal } from "../components/modals/CollabInviteModal";
 import { PlaylistComments } from "../components/comments/PlaylistComments";
 import { Menu } from "lucide-react";
 import { getArtistName, getAlbumName } from "../utils/trackHelpers";
+import { usePlayerStore } from "../store/playerStore";
 
 const SpotifyIcon = ({ size = 24, className = "" }) => (
   <svg
@@ -256,6 +258,7 @@ export const PlaylistPage: React.FC = () => {
   const [playlist, setPlaylist] = React.useState<PlaylistViewModel | null>(null);
   const [tracks, setTracks] = React.useState<PlaylistTrack[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const { setQueue } = usePlayerStore();
   const [isPlaceholderMode, setIsPlaceholderMode] = React.useState(false);
   const [isActionsOpen, setIsActionsOpen] = React.useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = React.useState(false);
@@ -1026,6 +1029,12 @@ export const PlaylistPage: React.FC = () => {
   };
   const displayedTracks = isReorderMode ? reorderedTracks : tracks;
 
+  const handlePlayTracks = React.useCallback((startIndex = 0) => {
+    if (displayedTracks.length === 0) return;
+    const boundedIndex = Math.max(0, Math.min(startIndex, displayedTracks.length - 1));
+    setQueue(displayedTracks, boundedIndex);
+  }, [displayedTracks, setQueue]);
+
   if (isLoading || !playlist) {
     return <PlaylistPageSkeleton />;
   }
@@ -1183,6 +1192,7 @@ export const PlaylistPage: React.FC = () => {
             <button
               className="w-14 h-14 rounded-full bg-spotify-green text-black flex items-center justify-center shadow-[0_10px_24px_rgba(30,185,84,0.38)] hover:scale-105 transition-transform"
               title="Play"
+              onClick={() => handlePlayTracks(0)}
             >
               <Play size={24} fill="currentColor" className="translate-x-px" />
             </button>
@@ -1702,6 +1712,11 @@ export const PlaylistPage: React.FC = () => {
                         {(dragHandleProps, isDragging) => (
                           <div
                             role={isReorderMode ? undefined : "button"}
+                            onClick={() => {
+                              if (!isReorderMode) {
+                                handlePlayTracks(index);
+                              }
+                            }}
                             className={`w-full group text-left px-4 grid gap-3 items-center border-b border-white/8 transition-colors ${
                               index === displayedTracks.length - 1 ? 'border-b-0' : ''
                             } ${
