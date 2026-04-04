@@ -8,6 +8,7 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   maxWidthClassName?: string;
+  showHeader?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -16,6 +17,7 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   children,
   maxWidthClassName = "max-w-xl",
+  showHeader = true,
 }) => {
   if (!isOpen) return null;
 
@@ -37,18 +39,20 @@ export const Modal: React.FC<ModalProps> = ({
         <div className="absolute -top-16 -left-14 w-44 h-44 rounded-full bg-spotify-green/15 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-16 -right-14 w-44 h-44 rounded-full bg-cyan-300/10 blur-3xl pointer-events-none" />
 
-        <div className="relative px-5 py-4 border-b border-white/12 flex items-center justify-between">
-          <h2 className="text-lg md:text-xl font-semibold text-white tracking-tight">{title}</h2>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full border border-white/16 bg-white/[0.04]
-            text-white/70 hover:text-white hover:bg-white/[0.10] transition-colors
-            flex items-center justify-center"
-            aria-label="Close modal"
-          >
-            <X size={16} />
-          </button>
-        </div>
+        {showHeader && (
+          <div className="relative px-5 py-4 border-b border-white/12 flex items-center justify-between">
+            <h2 className="text-lg md:text-xl font-semibold text-white tracking-tight">{title}</h2>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full border border-white/16 bg-white/[0.04]
+              text-white/70 hover:text-white hover:bg-white/[0.10] transition-colors
+              flex items-center justify-center"
+              aria-label="Close modal"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
 
         <div className="relative p-5">
           {children}

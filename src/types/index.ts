@@ -216,3 +216,26 @@ export type TrackSortField =
   | 'added_at';
 
 export type SortOrder = 'asc' | 'desc';
+
+// ─── Collaboration Invite ───────────────────────────────────
+export interface InviteValidationResponse {
+  playlist_id: number;
+  playlist_name: string;
+  inviter_name?: string;
+  inviter_avatar_url?: string;
+  collaborators?: Array<{user_id: number}>;
+  is_collaborative: boolean;
+  owner_id?: number;
+}
+
+export interface InviteModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  token: string;
+  playlistName: string;
+  inviterName?: string;
+  playlistId: number;
+  isAlreadyCollaborator?: boolean;
+}
+
+export type InviteStatus = 'new' | 'already_collaborator' | 'invalid';

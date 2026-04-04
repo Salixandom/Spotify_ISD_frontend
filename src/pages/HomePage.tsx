@@ -16,6 +16,9 @@ import { playlistAPI } from "../api/playlists";
 import { searchAPI } from "../api/search";
 import { historyAPI } from "../api/history";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
+import { InviteModal } from "../components/modals/InviteModal";
+import { collabAPI } from "../api/collaboration";
+import toast from "react-hot-toast";
 import type { Playlist, Song } from "../types";
 import { usePlayerStore } from "../store/playerStore";
 import { toPlayerTrack } from "../utils/playerTrack";
@@ -372,7 +375,15 @@ export const HomePage: React.FC = () => {
     //const [hasApiError, setHasApiError] = React.useState(false);
 
     const [displayName, setDisplayName] = React.useState("Buddy");
-    
+
+    // Invite modal state
+    const [inviteToken, setInviteToken] = React.useState<string | null>(null);
+    const [inviteStatus, setInviteStatus] = React.useState<'new' | 'already_collaborator'>('new');
+    const [invitePlaylistName, setInvitePlaylistName] = React.useState<string>('');
+    const [invitePlaylistId, setInvitePlaylistId] = React.useState<number>(0);
+    const [inviterName, setInviterName] = React.useState<string>('');
+    const [isInviteModalOpen, setIsInviteModalOpen] = React.useState(false);
+
     React.useEffect(() => {
         try {
             // Adjust based on how you store user data
@@ -389,7 +400,36 @@ export const HomePage: React.FC = () => {
             setDisplayName("Buddy!");
         }
     }, []);
-    
+
+    // Check for invite parameter in URL
+    React.useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const inviteParam = params.get('invite');
+        const statusParam = params.get('status');
+
+        if (inviteParam) {
+            console.log('Invite token found in URL:', inviteParam);
+            setInviteToken(inviteParam);
+            setInviteStatus(statusParam === 'already_collaborator' ? 'already_collaborator' : 'new');
+
+            // Fetch invite details
+            collabAPI.validateToken(inviteParam)
+                .then((result) => {
+                    console.log('Invite details fetched:', result);
+                    setInvitePlaylistName(result.playlist_name);
+                    setInvitePlaylistId(result.playlist_id);
+                    setInviterName(''); // Backend doesn't return inviter_name yet
+                    setIsInviteModalOpen(true);
+                })
+                .catch((error) => {
+                    console.error('Failed to fetch invite details:', error);
+                    toast.error('Invalid invite link');
+                    // Clear the invite param from URL
+                    window.history.replaceState({}, '', '/');
+                });
+        }
+    }, []);
+
     const messages = [
         "bro came for one song and stayed for three hours",
         "who gave you the aux this time",
@@ -853,6 +893,23 @@ export const HomePage: React.FC = () => {
                             />
                         </section>
                     </>
+                )}
+
+                {/* Invite Modal */}
+                {inviteToken && invitePlaylistName && (
+                    <InviteModal
+                        isOpen={isInviteModalOpen}
+                        onClose={() => {
+                            setIsInviteModalOpen(false);
+                            // Clear invite params from URL
+                            window.history.replaceState({}, '', '/');
+                        }}
+                        token={inviteToken}
+                        playlistName={invitePlaylistName}
+                        inviterName={inviterName}
+                        playlistId={invitePlaylistId}
+                        isAlreadyCollaborator={inviteStatus === 'already_collaborator'}
+                    />
                 )}
             </div>
         </div>

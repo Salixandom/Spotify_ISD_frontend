@@ -12,6 +12,7 @@ import { PlaylistsPage } from "./pages/PlaylistsPage";
 import { ArtistPage } from "./pages/ArtistPage";
 import { UserProfilePage } from "./pages/UserProfilePage";
 import { PlaybackPage } from "./pages/PlaybackPage";
+import { InvitePage } from "./pages/InvitePage";
 import { useAuth } from "./hooks/useAuth";
 
 const queryClient = new QueryClient({
@@ -53,6 +54,7 @@ const AppRoutes: React.FC = () => {
         <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/invite/:token" element={<InvitePage />} />
             <Route
                 path="/"
                 element={

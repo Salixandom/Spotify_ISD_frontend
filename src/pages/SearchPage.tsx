@@ -501,6 +501,17 @@ export const SearchPage: React.FC = () => {
                 // Fetch user's own and collaborative playlists
                 const response = await playlistAPI.getUserPlaylists(userId) as any;
                 console.log('User playlists response:', response);
+
+                // Extract playlists array from response (API returns { playlists: [...] })
+                const playlistData = response?.playlists || response || [];
+                const playlistsArray = Array.isArray(playlistData) ? playlistData : [];
+
+                // Map response to the format expected by the modal
+                const formattedPlaylists = playlistsArray.map((playlist: any) => ({
+                    id: String(playlist.id),
+                    name: playlist.name,
+                }));
+                setUserPlaylists(formattedPlaylists);
             } catch (err) {
                 console.error('Could not fetch user playlists:', err);
                 setUserPlaylists([]);
