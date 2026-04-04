@@ -41,7 +41,7 @@ export const ViewCollaboratorsModal: React.FC<Props> = ({
     try {
       const members = await collabAPI.getMembers(playlistId);
       setCollaborators(members);
-    } catch (err) {
+    } catch {
       setError("Failed to load collaborators");
     } finally {
       setLoading(false);

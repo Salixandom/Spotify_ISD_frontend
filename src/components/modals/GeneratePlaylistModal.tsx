@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
 import { Wand2, TrendingUp, Clock, Sparkles, Guitar } from "lucide-react";
 import { Modal } from "../ui/Modal";

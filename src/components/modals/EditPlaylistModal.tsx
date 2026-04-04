@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import { Modal } from "../ui/Modal";
 import { Music2, Pencil, Check } from "lucide-react";

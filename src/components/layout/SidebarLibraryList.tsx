@@ -107,7 +107,7 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
         const unpinned = results.filter(p => !p.isPinned && !p.isLikedSongs);
 
         // Sort unpinned playlists
-        let sortedUnpinned = [...unpinned];
+        const sortedUnpinned = [...unpinned];
         if (sortBy === 'alphabetical') {
             sortedUnpinned.sort((a, b) => a.title.localeCompare(b.title));
         } else if (sortBy === 'reverseAlphabetical') {
@@ -143,14 +143,14 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
                             <div
                                 className="h-3.5 bg-white/[0.06] rounded mb-1.5 animate-pulse"
                                 style={{
-                                    width: `${Math.max(40, Math.random() * 80)}%`,
+                                    width: `${40 + ((i * 17) % 41)}%`,
                                     animationDelay: `${i * 50}ms`,
                                 }}
                             />
                             <div
                                 className="h-2.5 bg-white/[0.04] rounded animate-pulse"
                                 style={{
-                                    width: `${Math.max(30, Math.random() * 60)}%`,
+                                    width: `${30 + ((i * 13) % 31)}%`,
                                     animationDelay: `${i * 50 + 100}ms`,
                                 }}
                             />

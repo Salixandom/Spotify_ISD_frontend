@@ -93,6 +93,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({
       {/* Main menu */}
       <div
         ref={(el) => {
+          // eslint-disable-next-line react-hooks/immutability
           if (menuRef) (menuRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
         }}
         style={{ top: menuY, left: menuX }}

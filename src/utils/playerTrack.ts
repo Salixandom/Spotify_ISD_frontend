@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { PlaylistTrack } from "../types";
 import { getAlbumName, getArtistName } from "./trackHelpers";
 

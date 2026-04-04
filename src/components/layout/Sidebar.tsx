@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useMemo, useState } from "react";
 import { Library, Plus, Search, List, Wand2, ChevronDown, LayoutGrid, LayoutList, Grid3x3, ArrowUpAZ, ArrowUpZA, Music } from "lucide-react";
 import { playlistAPI } from "../../api/playlists";

@@ -177,7 +177,8 @@ export const BottomPlayer: React.FC = () => {
         if (!el || analyserRef.current) return false;
 
         try {
-            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            const webkitAudioContext = (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+            const AudioCtx = window.AudioContext || webkitAudioContext;
             if (!AudioCtx) return false;
 
             const ctx = new AudioCtx();

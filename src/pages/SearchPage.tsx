@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
@@ -529,7 +530,7 @@ export const SearchPage: React.FC = () => {
                     try {
                         const playlistData = await playlistAPI.list();
                         playlists = playlistData || [];
-                    } catch (playlistErr) {
+                    } catch {
                         // Silently fail if not authenticated - playlists will be empty
                         console.info('Playlists require authentication, skipping for now');
                     }
@@ -594,7 +595,7 @@ export const SearchPage: React.FC = () => {
             const songId = song.id || song.song?.id;
 
             // Find Liked Songs playlist
-            let likedPlaylist = userPlaylists.find(p => p.name === "Liked Songs");
+            const likedPlaylist = userPlaylists.find(p => p.name === "Liked Songs");
 
             if (likedTrackSongIds.has(songId)) {
                 // Unlike - remove from Liked Songs playlist
