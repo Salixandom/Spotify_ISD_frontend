@@ -15,6 +15,8 @@ import { searchAPI } from "../api/search";
 import { historyAPI } from "../api/history";
 import { DynamicMusicBackground } from "../components/ui/DynamicMusicBackground";
 import type { Playlist, Song } from "../types";
+import { usePlayerStore } from "../store/playerStore";
+import { toPlayerTrack } from "../utils/playerTrack";
 
 /**
  * Spotify-inspired homepage:
@@ -31,6 +33,7 @@ type HomeCard = {
     accentFrom: string;
     accentTo: string;
     kind: "playlist" | "mix" | "daily" | "focus";
+    song?: Song;
 };
 
 const DEFAULT_COVER = "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=600&h=600&fit=crop";
@@ -118,7 +121,7 @@ const SectionTitle: React.FC<{
     );
 };
 
-const QuickTile: React.FC<{ item: HomeCard; onClick?: () => void }> = ({ item, onClick }) => {
+const QuickTile: React.FC<{ item: HomeCard; onClick?: () => void; onPlay?: () => void }> = ({ item, onClick, onPlay }) => {
     const Icon = kindIcon[item.kind];
 
     return (
@@ -155,11 +158,19 @@ const QuickTile: React.FC<{ item: HomeCard; onClick?: () => void }> = ({ item, o
                         {item.subtitle}
                     </p>
                 </div>
-                <div className="opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onPlay?.();
+                    }}
+                    className="opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300"
+                    aria-label="Play song"
+                >
                     <div className="w-9 h-9 rounded-full bg-spotify-green text-black flex items-center justify-center shadow-xl shadow-spotify-green/30">
                         <Play size={16} fill="currentColor" />
                     </div>
-                </div>
+                </button>
                 <div className="absolute top-2 right-2 text-white/30 group-hover:text-white/60 transition-colors">
                     <Icon size={14} />
                 </div>
@@ -168,7 +179,7 @@ const QuickTile: React.FC<{ item: HomeCard; onClick?: () => void }> = ({ item, o
     );
 };
 
-const ShelfCard: React.FC<{ item: HomeCard; onClick?: () => void }> = ({ item, onClick }) => {
+const ShelfCard: React.FC<{ item: HomeCard; onClick?: () => void; onPlay?: () => void }> = ({ item, onClick, onPlay }) => {
     const Icon = kindIcon[item.kind];
 
     return (
@@ -192,11 +203,19 @@ const ShelfCard: React.FC<{ item: HomeCard; onClick?: () => void }> = ({ item, o
                         background: `linear-gradient(to top, ${item.accentTo}AA, transparent 60%)`,
                     }}
                 />
-                <div className="absolute right-3 bottom-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onPlay?.();
+                    }}
+                    className="absolute right-3 bottom-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300"
+                    aria-label="Play song"
+                >
                     <div className="w-10 h-10 rounded-full bg-spotify-green text-black flex items-center justify-center shadow-lg shadow-spotify-green/30">
                         <Play size={16} fill="currentColor" />
                     </div>
-                </div>
+                </button>
             </div>
 
             <div className="flex items-start gap-2.5">
@@ -222,7 +241,8 @@ const HorizontalShelf: React.FC<{
     onShowMore?: () => void;
     onShowLess?: () => void;
     onItemClick?: (item: HomeCard) => void;
-}> = ({ items, totalItems = 0, onShowMore, onShowLess, onItemClick }) => {
+    onItemPlay?: (item: HomeCard) => void;
+}> = ({ items, totalItems = 0, onShowMore, onShowLess, onItemClick, onItemPlay }) => {
     const hasMore = totalItems > items.length;
     const isShowingAll = items.length >= totalItems;
     // Only show collapse button if we're showing more than 12 items (collapsed limit)
@@ -232,7 +252,12 @@ const HorizontalShelf: React.FC<{
         <div className="overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex gap-3 w-max">
                 {items.map((item) => (
-                    <ShelfCard key={item.id} item={item} onClick={() => onItemClick?.(item)} />
+                    <ShelfCard
+                        key={item.id}
+                        item={item}
+                        onClick={() => onItemClick?.(item)}
+                        onPlay={item.song ? () => onItemPlay?.(item) : undefined}
+                    />
                 ))}
                 {!isShowingAll && hasMore && onShowMore && (
                     <button
@@ -332,6 +357,7 @@ const HomeSkeleton: React.FC = () => {
 
 export const HomePage: React.FC = () => {
     const navigate = useNavigate();
+    const { playTrack } = usePlayerStore();
     const [playlists, setPlaylists] = React.useState<Playlist[]>([]);
     const [recommendedPlaylists, setRecommendedPlaylists] = React.useState<Playlist[]>([]);
     const [systemPlaylists, setSystemPlaylists] = React.useState<Playlist[]>([]);
@@ -540,7 +566,13 @@ export const HomePage: React.FC = () => {
         accentFrom: ['#1db954', '#8b5cf6', '#06b6d4', '#f97316'][index % 4],
         accentTo: ['#0d6b30', '#4c1d95', '#0e7490', '#9a3412'][index % 4],
         kind,
+        song,
     });
+
+    const handleCardPlay = React.useCallback((item: HomeCard) => {
+        if (!item.song) return;
+        playTrack(toPlayerTrack(item.song));
+    }, [playTrack]);
 
     // Transform trending playlists to cards
     const trendingPlaylistCards = React.useMemo(
@@ -709,6 +741,7 @@ export const HomePage: React.FC = () => {
                                     <QuickTile
                                         key={item.id}
                                         item={item}
+                                        onPlay={item.song ? () => handleCardPlay(item) : undefined}
                                         onClick={() => {
                                             if (item.id.startsWith('pl-')) {
                                                 const playlistId = item.id.replace('pl-', '');
@@ -741,6 +774,7 @@ export const HomePage: React.FC = () => {
                                 totalItems={madeForYouTotal}
                                 onShowMore={() => toggleSection('madeForYou')}
                                 onShowLess={() => toggleSection('madeForYou')}
+                                onItemPlay={handleCardPlay}
                                 onItemClick={(item) => {
                                     if (item.id.startsWith('pl-')) {
                                         const playlistId = item.id.replace('pl-', '');
@@ -772,6 +806,7 @@ export const HomePage: React.FC = () => {
                                 totalItems={allTrendingCards.length || 0}
                                 onShowMore={() => toggleSection('trendingNow')}
                                 onShowLess={() => toggleSection('trendingNow')}
+                                onItemPlay={handleCardPlay}
                                 onItemClick={(item) => {
                                     if (item.id.startsWith('pl-')) {
                                         const playlistId = item.id.replace('pl-', '');
@@ -803,6 +838,7 @@ export const HomePage: React.FC = () => {
                                 totalItems={allNewReleaseCards.length || 0}
                                 onShowMore={() => toggleSection('recentlyAdded')}
                                 onShowLess={() => toggleSection('recentlyAdded')}
+                                onItemPlay={handleCardPlay}
                                 onItemClick={(item) => {
                                     if (item.id.startsWith('pl-')) {
                                         const playlistId = item.id.replace('pl-', '');

@@ -19,6 +19,11 @@ cp .env.example .env
 
 # Edit .env if needed (defaults work for local development)
 # VITE_API_BASE_URL=http://localhost/api
+# VITE_AUTH_MODE=normal
+
+# NOTE: Use VITE_AUTH_MODE=dev_no_jwt only for frontend-only UI work.
+# In dev_no_jwt mode, Authorization headers are not sent, so /auth/me,
+# /profile/me, playlists, and other protected endpoints will return 401.
 ```
 
 ### Step 4: Start Development Server

@@ -19,7 +19,7 @@ export const historyAPI = {
    * Used to track what the user is listening to
    */
   recordPlay: async (songId: number): Promise<{ status: string }> => {
-    const res = await api.post('/history/record/', { song_id: songId });
+    const res = await api.post('/history/played/', { song_id: songId });
     return unwrapResponse<{ status: string }>(res.data, 'Failed to record play');
   },
 };

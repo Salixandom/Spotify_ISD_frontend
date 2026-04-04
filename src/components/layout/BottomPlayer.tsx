@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
     Shuffle,
     SkipBack,
@@ -12,9 +13,17 @@ import {
     ListMusic,
     Laptop2,
     Maximize2,
+    Minimize2,
     CirclePlus,
 } from "lucide-react";
 import { usePlayerStore } from "../../store/playerStore";
+import { getArtistName } from "../../utils/trackHelpers";
+import { historyAPI } from "../../api/history";
+
+const ANALYZER_HOST_ALLOWLIST = [
+    "files.freemusicarchive.org",
+];
+const LAST_NON_PLAYBACK_ROUTE_KEY = "last_non_playback_route";
 
 const PLACEHOLDER_TRACK = {
     title: "Ural Debo Akashe",
@@ -24,6 +33,8 @@ const PLACEHOLDER_TRACK = {
 };
 
 export const BottomPlayer: React.FC = () => {
+    const navigate = useNavigate();
+    const location = useLocation();
     const {
         currentTrack,
         isPlaying,
@@ -32,23 +43,33 @@ export const BottomPlayer: React.FC = () => {
         duration,
         shuffle,
         repeatMode,
-        togglePlay,
+        setIsPlaying,
         nextTrack,
         prevTrack,
         setVolume,
         setProgress,
         setDuration,
+        setAudioMetrics,
         toggleShuffle,
         cycleRepeat,
         onTrackEnd,
     } = usePlayerStore();
 
     const audioRef = useRef<HTMLAudioElement>(null);
+    const lastRecordedTrackIdRef = useRef<number | null>(null);
+    const lastNonPlaybackPathRef = useRef<string>("/");
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const analyserRef = useRef<AnalyserNode | null>(null);
+    const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+    const frequencyDataRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
+    const rafRef = useRef<number | null>(null);
+    const fallbackRafRef = useRef<number | null>(null);
 
     const trackTitle = currentTrack?.song?.title || PLACEHOLDER_TRACK.title;
-    const trackArtist = currentTrack?.song?.artist || PLACEHOLDER_TRACK.artist;
+    const trackArtist = getArtistName(currentTrack?.song?.artist) || PLACEHOLDER_TRACK.artist;
     const trackCover = currentTrack?.song?.cover_url || PLACEHOLDER_TRACK.cover;
     const trackAudio = currentTrack?.song?.audio_url || "";
+    const isTrackPlayable = Boolean(trackAudio);
 
     const effectiveDuration =
         currentTrack?.song?.duration_seconds ||
@@ -56,28 +77,266 @@ export const BottomPlayer: React.FC = () => {
         PLACEHOLDER_TRACK.duration;
 
     useEffect(() => {
-        if (!audioRef.current || !trackAudio) return;
+        if (!audioRef.current || !trackAudio) {
+            if (isPlaying) {
+                setIsPlaying(false);
+            }
+            return;
+        }
 
         if (isPlaying) {
-            audioRef.current.play().catch(() => {});
+            audioRef.current.play().catch(() => {
+                setIsPlaying(false);
+            });
         } else {
             audioRef.current.pause();
         }
-    }, [isPlaying, trackAudio]);
+    }, [isPlaying, trackAudio, setIsPlaying]);
 
     useEffect(() => {
         if (!audioRef.current || !trackAudio) return;
 
-        audioRef.current.src = trackAudio;
-        if (isPlaying) {
-            audioRef.current.play().catch(() => {});
+        // Set CORS mode only for analyzer-safe hosts; preserve playback for others.
+        let analyzerSafeHost = false;
+        if (trackAudio.startsWith("/") || trackAudio.startsWith(window.location.origin)) {
+            analyzerSafeHost = true;
+        } else {
+            try {
+                analyzerSafeHost = ANALYZER_HOST_ALLOWLIST.includes(new URL(trackAudio).hostname);
+            } catch {
+                analyzerSafeHost = false;
+            }
         }
-    }, [trackAudio, isPlaying]);
+
+        audioRef.current.crossOrigin = analyzerSafeHost ? "anonymous" : null;
+        audioRef.current.src = trackAudio;
+    }, [trackAudio]);
 
     useEffect(() => {
         if (!audioRef.current) return;
         audioRef.current.volume = volume;
     }, [volume]);
+
+    useEffect(() => {
+        return () => {
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
+            if (fallbackRafRef.current) {
+                cancelAnimationFrame(fallbackRafRef.current);
+                fallbackRafRef.current = null;
+            }
+            sourceNodeRef.current?.disconnect();
+            analyserRef.current?.disconnect();
+            audioContextRef.current?.close().catch(() => {});
+        };
+    }, []);
+
+    const teardownAnalyzer = React.useCallback(() => {
+        if (rafRef.current) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+        }
+        if (fallbackRafRef.current) {
+            cancelAnimationFrame(fallbackRafRef.current);
+            fallbackRafRef.current = null;
+        }
+        sourceNodeRef.current?.disconnect();
+        analyserRef.current?.disconnect();
+        audioContextRef.current?.close().catch(() => {});
+        sourceNodeRef.current = null;
+        analyserRef.current = null;
+        audioContextRef.current = null;
+        frequencyDataRef.current = null;
+    }, []);
+
+    const canAnalyzeTrack = React.useCallback((url: string) => {
+        if (!url) return false;
+        if (url.startsWith("/") || url.startsWith(window.location.origin)) return true;
+
+        try {
+            const parsed = new URL(url);
+            return ANALYZER_HOST_ALLOWLIST.includes(parsed.hostname);
+        } catch {
+            return false;
+        }
+    }, []);
+
+    const setupAnalyzer = React.useCallback(() => {
+        const el = audioRef.current;
+        if (!el || analyserRef.current) return false;
+
+        try {
+            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioCtx) return false;
+
+            const ctx = new AudioCtx();
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = 512;
+            analyser.smoothingTimeConstant = 0.82;
+
+            const src = ctx.createMediaElementSource(el);
+            src.connect(analyser);
+            analyser.connect(ctx.destination);
+
+            audioContextRef.current = ctx;
+            analyserRef.current = analyser;
+            sourceNodeRef.current = src;
+            frequencyDataRef.current = new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount));
+            return true;
+        } catch {
+            teardownAnalyzer();
+            return false;
+        }
+    }, [teardownAnalyzer]);
+
+    useEffect(() => {
+        if (!trackAudio) {
+            teardownAnalyzer();
+            return;
+        }
+
+        const enableAnalyzer = canAnalyzeTrack(trackAudio);
+        if (!enableAnalyzer) {
+            teardownAnalyzer();
+            return;
+        }
+
+        setupAnalyzer();
+    }, [trackAudio, canAnalyzeTrack, setupAnalyzer, teardownAnalyzer]);
+
+    useEffect(() => {
+        if (!isPlaying) {
+            setAudioMetrics({
+                amplitude: 0,
+                bass: 0,
+                mid: 0,
+                treble: 0,
+                spectrum: Array.from({ length: 24 }, () => 0),
+            });
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
+            if (fallbackRafRef.current) {
+                cancelAnimationFrame(fallbackRafRef.current);
+                fallbackRafRef.current = null;
+            }
+            return;
+        }
+
+        const analyser = analyserRef.current;
+        const buffer = frequencyDataRef.current;
+        const ctx = audioContextRef.current;
+        if (!analyser || !buffer) {
+            const tickFallback = () => {
+                const t = performance.now() / 1000;
+                const amplitude = 0.16 + 0.08 * (Math.sin(t * 2.2) * 0.5 + 0.5);
+                const bass = 0.22 + 0.11 * (Math.sin(t * 1.3 + 0.8) * 0.5 + 0.5);
+                const mid = 0.2 + 0.1 * (Math.sin(t * 2.1 + 1.7) * 0.5 + 0.5);
+                const treble = 0.18 + 0.09 * (Math.sin(t * 2.9 + 2.4) * 0.5 + 0.5);
+
+                const spectrum = Array.from({ length: 24 }, (_, i) => {
+                    const wave = Math.sin(t * (1.4 + (i % 5) * 0.25) + i * 0.55);
+                    return 0.16 + ((wave * 0.5 + 0.5) * 0.28);
+                });
+
+                setAudioMetrics({ amplitude, bass, mid, treble, spectrum });
+                fallbackRafRef.current = requestAnimationFrame(tickFallback);
+            };
+
+            fallbackRafRef.current = requestAnimationFrame(tickFallback);
+            return () => {
+                if (fallbackRafRef.current) {
+                    cancelAnimationFrame(fallbackRafRef.current);
+                    fallbackRafRef.current = null;
+                }
+            };
+        }
+
+        if (ctx && ctx.state === "suspended") {
+            ctx.resume().catch(() => {});
+        }
+
+        const sampleBand = (start: number, end: number): number => {
+            if (end <= start) return 0;
+            let sum = 0;
+            for (let i = start; i < end; i += 1) sum += buffer[i];
+            return (sum / (end - start)) / 255;
+        };
+
+        const tick = () => {
+            analyser.getByteFrequencyData(buffer);
+
+            let total = 0;
+            for (let i = 0; i < buffer.length; i += 1) total += buffer[i];
+            const amplitude = (total / buffer.length) / 255;
+
+            const bassEnd = Math.floor(buffer.length * 0.14);
+            const midEnd = Math.floor(buffer.length * 0.48);
+
+            const bass = sampleBand(0, bassEnd);
+            const mid = sampleBand(bassEnd, midEnd);
+            const treble = sampleBand(midEnd, buffer.length);
+
+            const bars = 24;
+            const chunk = Math.max(1, Math.floor(buffer.length / bars));
+            const spectrum = Array.from({ length: bars }, (_, idx) => {
+                const start = idx * chunk;
+                const end = Math.min(buffer.length, start + chunk);
+                let localMax = 0;
+                for (let i = start; i < end; i += 1) {
+                    if (buffer[i] > localMax) localMax = buffer[i];
+                }
+                return localMax / 255;
+            });
+
+            setAudioMetrics({ amplitude, bass, mid, treble, spectrum });
+            rafRef.current = requestAnimationFrame(tick);
+        };
+
+        rafRef.current = requestAnimationFrame(tick);
+        return () => {
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
+        };
+    }, [isPlaying, trackAudio, setAudioMetrics]);
+
+    useEffect(() => {
+        if (!audioRef.current || !trackAudio) return;
+        const liveTime = audioRef.current.currentTime;
+        if (!Number.isFinite(liveTime)) return;
+
+        if (Math.abs(liveTime - progress) > 0.8) {
+            audioRef.current.currentTime = progress;
+        }
+    }, [progress, trackAudio]);
+
+    useEffect(() => {
+        if (location.pathname !== "/playback") {
+            const route = `${location.pathname}${location.search}`;
+            lastNonPlaybackPathRef.current = route;
+            try {
+                sessionStorage.setItem(LAST_NON_PLAYBACK_ROUTE_KEY, route);
+            } catch {
+                // ignore storage failures
+            }
+        }
+    }, [location.pathname, location.search]);
+
+    useEffect(() => {
+        const songId = currentTrack?.song?.id;
+        if (!songId || !isPlaying) return;
+        if (lastRecordedTrackIdRef.current === songId) return;
+
+        lastRecordedTrackIdRef.current = songId;
+        historyAPI.recordPlay(songId).catch(() => {
+            // Ignore tracking failures to avoid interrupting playback.
+        });
+    }, [currentTrack?.song?.id, isPlaying]);
 
     const formatTime = (seconds: number) => {
         if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -88,6 +347,22 @@ export const BottomPlayer: React.FC = () => {
 
     const isRepeatOff = repeatMode === "off";
     const isRepeatOne = repeatMode === "one";
+    const handleTogglePlay = () => {
+        if (!audioRef.current || !trackAudio) {
+            setIsPlaying(false);
+            return;
+        }
+
+        if (isPlaying) {
+            audioRef.current.pause();
+            setIsPlaying(false);
+            return;
+        }
+
+        audioRef.current.play()
+            .then(() => setIsPlaying(true))
+            .catch(() => setIsPlaying(false));
+    };
 
     return (
         <footer
@@ -100,6 +375,8 @@ export const BottomPlayer: React.FC = () => {
         >
             <audio
                 ref={audioRef}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
                 onTimeUpdate={(e) => setProgress(e.currentTarget.currentTime)}
                 onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
                 onEnded={onTrackEnd}
@@ -165,9 +442,10 @@ export const BottomPlayer: React.FC = () => {
 
                         <button
                             type="button"
-                            onClick={togglePlay}
+                            onClick={handleTogglePlay}
                             className="w-8 h-8 rounded-full bg-white text-black
-              flex items-center justify-center hover:scale-105 transition-transform"
+              flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled={!isTrackPlayable}
                             aria-label={isPlaying ? "Pause" : "Play"}
                             title={isPlaying ? "Pause" : "Play"}
                         >
@@ -281,11 +559,24 @@ export const BottomPlayer: React.FC = () => {
 
                     <button
                         type="button"
-                        className="text-white/60 hover:text-white transition-colors hidden lg:inline-flex"
+                        onClick={() => {
+                            if (location.pathname === "/playback") {
+                                let target = lastNonPlaybackPathRef.current || "/";
+                                try {
+                                    target = sessionStorage.getItem(LAST_NON_PLAYBACK_ROUTE_KEY) || target;
+                                } catch {
+                                    // ignore storage failures
+                                }
+                                navigate(target || "/");
+                            } else {
+                                navigate("/playback");
+                            }
+                        }}
+                        className="text-white/60 hover:text-white transition-colors inline-flex"
                         aria-label="Open full screen player"
-                        title="Full screen"
+                        title={location.pathname === "/playback" ? "Exit full screen" : "Full screen"}
                     >
-                        <Maximize2 size={15} />
+                        {location.pathname === "/playback" ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
                     </button>
                 </section>
             </div>

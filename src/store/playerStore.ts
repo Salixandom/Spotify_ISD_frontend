@@ -14,6 +14,13 @@ interface PlayerStore {
   isMuted: boolean;
   shuffle: boolean;
   repeatMode: RepeatMode;
+  audioMetrics: {
+    amplitude: number;
+    bass: number;
+    mid: number;
+    treble: number;
+    spectrum: number[];
+  };
 
   // Queue actions
   setQueue: (tracks: PlaylistTrack[], startIndex?: number) => void;
@@ -22,6 +29,7 @@ interface PlayerStore {
 
   // Playback actions
   togglePlay: () => void;
+  setIsPlaying: (playing: boolean) => void;
   nextTrack: () => void;
   prevTrack: () => void;
   seekTo: (seconds: number) => void;
@@ -38,6 +46,13 @@ interface PlayerStore {
   setProgress: (seconds: number) => void;
   setDuration: (seconds: number) => void;
   onTrackEnd: () => void;
+  setAudioMetrics: (metrics: {
+    amplitude: number;
+    bass: number;
+    mid: number;
+    treble: number;
+    spectrum: number[];
+  }) => void;
 }
 
 // Helper: shuffle array, keeping item at keepIndex first
@@ -63,6 +78,13 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   isMuted: false,
   shuffle: false,
   repeatMode: 'off',
+  audioMetrics: {
+    amplitude: 0,
+    bass: 0,
+    mid: 0,
+    treble: 0,
+    spectrum: Array.from({ length: 24 }, () => 0),
+  },
 
   setQueue: (tracks, startIndex = 0) => {
     const { shuffle } = get();
@@ -99,6 +121,10 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   togglePlay: () => {
     set((state) => ({ isPlaying: !state.isPlaying }));
+  },
+
+  setIsPlaying: (playing) => {
+    set({ isPlaying: playing });
   },
 
   nextTrack: () => {
@@ -188,6 +214,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   setProgress: (seconds) => set({ progress: seconds }),
   setDuration: (seconds) => set({ duration: seconds }),
+  setAudioMetrics: (metrics) => set({ audioMetrics: metrics }),
 
   onTrackEnd: () => {
     get().nextTrack();
