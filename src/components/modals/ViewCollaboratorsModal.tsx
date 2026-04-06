@@ -8,7 +8,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   playlistId: number;
-  userRole: 'owner' | 'collaborator' | null;
+  userRole: 'owner' | 'collaborator' | 'follower' | null;
   currentUserId: number;
   ownerId: number;
   onRemoveClick: (collaborator: Collaborator) => void;

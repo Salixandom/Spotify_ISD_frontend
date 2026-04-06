@@ -269,7 +269,7 @@ export const PlaylistPage: React.FC = () => {
   const [isShareSubmenuOpen, setIsShareSubmenuOpen] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"list" | "compact">("list");
   const [isArchived, setIsArchived] = React.useState(false);
-  const [isOnProfile, setIsOnProfile] = React.useState(true); // true = followed/owned, false = not on profile
+  const [isOnProfile, setIsOnProfile] = React.useState(false); // false = not following, true = following
   const [likedSongsPlaylistId, setLikedSongsPlaylistId] = React.useState<string | null>(null);
   const [likedTrackSongIds, setLikedTrackSongIds] = React.useState<Set<number>>(new Set());
   const [likedSongTrackIdsMap, setLikedSongTrackIdsMap] = React.useState<Map<number, number>>(new Map()); // song_id -> track_id in Liked Songs
@@ -278,7 +278,7 @@ export const PlaylistPage: React.FC = () => {
 
   // Collaborators state
   const [collaborators, setCollaborators] = React.useState<Collaborator[]>([]);
-  const [userRole, setUserRole] = React.useState<'owner' | 'collaborator' | null>(null);
+  const [userRole, setUserRole] = React.useState<'owner' | 'collaborator' | 'follower' | null>(null);
   const [selectedCollaborator, setSelectedCollaborator] = React.useState<Collaborator | null>(null);
   const [isViewCollabModalOpen, setIsViewCollabModalOpen] = React.useState(false);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = React.useState(false);
@@ -286,6 +286,9 @@ export const PlaylistPage: React.FC = () => {
   const [isTransferModalOpen, setIsTransferModalOpen] = React.useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = React.useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = React.useState(false);
+
+  // Share/Follower view mode state
+  const [shareViewMode, setShareViewMode] = React.useState<'owner' | 'collaborator' | 'follower' | 'public'>('owner');
   const [contextMenu, setContextMenu] = React.useState<{
     isOpen: boolean;
     track: PlaylistTrack | null;
@@ -638,6 +641,25 @@ export const PlaylistPage: React.FC = () => {
           ownerDisplayName = isCollaborative ? `User ${ownerId}` : 'Unknown';
         }
 
+        // Check if user is following this playlist (for non-owned playlists)
+        let isFollowingPlaylist = false;
+        if (ownerId !== currentUserId) {
+          try {
+            console.log('🔍 Checking follow status for playlist:', playlistData.id);
+            const followStatus = await collabAPI.isFollowing(playlistData.id);
+            console.log('✅ Follow status response:', followStatus);
+            isFollowingPlaylist = followStatus.is_following;
+            console.log('📌 isFollowingPlaylist set to:', isFollowingPlaylist);
+          } catch (error) {
+            console.error('❌ Failed to check follow status:', error);
+            isFollowingPlaylist = false;
+          }
+        } else {
+          // Own playlists are always "on profile"
+          console.log('👤 User owns this playlist, setting isOnProfile to true');
+          isFollowingPlaylist = true;
+        }
+
         setPlaylist({
           id: String(playlistData.id),
           name: playlistName,
@@ -650,7 +672,7 @@ export const PlaylistPage: React.FC = () => {
           createdAt: playlistData.created_at,
         });
         setIsArchived(archivedStatus);
-        setIsOnProfile(true); // Own playlists are always accessible
+        setIsOnProfile(isFollowingPlaylist);
         setTracks(Array.isArray(trackData) ? trackData : []);
 
         // Build user map for "Added by" display by fetching profiles for all users who added tracks
@@ -751,6 +773,47 @@ export const PlaylistPage: React.FC = () => {
       isMounted = false;
     };
   }, [id]);
+
+  // Detect share link access mode and set view mode accordingly
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const mode = params.get('mode');
+
+    // Determine base view mode from user role
+    let baseViewMode: 'owner' | 'collaborator' | 'follower' | 'public' = 'public';
+
+    if (userRole === 'owner') {
+      baseViewMode = 'owner';
+      // Owners are always followers (isOnProfile=true is set elsewhere)
+    } else if (userRole === 'collaborator') {
+      baseViewMode = 'collaborator';
+      // Collaborators are always followers (isOnProfile=true is set elsewhere)
+    } else {
+      // Not owner or collaborator - check if following (use existing isOnProfile)
+      if (!isOnProfile) {
+        baseViewMode = 'public';
+      } else {
+        baseViewMode = 'follower';
+      }
+    }
+
+    // If in shared mode, adjust view mode
+    if (mode === 'shared') {
+      // User accessed via share link
+      const currentUserId = getCurrentUserId();
+
+      if (!currentUserId || currentUserId === 0) {
+        // Not authenticated - public view (can't follow)
+        setShareViewMode('public');
+      } else {
+        // Authenticated - keep determined role
+        setShareViewMode(baseViewMode);
+      }
+    } else {
+      // Normal mode - use determined role
+      setShareViewMode(baseViewMode);
+    }
+  }, [userRole, isOnProfile, id, getCurrentUserId]);
 
   React.useEffect(() => {
     const onDocClick = (event: MouseEvent) => {
@@ -1197,7 +1260,8 @@ export const PlaylistPage: React.FC = () => {
               <Play size={24} fill="currentColor" className="translate-x-px" />
             </button>
 
-            {/* Follow/Unfollow button */}
+            {/* Follow/Unfollow button - Only for followers */}
+            {userRole === 'follower' && (
             <button
               onClick={async () => {
                 const numericId = Number(playlist.id);
@@ -1241,6 +1305,7 @@ export const PlaylistPage: React.FC = () => {
             >
               <Heart size={17} className={isOnProfile ? "fill-spotify-green text-spotify-green" : ""} />
             </button>
+            )}
 
             {/* Shuffle button */}
             <button
@@ -1278,16 +1343,17 @@ export const PlaylistPage: React.FC = () => {
               </button>
             )}
 
-            {/* More actions menu */}
-            <div className="relative" ref={actionsMenuRef}>
-              <button
-                onClick={() => setIsActionsOpen((prev) => !prev)}
-                className="w-9 h-9 rounded-full border border-white/20 bg-white/3 text-white/75 hover:text-white hover:bg-white/8 transition-colors flex items-center justify-center"
-                aria-label="Playlist actions"
-                title="More options"
-              >
-                <MoreHorizontal size={18} />
-              </button>
+            {/* More actions menu - only for owners and collaborators */}
+            {(shareViewMode === 'owner' || shareViewMode === 'collaborator') && (
+              <div className="relative" ref={actionsMenuRef}>
+                <button
+                  onClick={() => setIsActionsOpen((prev) => !prev)}
+                  className="w-9 h-9 rounded-full border border-white/20 bg-white/3 text-white/75 hover:text-white hover:bg-white/8 transition-colors flex items-center justify-center"
+                  aria-label="Playlist actions"
+                  title="More options"
+                >
+                  <MoreHorizontal size={18} />
+                </button>
 
               {isActionsOpen && (
                 <div className="absolute left-0 top-11 z-40 w-[260px] py-1 bg-white/5 backdrop-blur-xl rounded-lg shadow-[0_8px_30px_rgba(0,0,0,0.50)] border border-white/15 animate-in fade-in zoom-in-95 duration-100">
@@ -1296,6 +1362,9 @@ export const PlaylistPage: React.FC = () => {
                     <span className="flex-1">Add to queue</span>
                   </button>
                   <div className="my-1 mx-3 border-t border-white/10" />
+
+                  {/* Add/Remove from profile - Only for followers */}
+                  {userRole === 'follower' && (
                   <button
                     onClick={async () => {
                         setIsActionsOpen(false);
@@ -1320,6 +1389,8 @@ export const PlaylistPage: React.FC = () => {
                     <UserMinus size={16} className="text-white/60 shrink-0" />
                     <span className="flex-1">{isOnProfile ? "Remove from profile" : "Add to profile"}</span>
                   </button>
+                  )}
+
                   <button
                     onClick={() => {
                       setIsActionsOpen(false);
@@ -1417,10 +1488,13 @@ export const PlaylistPage: React.FC = () => {
                     <span className="flex-1">Invite collaborators</span>
                   </button>
 
+                  {/* Exclude from taste profile - Only for followers */}
+                  {userRole === 'follower' && (
                   <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors text-left">
                     <XCircle size={16} className="text-white/60 shrink-0" />
                     <span className="flex-1">Exclude from your taste profile</span>
                   </button>
+                  )}
                   <div className="my-1 mx-3 border-t border-white/10" />
                   <button
                     onClick={async () => {
@@ -1514,6 +1588,7 @@ export const PlaylistPage: React.FC = () => {
                 </div>
               )}
             </div>
+            )}
 
             {/* Advanced sort */}
             <div className="relative" ref={sortMenuRef}>
@@ -2056,6 +2131,7 @@ export const PlaylistPage: React.FC = () => {
           isOpen={isShareModalOpen}
           onClose={() => setIsShareModalOpen(false)}
           playlistId={Number(playlist.id)}
+          playlistName={playlist.name}
         />
       )}
 
