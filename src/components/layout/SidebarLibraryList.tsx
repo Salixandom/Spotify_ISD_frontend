@@ -81,6 +81,7 @@ export const SidebarLibraryList: React.FC<SidebarLibraryListProps> = ({
                 ...categories.likedSongs,
                 ...categories.bySpotify,
                 ...categories.byYou,
+                ...categories.followed,
             ];
         }
 

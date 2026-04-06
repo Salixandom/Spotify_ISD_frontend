@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Modal } from '../ui/Modal';
 import { collabAPI } from '../../api/collaboration';
 import toast from 'react-hot-toast';
-import { Users, UserPlus, Check, X, Loader2, Music, Clock } from 'lucide-react';
+import { Users, UserPlus, Check, Loader2, Music, Clock } from 'lucide-react';
 import type { InviteModalProps } from '../../types';
 
 export const InviteModal: React.FC<InviteModalProps> = ({

@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 interface PlaylistCommentsProps {
   playlistId: string | number;
   currentUserId: number;
-  userRole: 'owner' | 'collaborator' | null;
+  userRole: 'owner' | 'collaborator' | 'follower' | null;
   ownerId: number;
   userMap: Map<number, { id: number; username: string; display_name?: string; avatar_url?: string }>;
 }

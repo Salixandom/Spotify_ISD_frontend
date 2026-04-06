@@ -239,3 +239,46 @@ export interface InviteModalProps {
 }
 
 export type InviteStatus = 'new' | 'already_collaborator' | 'invalid';
+
+// ─── Share Link ─────────────────────────────────────────────
+export interface ShareTokenResponse {
+  id: number;
+  token: string;
+  playlist_id: number;
+  created_by_id: number;
+  is_active: boolean;
+  created_at: string;
+  expires_at: string;
+  usage_count: number;
+  is_valid: boolean;
+  share_url: string;
+}
+
+export interface ShareValidationResponse {
+  valid: boolean;
+  playlist_id: number;
+  playlist_name: string;
+  owner_name?: string;
+  owner_id?: number;
+  is_public: boolean;
+  visibility: 'public' | 'private';
+  playlist_type: 'solo' | 'collaborative';
+  share: ShareTokenResponse;
+}
+
+export interface FollowResponse {
+  followed_at?: string;
+  message: string;
+}
+
+export interface FollowersResponse {
+  followers_count: number;
+  playlist_id: number;
+}
+
+export interface IsFollowingResponse {
+  is_following: boolean;
+  playlist_id: number;
+}
+
+export type PlaylistViewMode = 'owner' | 'collaborator' | 'follower' | 'public';

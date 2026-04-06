@@ -1,13 +1,37 @@
 import api from './axios';
 import { unwrapResponse } from '../utils/apiResponse';
-import type { Collaborator, InviteLink, Playlist } from '../types';
+import type { Collaborator, InviteLink, Playlist, ShareValidationResponse, FollowersResponse, IsFollowingResponse } from '../types';
 
 export const collabAPI = {
-  createShareLink: async (playlistId: number): Promise<{ token: string; expires_at: string }> => {
+  createShareLink: async (playlistId: number): Promise<{ token: string; expires_at: string; share_url: string }> => {
     const res = await api.post(`/share/${playlistId}/create/`);
-    return unwrapResponse<{ token: string; expires_at: string }>(
+    return unwrapResponse<{ token: string; expires_at: string; share_url: string }>(
       res.data,
       'Failed to create share link'
+    );
+  },
+
+  validateShareToken: async (token: string): Promise<ShareValidationResponse> => {
+    const res = await api.get(`/share/view/${token}/`);
+    return unwrapResponse<ShareValidationResponse>(
+      res.data,
+      'Invalid or expired share link'
+    );
+  },
+
+  getFollowers: async (playlistId: number): Promise<FollowersResponse> => {
+    const res = await api.get(`/share/${playlistId}/followers/`);
+    return unwrapResponse<FollowersResponse>(
+      res.data,
+      'Failed to fetch followers'
+    );
+  },
+
+  isFollowing: async (playlistId: number): Promise<IsFollowingResponse> => {
+    const res = await api.get(`/share/${playlistId}/is-following/`);
+    return unwrapResponse<IsFollowingResponse>(
+      res.data,
+      'Failed to check follow status'
     );
   },
 
