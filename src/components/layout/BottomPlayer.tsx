@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
     Shuffle,
@@ -15,6 +15,7 @@ import {
     Maximize2,
     Minimize2,
     CirclePlus,
+    Loader2,
 } from "lucide-react";
 import { usePlayerStore } from "../../store/playerStore";
 import { getArtistName } from "../../utils/trackHelpers";
@@ -43,6 +44,7 @@ const PLACEHOLDER_TRACK = {
 export const BottomPlayer: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const [showLoadingIndicator, setShowLoadingIndicator] = useState(false);
     const {
         currentTrack,
         isPlaying,
@@ -73,6 +75,9 @@ export const BottomPlayer: React.FC = () => {
     const rafRef = useRef<number | null>(null);
     const fallbackRafRef = useRef<number | null>(null);
     const lastMetricsUpdateTsRef = useRef<number>(0);
+    const intendedPlayingRef = useRef<boolean>(false);
+    const isLoadingTrackRef = useRef<boolean>(false);
+    const currentTrackIdRef = useRef<number | null>(null);
 
     const trackTitle = currentTrack?.song?.title || PLACEHOLDER_TRACK.title;
     const trackArtist = getArtistName(currentTrack?.song?.artist) || PLACEHOLDER_TRACK.artist;
@@ -85,6 +90,32 @@ export const BottomPlayer: React.FC = () => {
         duration ||
         PLACEHOLDER_TRACK.duration;
 
+    // Sync intended playing state
+    useEffect(() => {
+        intendedPlayingRef.current = isPlaying;
+    }, [isPlaying]);
+
+    // Track when song changes to prevent race conditions
+    useEffect(() => {
+        const songId = currentTrack?.song?.id ?? null;
+        if (songId !== currentTrackIdRef.current) {
+            isLoadingTrackRef.current = true;
+            setShowLoadingIndicator(true);
+            currentTrackIdRef.current = songId;
+
+            // Fallback timeout to hide loading indicator if canplay doesn't fire
+            // (can happen with some audio formats or network issues)
+            const fallbackTimer = setTimeout(() => {
+                setShowLoadingIndicator(false);
+                isLoadingTrackRef.current = false;
+            }, 3000); // 3 second fallback
+
+            return () => {
+                clearTimeout(fallbackTimer);
+            };
+        }
+    }, [currentTrack?.song?.id]);
+
     useEffect(() => {
         if (!audioRef.current || !trackAudio) {
             if (isPlaying) {
@@ -94,9 +125,16 @@ export const BottomPlayer: React.FC = () => {
         }
 
         if (isPlaying) {
-            audioRef.current.play().catch(() => {
-                setIsPlaying(false);
-            });
+            // Wait for audio to be ready before playing
+            const playAudio = async () => {
+                try {
+                    await audioRef.current?.play();
+                } catch (err) {
+                    // Audio not ready or blocked, that's ok - it will play on load
+                    setIsPlaying(false);
+                }
+            };
+            playAudio();
         } else {
             audioRef.current.pause();
         }
@@ -119,7 +157,31 @@ export const BottomPlayer: React.FC = () => {
 
         audioRef.current.crossOrigin = analyzerSafeHost ? "anonymous" : null;
         audioRef.current.src = trackAudio;
-    }, [trackAudio]);
+
+        // Load the audio and prepare it for playback
+        audioRef.current.load();
+
+        // If we intend to play, start playback once audio is ready
+        if (intendedPlayingRef.current) {
+            const playWhenReady = () => {
+                if (!audioRef.current) return;
+                audioRef.current.play().catch((err) => {
+                    console.warn('Autoplay prevented:', err);
+                    setIsPlaying(false);
+                });
+            };
+
+            // Try playing immediately, but also set up as a fallback on canplay
+            audioRef.current.play().catch(() => {
+                // If immediate play fails, wait for canplay event
+                const onCanPlay = () => {
+                    playWhenReady();
+                    audioRef.current?.removeEventListener('canplay', onCanPlay);
+                };
+                audioRef.current?.addEventListener('canplay', onCanPlay);
+            });
+        }
+    }, [trackAudio, setIsPlaying]);
 
     useEffect(() => {
         if (!audioRef.current) return;
@@ -380,10 +442,47 @@ export const BottomPlayer: React.FC = () => {
         >
             <audio
                 ref={audioRef}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                onTimeUpdate={(e) => setProgress(e.currentTarget.currentTime)}
-                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                preload="auto"
+                onPlay={() => {
+                    // Only update state if this matches our intended state
+                    if (!isLoadingTrackRef.current) {
+                        setIsPlaying(true);
+                    }
+                }}
+                onPause={() => {
+                    // Don't update state if we're in the middle of changing tracks
+                    if (!isLoadingTrackRef.current && intendedPlayingRef.current) {
+                        // If we intended to be playing but got paused, try to resume
+                        setTimeout(() => {
+                            if (intendedPlayingRef.current && audioRef.current) {
+                                audioRef.current.play().catch(() => setIsPlaying(false));
+                            }
+                        }, 50);
+                    } else if (!isLoadingTrackRef.current) {
+                        setIsPlaying(false);
+                    }
+                }}
+                onTimeUpdate={(e) => {
+                    const currentTime = e.currentTarget.currentTime;
+                    const audioDuration = e.currentTarget.duration;
+                    // Only update progress if we have valid duration and time isn't jumping around
+                    if (Number.isFinite(audioDuration) && audioDuration > 0) {
+                        setProgress(Math.min(currentTime, audioDuration));
+                    }
+                }}
+                onLoadedMetadata={(e) => {
+                    const audioDuration = e.currentTarget.duration;
+                    if (Number.isFinite(audioDuration) && audioDuration > 0) {
+                        setDuration(audioDuration);
+                    }
+                }}
+                onCanPlay={() => {
+                    // Audio is ready to play - hide loading indicator and start if intended
+                    setShowLoadingIndicator(false);
+                    if (intendedPlayingRef.current) {
+                        audioRef.current?.play().catch(() => setIsPlaying(false));
+                    }
+                }}
                 onEnded={onTrackEnd}
             />
 
@@ -449,12 +548,14 @@ export const BottomPlayer: React.FC = () => {
                             type="button"
                             onClick={handleTogglePlay}
                             className="w-8 h-8 rounded-full bg-white text-black
-              flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+              flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-40 disabled:cursor-not-allowed relative"
                             disabled={!isTrackPlayable}
                             aria-label={isPlaying ? "Pause" : "Play"}
                             title={isPlaying ? "Pause" : "Play"}
                         >
-                            {isPlaying ? (
+                            {showLoadingIndicator ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : isPlaying ? (
                                 <Pause size={16} fill="currentColor" />
                             ) : (
                                 <Play size={16} fill="currentColor" />
