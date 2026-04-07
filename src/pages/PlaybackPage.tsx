@@ -1,6 +1,10 @@
 import React from "react";
 import { usePlayerStore } from "../store/playerStore";
 import vinylPng from "../assets/vinyl.png";
+import BackgroundArt from "../components/playback/BackgroundArt";
+import TrackInfoPanel from "../components/playback/TrackInfoPanel";
+import QueuePanel from "../components/playback/QueuePanel";
+import OuterRingVisualizer from "../components/playback/OuterRingVisualizer";
 
 function hashToHue(text: string): number {
   let hash = 0;
@@ -241,6 +245,8 @@ export const PlaybackPage: React.FC = () => {
         `}
       </style>
 
+      <BackgroundArt coverUrl={cover} isActive={isPlaying} />
+
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
           className="absolute inset-[-14%]"
@@ -349,6 +355,13 @@ export const PlaybackPage: React.FC = () => {
       </div>
 
       <div className="relative z-10 h-full flex items-center justify-center px-3 md:px-8">
+        {currentTrack && (
+          <>
+            <TrackInfoPanel audioMetrics={audioMetrics} />
+            <QueuePanel />
+          </>
+        )}
+
         <div className="relative w-[min(86vw,760px)] aspect-square flex items-center justify-center">
           <div
             className="absolute inset-[9%] rounded-full border border-white/15 bg-white/[0.04]"
@@ -376,6 +389,8 @@ export const PlaybackPage: React.FC = () => {
 
             <div className="absolute inset-[47.2%] rounded-full bg-black/95 border border-white/30" />
           </div>
+
+          <OuterRingVisualizer spectrum={audioMetrics.spectrum} isActive={isPlaying} />
         </div>
       </div>
     </div>

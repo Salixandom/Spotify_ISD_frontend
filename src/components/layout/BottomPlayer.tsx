@@ -14,12 +14,16 @@ import {
     Laptop2,
     Maximize2,
     Minimize2,
-    CirclePlus,
     Loader2,
+    Heart,
 } from "lucide-react";
 import { usePlayerStore } from "../../store/playerStore";
 import { getArtistName } from "../../utils/trackHelpers";
 import { historyAPI } from "../../api/history";
+import { trackAPI } from "../../api/tracks";
+import { playlistAPI } from "../../api/playlists";
+import { toast } from "react-hot-toast";
+import type { PlaylistTrack } from "../../types";
 
 const ANALYZER_HOST_ALLOWLIST = [
     "files.freemusicarchive.org",
@@ -45,6 +49,9 @@ export const BottomPlayer: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [showLoadingIndicator, setShowLoadingIndicator] = useState(false);
+    const [likedSongsPlaylistId, setLikedSongsPlaylistId] = useState<string | null>(null);
+    const [likedTrackSongIds, setLikedTrackSongIds] = useState<Set<number>>(new Set());
+    const [isLiked, setIsLiked] = useState(false);
     const {
         currentTrack,
         isPlaying,
@@ -405,6 +412,47 @@ export const BottomPlayer: React.FC = () => {
         });
     }, [currentTrack?.song?.id, isPlaying]);
 
+    // Fetch liked songs data on mount
+    useEffect(() => {
+        const fetchLikedSongs = async () => {
+            const userStr = localStorage.getItem('user');
+            if (!userStr) return;
+
+            try {
+                const user = JSON.parse(userStr);
+                const playlistsResponse = await playlistAPI.getUserPlaylists(user.id, true);
+
+                let playlists: any[] = [];
+                if (Array.isArray(playlistsResponse)) {
+                    playlists = playlistsResponse;
+                } else if (typeof playlistsResponse === 'object' && 'playlists' in playlistsResponse) {
+                    playlists = (playlistsResponse as Record<string, unknown>).playlists as any[];
+                }
+
+                const likedPlaylist = playlists.find((p: any) => p.is_liked_songs);
+                if (likedPlaylist) {
+                    setLikedSongsPlaylistId(String(likedPlaylist.id));
+                    const likedTracks = await trackAPI.list(likedPlaylist.id);
+                    if (Array.isArray(likedTracks)) {
+                        const songIds = new Set(likedTracks.map((t: PlaylistTrack) => t.song.id));
+                        setLikedTrackSongIds(songIds);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch Liked Songs:", err);
+            }
+        };
+
+        fetchLikedSongs();
+    }, []);
+
+    // Update isLiked when currentTrack or likedTrackSongIds changes
+    useEffect(() => {
+        if (currentTrack) {
+            setIsLiked(likedTrackSongIds.has(currentTrack.song.id));
+        }
+    }, [currentTrack, likedTrackSongIds]);
+
     const formatTime = (seconds: number) => {
         if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
         const m = Math.floor(seconds / 60);
@@ -414,6 +462,54 @@ export const BottomPlayer: React.FC = () => {
 
     const isRepeatOff = repeatMode === "off";
     const isRepeatOne = repeatMode === "one";
+
+    const handleLike = async () => {
+        if (!currentTrack) return;
+
+        let currentLikedSongsId = likedSongsPlaylistId;
+
+        // Create Liked Songs playlist if it doesn't exist
+        if (currentLikedSongsId === null) {
+            try {
+                const newPlaylist = await playlistAPI.create({
+                    name: "Liked Songs",
+                    visibility: "private",
+                    is_liked_songs: true
+                });
+                currentLikedSongsId = String(newPlaylist.id);
+                setLikedSongsPlaylistId(currentLikedSongsId);
+                toast.success("Created Liked Songs playlist");
+            } catch (err) {
+                console.error(err);
+                toast.error("Failed to create Liked Songs playlist");
+                return;
+            }
+        }
+
+        // Toggle like status
+        try {
+            if (isLiked) {
+                // Remove from liked songs
+                const trackIdInLiked = currentTrack.id;
+                await trackAPI.remove(Number(currentLikedSongsId), trackIdInLiked);
+                setLikedTrackSongIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(currentTrack.song.id);
+                    return next;
+                });
+                toast.success("Removed from Liked Songs");
+            } else {
+                // Add to liked songs
+                await trackAPI.add(Number(currentLikedSongsId), currentTrack.song.id);
+                setLikedTrackSongIds(prev => new Set(prev).add(currentTrack.song.id));
+                toast.success("Added to Liked Songs");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update Liked Songs");
+        }
+    };
+
     const handleTogglePlay = () => {
         if (!audioRef.current || !trackAudio) {
             setIsPlaying(false);
@@ -444,21 +540,16 @@ export const BottomPlayer: React.FC = () => {
                 ref={audioRef}
                 preload="auto"
                 onPlay={() => {
-                    // Only update state if this matches our intended state
-                    if (!isLoadingTrackRef.current) {
-                        setIsPlaying(true);
+                    // Always sync state when audio is actually playing
+                    setIsPlaying(true);
+                    // Clear loading state since audio is now playing
+                    if (isLoadingTrackRef.current) {
+                        isLoadingTrackRef.current = false;
                     }
                 }}
                 onPause={() => {
-                    // Don't update state if we're in the middle of changing tracks
-                    if (!isLoadingTrackRef.current && intendedPlayingRef.current) {
-                        // If we intended to be playing but got paused, try to resume
-                        setTimeout(() => {
-                            if (intendedPlayingRef.current && audioRef.current) {
-                                audioRef.current.play().catch(() => setIsPlaying(false));
-                            }
-                        }, 50);
-                    } else if (!isLoadingTrackRef.current) {
+                    // Don't try to resume if we're loading a new track
+                    if (!isLoadingTrackRef.current) {
                         setIsPlaying(false);
                     }
                 }}
@@ -509,11 +600,14 @@ export const BottomPlayer: React.FC = () => {
 
                     <button
                         type="button"
-                        className="text-white/60 hover:text-white transition-colors shrink-0 inline-flex"
-                        aria-label="Add current song to playlist"
-                        title="Add to playlist"
+                        onClick={handleLike}
+                        className={`transition-colors shrink-0 inline-flex ${
+                            isLiked ? "text-spotify-green" : "text-white/60 hover:text-white"
+                        }`}
+                        aria-label={isLiked ? "Remove from Liked Songs" : "Add to Liked Songs"}
+                        title={isLiked ? "Liked" : "Like"}
                     >
-                        <CirclePlus size={17} />
+                        <Heart size={17} fill={isLiked ? "currentColor" : "none"} />
                     </button>
                 </section>
 
@@ -622,7 +716,14 @@ export const BottomPlayer: React.FC = () => {
                 <section className="min-w-0 flex items-center justify-end gap-3">
                     <button
                         type="button"
-                        className="text-white/60 hover:text-white transition-colors hidden md:inline-flex"
+                        onClick={() => {
+                            if (location.pathname !== "/playback") {
+                                navigate("/playback");
+                            }
+                        }}
+                        className={`transition-colors hidden md:inline-flex ${
+                            location.pathname === "/playback" ? "text-spotify-green" : "text-white/60 hover:text-white"
+                        }`}
                         aria-label="Now playing queue"
                         title="Queue"
                     >

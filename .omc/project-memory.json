@@ -165,8 +165,8 @@
   "hotPaths": [
     {
       "path": "src/pages/PlaylistPage.tsx",
-      "accessCount": 117,
-      "lastAccessed": 1775471023549,
+      "accessCount": 148,
+      "lastAccessed": 1775508277004,
       "type": "file"
     },
     {
@@ -194,9 +194,21 @@
       "type": "file"
     },
     {
+      "path": "src/components/layout/BottomPlayer.tsx",
+      "accessCount": 21,
+      "lastAccessed": 1775509795208,
+      "type": "file"
+    },
+    {
+      "path": "src/components/playback/TrackInfoPanel.tsx",
+      "accessCount": 14,
+      "lastAccessed": 1775506870090,
+      "type": "file"
+    },
+    {
       "path": "src/components/modals/TrackContextMenu.tsx",
-      "accessCount": 9,
-      "lastAccessed": 1775174963441,
+      "accessCount": 14,
+      "lastAccessed": 1775507667580,
       "type": "file"
     },
     {
@@ -218,6 +230,12 @@
       "type": "file"
     },
     {
+      "path": "src",
+      "accessCount": 7,
+      "lastAccessed": 1775507048916,
+      "type": "directory"
+    },
+    {
       "path": "src/components/comments/PlaylistComments.tsx",
       "accessCount": 5,
       "lastAccessed": 1775471049274,
@@ -234,6 +252,18 @@
       "accessCount": 4,
       "lastAccessed": 1775254708921,
       "type": "file"
+    },
+    {
+      "path": "src/api",
+      "accessCount": 4,
+      "lastAccessed": 1775506607621,
+      "type": "directory"
+    },
+    {
+      "path": "src/components",
+      "accessCount": 4,
+      "lastAccessed": 1775507049463,
+      "type": "directory"
     },
     {
       "path": "src/api/collaboration.ts",
@@ -266,18 +296,6 @@
       "type": "file"
     },
     {
-      "path": "src/api",
-      "accessCount": 3,
-      "lastAccessed": 1775212294641,
-      "type": "directory"
-    },
-    {
-      "path": "src/components",
-      "accessCount": 3,
-      "lastAccessed": 1775212974904,
-      "type": "directory"
-    },
-    {
       "path": "src/components/layout",
       "accessCount": 3,
       "lastAccessed": 1775212999537,
@@ -287,18 +305,6 @@
       "path": "src/pages/InvitePage.tsx",
       "accessCount": 3,
       "lastAccessed": 1775252933879,
-      "type": "file"
-    },
-    {
-      "path": "src",
-      "accessCount": 3,
-      "lastAccessed": 1775471031830,
-      "type": "directory"
-    },
-    {
-      "path": "src/components/layout/BottomPlayer.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1775174932815,
       "type": "file"
     },
     {
@@ -317,6 +323,24 @@
       "path": "src/pages/InviteErrorPage.tsx",
       "accessCount": 2,
       "lastAccessed": 1775251577243,
+      "type": "file"
+    },
+    {
+      "path": "src/api/tracks.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775506609301,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 2,
+      "lastAccessed": 1775506729713,
+      "type": "directory"
+    },
+    {
+      "path": "src/store/playerStore.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775507328399,
       "type": "file"
     },
     {
@@ -344,12 +368,6 @@
       "type": "file"
     },
     {
-      "path": "src/api/tracks.ts",
-      "accessCount": 1,
-      "lastAccessed": 1775173360641,
-      "type": "file"
-    },
-    {
       "path": "src/components/layout/AppLayout.tsx",
       "accessCount": 1,
       "lastAccessed": 1775206236897,
@@ -366,12 +384,6 @@
       "accessCount": 1,
       "lastAccessed": 1775241266210,
       "type": "file"
-    },
-    {
-      "path": "",
-      "accessCount": 1,
-      "lastAccessed": 1775252703052,
-      "type": "directory"
     },
     {
       "path": "src/pages",
