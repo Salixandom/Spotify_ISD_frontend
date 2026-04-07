@@ -123,29 +123,44 @@ export const BottomPlayer: React.FC = () => {
         }
     }, [currentTrack?.song?.id]);
 
+    // Clear loading flag when audio actually starts playing
     useEffect(() => {
-        if (!audioRef.current || !trackAudio) {
-            if (isPlaying) {
-                setIsPlaying(false);
+        const handlePlayingStart = () => {
+            if (isLoadingTrackRef.current) {
+                isLoadingTrackRef.current = false;
+                setShowLoadingIndicator(false);
             }
-            return;
+        };
+
+        const audio = audioRef.current;
+        if (audio) {
+            audio.addEventListener('play', handlePlayingStart);
+            return () => {
+                audio.removeEventListener('play', handlePlayingStart);
+            };
         }
+    }, [trackAudio]);
+
+    // Sync playback state with audio element
+    // Only update audio when state changes, don't call setIsPlaying here
+    // Let audio events (onPlay, onPause) be the single source of truth for state
+    useEffect(() => {
+        if (!audioRef.current || !trackAudio) return;
 
         if (isPlaying) {
-            // Wait for audio to be ready before playing
             const playAudio = async () => {
                 try {
                     await audioRef.current?.play();
                 } catch (err) {
-                    // Audio not ready or blocked, that's ok - it will play on load
-                    setIsPlaying(false);
+                    // Audio not ready - will be retried in onCanPlay handler
+                    console.warn('Audio not ready, waiting for onCanPlay:', err);
                 }
             };
             playAudio();
         } else {
             audioRef.current.pause();
         }
-    }, [isPlaying, trackAudio, setIsPlaying]);
+    }, [isPlaying, trackAudio]);
 
     useEffect(() => {
         if (!audioRef.current || !trackAudio) return;
@@ -174,7 +189,8 @@ export const BottomPlayer: React.FC = () => {
                 if (!audioRef.current) return;
                 audioRef.current.play().catch((err) => {
                     console.warn('Autoplay prevented:', err);
-                    setIsPlaying(false);
+                    toast('Click play to start', { icon: '▶️', duration: 3000 });
+                    // Don't update state here - let onPlay handle it when it actually plays
                 });
             };
 
@@ -540,15 +556,15 @@ export const BottomPlayer: React.FC = () => {
                 ref={audioRef}
                 preload="auto"
                 onPlay={() => {
-                    // Always sync state when audio is actually playing
-                    setIsPlaying(true);
-                    // Clear loading state since audio is now playing
+                    // Audio is actually playing - sync state and clear loading flag
                     if (isLoadingTrackRef.current) {
                         isLoadingTrackRef.current = false;
+                        setShowLoadingIndicator(false);
                     }
+                    setIsPlaying(true);
                 }}
                 onPause={() => {
-                    // Don't try to resume if we're loading a new track
+                    // Audio actually paused - sync state
                     if (!isLoadingTrackRef.current) {
                         setIsPlaying(false);
                     }
@@ -571,7 +587,14 @@ export const BottomPlayer: React.FC = () => {
                     // Audio is ready to play - hide loading indicator and start if intended
                     setShowLoadingIndicator(false);
                     if (intendedPlayingRef.current) {
-                        audioRef.current?.play().catch(() => setIsPlaying(false));
+                        audioRef.current?.play().catch((err) => {
+                            // Play failed - onPlay won't fire, so reset state and notify user
+                            if (!isLoadingTrackRef.current) {
+                                setIsPlaying(false);
+                                toast.error('Failed to play track. Please try again.');
+                            }
+                            console.error('Audio play failed on canplay:', err);
+                        });
                     }
                 }}
                 onEnded={onTrackEnd}

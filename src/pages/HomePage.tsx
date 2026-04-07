@@ -423,9 +423,12 @@ export const HomePage: React.FC = () => {
                 })
                 .catch((error) => {
                     console.error('Failed to fetch invite details:', error);
-                    toast.error('Invalid invite link');
-                    // Clear the invite param from URL
-                    window.history.replaceState({}, '', '/');
+                    toast.error('Invalid or expired invite link');
+                    // Clear the invite params from URL
+                    window.history.replaceState({}, '', window.location.pathname);
+                    // Clear state
+                    setInviteToken(null);
+                    setInvitePlaylistName('');
                 });
         }
     }, []);

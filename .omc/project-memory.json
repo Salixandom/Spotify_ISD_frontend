@@ -182,6 +182,12 @@
       "type": "file"
     },
     {
+      "path": "src/components/layout/BottomPlayer.tsx",
+      "accessCount": 41,
+      "lastAccessed": 1775587054757,
+      "type": "file"
+    },
+    {
       "path": "src/animations/InvalidInviteAnimation.tsx",
       "accessCount": 21,
       "lastAccessed": 1775252636424,
@@ -191,12 +197,6 @@
       "path": "src/components/layout/Sidebar.tsx",
       "accessCount": 21,
       "lastAccessed": 1775470152369,
-      "type": "file"
-    },
-    {
-      "path": "src/components/layout/BottomPlayer.tsx",
-      "accessCount": 21,
-      "lastAccessed": 1775509795208,
       "type": "file"
     },
     {
@@ -210,6 +210,12 @@
       "accessCount": 14,
       "lastAccessed": 1775507667580,
       "type": "file"
+    },
+    {
+      "path": "src",
+      "accessCount": 10,
+      "lastAccessed": 1775582456456,
+      "type": "directory"
     },
     {
       "path": "src/types/index.ts",
@@ -228,12 +234,6 @@
       "accessCount": 7,
       "lastAccessed": 1775471058769,
       "type": "file"
-    },
-    {
-      "path": "src",
-      "accessCount": 7,
-      "lastAccessed": 1775507048916,
-      "type": "directory"
     },
     {
       "path": "src/components/comments/PlaylistComments.tsx",
@@ -308,6 +308,24 @@
       "type": "file"
     },
     {
+      "path": ".env.local",
+      "accessCount": 3,
+      "lastAccessed": 1775582699680,
+      "type": "file"
+    },
+    {
+      "path": "vercel.json",
+      "accessCount": 3,
+      "lastAccessed": 1775582699866,
+      "type": "file"
+    },
+    {
+      "path": "src/store/playerStore.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775586926859,
+      "type": "file"
+    },
+    {
       "path": "src/components/modals/CreatePlaylistModal.tsx",
       "accessCount": 2,
       "lastAccessed": 1775174948135,
@@ -338,9 +356,9 @@
       "type": "directory"
     },
     {
-      "path": "src/store/playerStore.ts",
+      "path": ".env.production",
       "accessCount": 2,
-      "lastAccessed": 1775507328399,
+      "lastAccessed": 1775582573562,
       "type": "file"
     },
     {
@@ -395,6 +413,24 @@
       "path": "src/components/modals/ShareLinkModal.tsx",
       "accessCount": 1,
       "lastAccessed": 1775469736178,
+      "type": "file"
+    },
+    {
+      "path": ".env.example",
+      "accessCount": 1,
+      "lastAccessed": 1775582433891,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 1,
+      "lastAccessed": 1775582434393,
+      "type": "file"
+    },
+    {
+      "path": "src/api/axios.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775582458590,
       "type": "file"
     }
   ],

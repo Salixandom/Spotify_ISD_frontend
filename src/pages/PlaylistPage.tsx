@@ -690,8 +690,8 @@ export const PlaylistPage: React.FC = () => {
                 console.log('🖼️ Profile for user', userId, ':', profile);
                 map.set(userId, {
                   id: userId,
-                  username: `user${userId}`,
-                  display_name: profile.display_name,
+                  username: profile.username || profile.display_name || `user${userId}`,
+                  display_name: profile.display_name || profile.username || `User${userId}`,
                   avatar_url: profile.avatar_url,
                 });
               } catch (error) {
@@ -932,8 +932,8 @@ export const PlaylistPage: React.FC = () => {
 
           map.set(ownerId, {
             id: ownerId,
-            username: ownerProfile.display_name || `user${ownerId}`,
-            display_name: ownerProfile.display_name,
+            username: ownerProfile.username || ownerProfile.display_name || `user${ownerId}`,
+            display_name: ownerProfile.display_name || ownerProfile.username || `User${ownerId}`,
             avatar_url: ownerProfile.avatar_url,
           });
         } catch (error) {
@@ -961,8 +961,8 @@ export const PlaylistPage: React.FC = () => {
                 const profile = await profileAPI.getPublicProfile(member.user_id);
                 map.set(member.user_id, {
                   id: member.user_id,
-                  username: profile.display_name || `user${member.user_id}`,
-                  display_name: profile.display_name,
+                  username: profile.username || profile.display_name || `user${member.user_id}`,
+                  display_name: profile.display_name || profile.username || `User${member.user_id}`,
                   avatar_url: profile.avatar_url,
                 });
               } catch (error) {

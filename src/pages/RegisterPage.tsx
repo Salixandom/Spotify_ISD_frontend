@@ -546,7 +546,12 @@ export const RegisterPage: React.FC = () => {
                             <p className="text-gray-400 text-sm">
                                 Already have an account?{" "}
                                 <button
-                                    onClick={() => navigate("/login")}
+                                    onClick={() => {
+                                        const params = new URLSearchParams(location.search);
+                                        const redirectParam = params.get('redirect');
+                                        const loginPath = redirectParam ? `/login?redirect=${encodeURIComponent(redirectParam)}` : '/login';
+                                        navigate(loginPath);
+                                    }}
                                     className="text-spotify-green hover:text-emerald-400 font-semibold underline underline-offset-4 hover:underline-offset-8 transition-all duration-200"
                                 >
                                     Log in here
