@@ -258,7 +258,7 @@ export const PlaylistPage: React.FC = () => {
   const [playlist, setPlaylist] = React.useState<PlaylistViewModel | null>(null);
   const [tracks, setTracks] = React.useState<PlaylistTrack[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-  const { setQueue } = usePlayerStore();
+  const { setQueue, toggleShuffle, shuffle, addToQueue } = usePlayerStore();
   const [isPlaceholderMode, setIsPlaceholderMode] = React.useState(false);
   const [isActionsOpen, setIsActionsOpen] = React.useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = React.useState(false);
@@ -1309,7 +1309,15 @@ export const PlaylistPage: React.FC = () => {
 
             {/* Shuffle button */}
             <button
-              className="w-9 h-9 rounded-full border border-white/20 bg-white/3 text-white/75 hover:text-white hover:bg-white/8 transition-colors flex items-center justify-center"
+              onClick={() => {
+                if (!shuffle) toggleShuffle();
+                handlePlayTracks(Math.floor(Math.random() * Math.max(0, displayedTracks.length - 1)));
+              }}
+              className={`w-9 h-9 rounded-full border transition-colors flex items-center justify-center ${
+                shuffle
+                  ? "border-spotify-green bg-spotify-green/10 text-spotify-green hover:text-spotify-green hover:bg-spotify-green/20"
+                  : "border-white/20 bg-white/3 text-white/75 hover:text-white hover:bg-white/8"
+              }`}
               title="Shuffle play"
             >
               <Shuffle size={17} />
@@ -1357,7 +1365,14 @@ export const PlaylistPage: React.FC = () => {
 
               {isActionsOpen && (
                 <div className="absolute left-0 top-11 z-40 w-[260px] py-1 bg-white/5 backdrop-blur-xl rounded-lg shadow-[0_8px_30px_rgba(0,0,0,0.50)] border border-white/15 animate-in fade-in zoom-in-95 duration-100">
-                  <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors text-left">
+                  <button
+                    onClick={() => {
+                      setIsActionsOpen(false);
+                      displayedTracks.forEach((track) => addToQueue(track));
+                      toast.success(`Added ${displayedTracks.length} songs to queue`);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors text-left"
+                  >
                     <ListPlus size={16} className="text-white/60 shrink-0" />
                     <span className="flex-1">Add to queue</span>
                   </button>
@@ -1820,7 +1835,19 @@ export const PlaylistPage: React.FC = () => {
                             {/* Title column */}
                             <span className="flex items-center gap-3 min-w-0">
                               {viewMode !== "compact" && (
-                                <img src={track.song.cover_url} alt={track.song.title} className="w-10 h-10 rounded object-cover border border-white/10 shrink-0" loading="lazy" />
+                                <div className="relative w-10 h-10 shrink-0 group/cover">
+                                  <img src={track.song.cover_url} alt={track.song.title} className="w-full h-full rounded object-cover border border-white/10" loading="lazy" />
+                                  {/* Play overlay */}
+                                  <div
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handlePlayTracks(displayedTracks.findIndex(t => t.id === track.id));
+                                    }}
+                                    className="absolute inset-0 bg-black/40 rounded flex items-center justify-center opacity-0 group-hover/cover:opacity-100 transition-opacity duration-150 cursor-pointer"
+                                  >
+                                    <Play size={16} fill="white" className="drop-shadow-lg" />
+                                  </div>
+                                </div>
                               )}
                               <span className="min-w-0">
                                 <span className={`text-white text-sm truncate block ${viewMode === "compact" ? "font-normal" : "font-semibold"}`}>{track.song.title}</span>
@@ -2163,6 +2190,7 @@ export const PlaylistPage: React.FC = () => {
           toast.success("Playlist details updated");
         }}
       />
+      
 
       <TrackContextMenu
         isOpen={contextMenu.isOpen}
@@ -2171,6 +2199,10 @@ export const PlaylistPage: React.FC = () => {
         position={{ x: contextMenu.x, y: contextMenu.y }}
         isLiked={contextMenu.track ? likedTrackSongIds.has(contextMenu.track.song.id) : false}
         onToggleLike={handleToggleLike}
+        onAddToQueue={(track) => {
+          addToQueue(track);
+          toast.success(`Added "${track.song.title}" to queue`);
+        }}
         onAddToPlaylist={async (track, playlistId) => {
             try {
                 if (!playlistId) {

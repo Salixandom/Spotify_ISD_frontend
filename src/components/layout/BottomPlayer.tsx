@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
     Shuffle,
@@ -14,11 +14,16 @@ import {
     Laptop2,
     Maximize2,
     Minimize2,
-    CirclePlus,
+    Loader2,
+    Heart,
 } from "lucide-react";
 import { usePlayerStore } from "../../store/playerStore";
 import { getArtistName } from "../../utils/trackHelpers";
 import { historyAPI } from "../../api/history";
+import { trackAPI } from "../../api/tracks";
+import { playlistAPI } from "../../api/playlists";
+import { toast } from "react-hot-toast";
+import type { PlaylistTrack } from "../../types";
 
 const ANALYZER_HOST_ALLOWLIST = [
     "files.freemusicarchive.org",
@@ -43,6 +48,10 @@ const PLACEHOLDER_TRACK = {
 export const BottomPlayer: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const [showLoadingIndicator, setShowLoadingIndicator] = useState(false);
+    const [likedSongsPlaylistId, setLikedSongsPlaylistId] = useState<string | null>(null);
+    const [likedTrackSongIds, setLikedTrackSongIds] = useState<Set<number>>(new Set());
+    const [isLiked, setIsLiked] = useState(false);
     const {
         currentTrack,
         isPlaying,
@@ -73,6 +82,9 @@ export const BottomPlayer: React.FC = () => {
     const rafRef = useRef<number | null>(null);
     const fallbackRafRef = useRef<number | null>(null);
     const lastMetricsUpdateTsRef = useRef<number>(0);
+    const intendedPlayingRef = useRef<boolean>(false);
+    const isLoadingTrackRef = useRef<boolean>(false);
+    const currentTrackIdRef = useRef<number | null>(null);
 
     const trackTitle = currentTrack?.song?.title || PLACEHOLDER_TRACK.title;
     const trackArtist = getArtistName(currentTrack?.song?.artist) || PLACEHOLDER_TRACK.artist;
@@ -85,6 +97,32 @@ export const BottomPlayer: React.FC = () => {
         duration ||
         PLACEHOLDER_TRACK.duration;
 
+    // Sync intended playing state
+    useEffect(() => {
+        intendedPlayingRef.current = isPlaying;
+    }, [isPlaying]);
+
+    // Track when song changes to prevent race conditions
+    useEffect(() => {
+        const songId = currentTrack?.song?.id ?? null;
+        if (songId !== currentTrackIdRef.current) {
+            isLoadingTrackRef.current = true;
+            setShowLoadingIndicator(true);
+            currentTrackIdRef.current = songId;
+
+            // Fallback timeout to hide loading indicator if canplay doesn't fire
+            // (can happen with some audio formats or network issues)
+            const fallbackTimer = setTimeout(() => {
+                setShowLoadingIndicator(false);
+                isLoadingTrackRef.current = false;
+            }, 3000); // 3 second fallback
+
+            return () => {
+                clearTimeout(fallbackTimer);
+            };
+        }
+    }, [currentTrack?.song?.id]);
+
     useEffect(() => {
         if (!audioRef.current || !trackAudio) {
             if (isPlaying) {
@@ -94,9 +132,16 @@ export const BottomPlayer: React.FC = () => {
         }
 
         if (isPlaying) {
-            audioRef.current.play().catch(() => {
-                setIsPlaying(false);
-            });
+            // Wait for audio to be ready before playing
+            const playAudio = async () => {
+                try {
+                    await audioRef.current?.play();
+                } catch (err) {
+                    // Audio not ready or blocked, that's ok - it will play on load
+                    setIsPlaying(false);
+                }
+            };
+            playAudio();
         } else {
             audioRef.current.pause();
         }
@@ -119,7 +164,31 @@ export const BottomPlayer: React.FC = () => {
 
         audioRef.current.crossOrigin = analyzerSafeHost ? "anonymous" : null;
         audioRef.current.src = trackAudio;
-    }, [trackAudio]);
+
+        // Load the audio and prepare it for playback
+        audioRef.current.load();
+
+        // If we intend to play, start playback once audio is ready
+        if (intendedPlayingRef.current) {
+            const playWhenReady = () => {
+                if (!audioRef.current) return;
+                audioRef.current.play().catch((err) => {
+                    console.warn('Autoplay prevented:', err);
+                    setIsPlaying(false);
+                });
+            };
+
+            // Try playing immediately, but also set up as a fallback on canplay
+            audioRef.current.play().catch(() => {
+                // If immediate play fails, wait for canplay event
+                const onCanPlay = () => {
+                    playWhenReady();
+                    audioRef.current?.removeEventListener('canplay', onCanPlay);
+                };
+                audioRef.current?.addEventListener('canplay', onCanPlay);
+            });
+        }
+    }, [trackAudio, setIsPlaying]);
 
     useEffect(() => {
         if (!audioRef.current) return;
@@ -343,6 +412,47 @@ export const BottomPlayer: React.FC = () => {
         });
     }, [currentTrack?.song?.id, isPlaying]);
 
+    // Fetch liked songs data on mount
+    useEffect(() => {
+        const fetchLikedSongs = async () => {
+            const userStr = localStorage.getItem('user');
+            if (!userStr) return;
+
+            try {
+                const user = JSON.parse(userStr);
+                const playlistsResponse = await playlistAPI.getUserPlaylists(user.id, true);
+
+                let playlists: any[] = [];
+                if (Array.isArray(playlistsResponse)) {
+                    playlists = playlistsResponse;
+                } else if (typeof playlistsResponse === 'object' && 'playlists' in playlistsResponse) {
+                    playlists = (playlistsResponse as Record<string, unknown>).playlists as any[];
+                }
+
+                const likedPlaylist = playlists.find((p: any) => p.is_liked_songs);
+                if (likedPlaylist) {
+                    setLikedSongsPlaylistId(String(likedPlaylist.id));
+                    const likedTracks = await trackAPI.list(likedPlaylist.id);
+                    if (Array.isArray(likedTracks)) {
+                        const songIds = new Set(likedTracks.map((t: PlaylistTrack) => t.song.id));
+                        setLikedTrackSongIds(songIds);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch Liked Songs:", err);
+            }
+        };
+
+        fetchLikedSongs();
+    }, []);
+
+    // Update isLiked when currentTrack or likedTrackSongIds changes
+    useEffect(() => {
+        if (currentTrack) {
+            setIsLiked(likedTrackSongIds.has(currentTrack.song.id));
+        }
+    }, [currentTrack, likedTrackSongIds]);
+
     const formatTime = (seconds: number) => {
         if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
         const m = Math.floor(seconds / 60);
@@ -352,6 +462,54 @@ export const BottomPlayer: React.FC = () => {
 
     const isRepeatOff = repeatMode === "off";
     const isRepeatOne = repeatMode === "one";
+
+    const handleLike = async () => {
+        if (!currentTrack) return;
+
+        let currentLikedSongsId = likedSongsPlaylistId;
+
+        // Create Liked Songs playlist if it doesn't exist
+        if (currentLikedSongsId === null) {
+            try {
+                const newPlaylist = await playlistAPI.create({
+                    name: "Liked Songs",
+                    visibility: "private",
+                    is_liked_songs: true
+                });
+                currentLikedSongsId = String(newPlaylist.id);
+                setLikedSongsPlaylistId(currentLikedSongsId);
+                toast.success("Created Liked Songs playlist");
+            } catch (err) {
+                console.error(err);
+                toast.error("Failed to create Liked Songs playlist");
+                return;
+            }
+        }
+
+        // Toggle like status
+        try {
+            if (isLiked) {
+                // Remove from liked songs
+                const trackIdInLiked = currentTrack.id;
+                await trackAPI.remove(Number(currentLikedSongsId), trackIdInLiked);
+                setLikedTrackSongIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(currentTrack.song.id);
+                    return next;
+                });
+                toast.success("Removed from Liked Songs");
+            } else {
+                // Add to liked songs
+                await trackAPI.add(Number(currentLikedSongsId), currentTrack.song.id);
+                setLikedTrackSongIds(prev => new Set(prev).add(currentTrack.song.id));
+                toast.success("Added to Liked Songs");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update Liked Songs");
+        }
+    };
+
     const handleTogglePlay = () => {
         if (!audioRef.current || !trackAudio) {
             setIsPlaying(false);
@@ -380,10 +538,42 @@ export const BottomPlayer: React.FC = () => {
         >
             <audio
                 ref={audioRef}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                onTimeUpdate={(e) => setProgress(e.currentTarget.currentTime)}
-                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                preload="auto"
+                onPlay={() => {
+                    // Always sync state when audio is actually playing
+                    setIsPlaying(true);
+                    // Clear loading state since audio is now playing
+                    if (isLoadingTrackRef.current) {
+                        isLoadingTrackRef.current = false;
+                    }
+                }}
+                onPause={() => {
+                    // Don't try to resume if we're loading a new track
+                    if (!isLoadingTrackRef.current) {
+                        setIsPlaying(false);
+                    }
+                }}
+                onTimeUpdate={(e) => {
+                    const currentTime = e.currentTarget.currentTime;
+                    const audioDuration = e.currentTarget.duration;
+                    // Only update progress if we have valid duration and time isn't jumping around
+                    if (Number.isFinite(audioDuration) && audioDuration > 0) {
+                        setProgress(Math.min(currentTime, audioDuration));
+                    }
+                }}
+                onLoadedMetadata={(e) => {
+                    const audioDuration = e.currentTarget.duration;
+                    if (Number.isFinite(audioDuration) && audioDuration > 0) {
+                        setDuration(audioDuration);
+                    }
+                }}
+                onCanPlay={() => {
+                    // Audio is ready to play - hide loading indicator and start if intended
+                    setShowLoadingIndicator(false);
+                    if (intendedPlayingRef.current) {
+                        audioRef.current?.play().catch(() => setIsPlaying(false));
+                    }
+                }}
                 onEnded={onTrackEnd}
             />
 
@@ -410,11 +600,14 @@ export const BottomPlayer: React.FC = () => {
 
                     <button
                         type="button"
-                        className="text-white/60 hover:text-white transition-colors shrink-0 inline-flex"
-                        aria-label="Add current song to playlist"
-                        title="Add to playlist"
+                        onClick={handleLike}
+                        className={`transition-colors shrink-0 inline-flex ${
+                            isLiked ? "text-spotify-green" : "text-white/60 hover:text-white"
+                        }`}
+                        aria-label={isLiked ? "Remove from Liked Songs" : "Add to Liked Songs"}
+                        title={isLiked ? "Liked" : "Like"}
                     >
-                        <CirclePlus size={17} />
+                        <Heart size={17} fill={isLiked ? "currentColor" : "none"} />
                     </button>
                 </section>
 
@@ -449,12 +642,14 @@ export const BottomPlayer: React.FC = () => {
                             type="button"
                             onClick={handleTogglePlay}
                             className="w-8 h-8 rounded-full bg-white text-black
-              flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+              flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-40 disabled:cursor-not-allowed relative"
                             disabled={!isTrackPlayable}
                             aria-label={isPlaying ? "Pause" : "Play"}
                             title={isPlaying ? "Pause" : "Play"}
                         >
-                            {isPlaying ? (
+                            {showLoadingIndicator ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : isPlaying ? (
                                 <Pause size={16} fill="currentColor" />
                             ) : (
                                 <Play size={16} fill="currentColor" />
@@ -521,7 +716,14 @@ export const BottomPlayer: React.FC = () => {
                 <section className="min-w-0 flex items-center justify-end gap-3">
                     <button
                         type="button"
-                        className="text-white/60 hover:text-white transition-colors hidden md:inline-flex"
+                        onClick={() => {
+                            if (location.pathname !== "/playback") {
+                                navigate("/playback");
+                            }
+                        }}
+                        className={`transition-colors hidden md:inline-flex ${
+                            location.pathname === "/playback" ? "text-spotify-green" : "text-white/60 hover:text-white"
+                        }`}
                         aria-label="Now playing queue"
                         title="Queue"
                     >

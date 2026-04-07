@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Search as SearchIcon,
   Check,
+  ListPlus,
 } from "lucide-react";
 import type { PlaylistTrack } from "../../types";
 import { getArtistName } from "../../utils/trackHelpers";
@@ -27,6 +28,7 @@ interface TrackContextMenuProps {
   onAddToPlaylist: (track: PlaylistTrack, playlistId?: string) => void;
   onRemoveFromPlaylist?: (track: PlaylistTrack) => void;
   onToggleLike: (track: PlaylistTrack) => void;
+  onAddToQueue?: (track: PlaylistTrack) => void;
   isLiked: boolean;
   position: { x: number; y: number };
   menuRef?: React.RefObject<HTMLDivElement | null>;
@@ -42,6 +44,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({
   onAddToPlaylist,
   onRemoveFromPlaylist,
   onToggleLike,
+  onAddToQueue,
   isLiked,
   position,
   menuRef,
@@ -113,6 +116,18 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({
             <p className="text-white/60 text-xs truncate">{getArtistName(track.song.artist)}</p>
           </div>
         </div>
+
+        {/* Add to queue */}
+        {onAddToQueue && (
+          <button
+            onClick={() => { onAddToQueue(track); onClose(); }}
+            onMouseEnter={closeAllSubmenus}
+            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors text-left"
+          >
+            <ListPlus size={16} className="text-white/60 shrink-0" />
+            <span>Add to queue</span>
+          </button>
+        )}
 
         {/* Add to playlist */}
         <button

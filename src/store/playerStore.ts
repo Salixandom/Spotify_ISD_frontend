@@ -88,8 +88,10 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   setQueue: (tracks, startIndex = 0) => {
     const { shuffle } = get();
-    const ordered = shuffle ? shuffleKeepFirst(tracks, startIndex) : tracks;
-    const index = shuffle ? 0 : startIndex;
+    // Validate startIndex
+    const validStartIndex = Math.max(0, Math.min(startIndex, tracks.length - 1));
+    const ordered = shuffle ? shuffleKeepFirst(tracks, validStartIndex) : tracks;
+    const index = shuffle ? 0 : validStartIndex;
     set({
       queue: ordered,
       originalQueue: tracks,
@@ -192,8 +194,14 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     if (!shuffle) {
       // Turning shuffle ON
       const currentIndex = queue.findIndex((t) => t.id === currentTrack?.id);
-      const shuffled = shuffleKeepFirst(queue, currentIndex);
-      set({ shuffle: true, queue: shuffled, currentIndex: 0 });
+      if (currentIndex === -1) {
+        // Current track not in queue, just shuffle normally starting from first
+        const shuffled = [...queue].sort(() => Math.random() - 0.5);
+        set({ shuffle: true, queue: shuffled, currentIndex: 0 });
+      } else {
+        const shuffled = shuffleKeepFirst(queue, currentIndex);
+        set({ shuffle: true, queue: shuffled, currentIndex: 0 });
+      }
     } else {
       // Turning shuffle OFF — restore original order
       const newIndex = originalQueue.findIndex((t) => t.id === currentTrack?.id);
