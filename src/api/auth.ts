@@ -21,8 +21,8 @@ export const authAPI = {
       const profile = await profileAPI.getMyProfile();
       localStorage.setItem('user', JSON.stringify({
         id: profile.user_id,
-        username: profile.display_name,
-        displayName: profile.display_name,
+        username: profile.username || profile.display_name,
+        displayName: profile.display_name || profile.username,
         bio: profile.bio,
         avatar_url: profile.avatar_url,
       }));
