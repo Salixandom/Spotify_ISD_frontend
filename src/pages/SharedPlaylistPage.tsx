@@ -1,16 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { collabAPI } from '../api/collaboration';
+import { useAuthStore } from '../store/authStore';
 
 export const SharedPlaylistPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuthStore();
   const [status, setStatus] = useState<'loading' | 'valid' | 'invalid'>('loading');
 
   useEffect(() => {
     if (!token) {
       setStatus('invalid');
       return;
+    }
+
+    // Check authentication first - similar to InvitePage
+    const hasToken = localStorage.getItem('access_token');
+
+    if (!isAuthenticated && !hasToken) {
+      // Not logged in - redirect to login with redirect URL
+      console.log('User not authenticated, redirecting to login');
+      navigate(`/login?redirect=/share/${token}`, { replace: true });
+      return;
+    }
+
+    // If we have a token but authStore hasn't been initialized yet, proceed anyway
+    if (!isAuthenticated && hasToken) {
+      console.log('Token exists in localStorage, proceeding with validation');
     }
 
     const validateShareLink = async () => {

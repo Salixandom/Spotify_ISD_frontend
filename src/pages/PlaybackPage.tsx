@@ -354,43 +354,44 @@ export const PlaybackPage: React.FC = () => {
         />
       </div>
 
-      <div className="relative z-10 h-full flex items-center justify-center px-3 md:px-8">
-        {currentTrack && (
-          <>
-            <TrackInfoPanel audioMetrics={audioMetrics} />
-            <QueuePanel />
-          </>
-        )}
+      <div className="relative z-10 h-full px-3 md:px-8">
+        <div className="h-full flex items-center justify-center gap-6">
+          {currentTrack && (
+            <>
+              <TrackInfoPanel audioMetrics={audioMetrics} />
+              <div className="relative w-[min(86vw,760px)] aspect-square flex items-center justify-center shrink-0">
+                <div
+                  className="absolute inset-[9%] rounded-full border border-white/15 bg-white/[0.04]"
+                  style={{
+                    backdropFilter: "blur(14px)",
+                    boxShadow: `0 0 ${24 + energy * 36}px rgba(255,255,255,${0.07 + energy * 0.14})`,
+                    transform: `scale(${1 + energy * 0.03})`,
+                    transition: "transform 120ms linear",
+                  }}
+                />
 
-        <div className="relative w-[min(86vw,760px)] aspect-square flex items-center justify-center">
-          <div
-            className="absolute inset-[9%] rounded-full border border-white/15 bg-white/[0.04]"
-            style={{
-              backdropFilter: "blur(14px)",
-              boxShadow: `0 0 ${24 + energy * 36}px rgba(255,255,255,${0.07 + energy * 0.14})`,
-              transform: `scale(${1 + energy * 0.03})`,
-              transition: "transform 120ms linear",
-            }}
-          />
+                <div
+                  className="relative w-[84%] h-[84%]"
+                  style={{
+                    animation: "playback-spin 11s linear infinite",
+                    animationPlayState: isPlaying ? "running" : "paused",
+                    filter: `drop-shadow(0 0 ${18 + energy * 24}px rgba(255,255,255,${0.1 + energy * 0.14}))`,
+                  }}
+                >
+                  <img src={vinylPng} alt="vinyl" className="w-full h-full object-contain" />
 
-          <div
-            className="relative w-[84%] h-[84%]"
-            style={{
-              animation: "playback-spin 11s linear infinite",
-              animationPlayState: isPlaying ? "running" : "paused",
-              filter: `drop-shadow(0 0 ${18 + energy * 24}px rgba(255,255,255,${0.1 + energy * 0.14}))`,
-            }}
-          >
-            <img src={vinylPng} alt="vinyl" className="w-full h-full object-contain" />
+                  <div className="absolute inset-[33.5%] rounded-full overflow-hidden border border-white/35 shadow-[0_0_24px_rgba(0,0,0,0.58)]">
+                    <img src={cover} alt="album art" className="w-full h-full object-cover" />
+                  </div>
 
-            <div className="absolute inset-[33.5%] rounded-full overflow-hidden border border-white/35 shadow-[0_0_24px_rgba(0,0,0,0.58)]">
-              <img src={cover} alt="album art" className="w-full h-full object-cover" />
-            </div>
+                  <div className="absolute inset-[47.2%] rounded-full bg-black/95 border border-white/30" />
+                </div>
 
-            <div className="absolute inset-[47.2%] rounded-full bg-black/95 border border-white/30" />
-          </div>
-
-          <OuterRingVisualizer spectrum={audioMetrics.spectrum} isActive={isPlaying} />
+                <OuterRingVisualizer spectrum={audioMetrics.spectrum} isActive={isPlaying} />
+              </div>
+              <QueuePanel />
+            </>
+          )}
         </div>
       </div>
     </div>

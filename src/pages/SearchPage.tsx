@@ -945,6 +945,12 @@ export const SearchPage: React.FC = () => {
                             imageUrl={album.cover_url || album.imageUrl || IMG[0]}
                             title={album.name}
                             subtitle={`${album.release_year || album.year || '2024'} · ${typeof album.artist === 'string' ? album.artist : album.artist?.name || 'Unknown Artist'}`}
+                            onClick={() => {
+                                const toSlug = (name: string) =>
+                                    name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+                                const slug = toSlug(album.name);
+                                navigate(`/album/${slug}`);
+                            }}
                         />
                     ))}
                 </HorizontalShelf>
@@ -1093,6 +1099,12 @@ export const SearchPage: React.FC = () => {
                     imageUrl={album.cover_url || album.imageUrl || IMG[0]}
                     title={album.name}
                     subtitle={`${album.release_year || album.year || '2024'} · ${typeof album.artist === 'string' ? album.artist : album.artist?.name || 'Unknown Artist'}`}
+                    onClick={() => {
+                        const toSlug = (name: string) =>
+                            name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+                        const slug = toSlug(album.name);
+                        navigate(`/album/${slug}`);
+                    }}
                 />
             ))}
         </MediaGrid>
@@ -1202,6 +1214,12 @@ export const SearchPage: React.FC = () => {
                 }}
                 onToggleLike={(song) => {
                     handleToggleLike(song);
+                }}
+                onGoToAlbum={(albumName) => {
+                    const toSlug = (name: string) =>
+                        name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+                    const slug = toSlug(albumName);
+                    navigate(`/album/${slug}`);
                 }}
                 isLiked={contextMenu?.song ? likedTrackSongIds.has(contextMenu.song.id || contextMenu.song.song?.id) : false}
             />

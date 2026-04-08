@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal } from "../ui/Modal";
 import { Users, Star, Loader2, Crown } from "lucide-react";
 import { collabAPI } from "../../api/collaboration";
+import { profileAPI } from "../../api/profile";
 import type { Collaborator } from "../../types";
 
 interface Props {
@@ -43,6 +44,37 @@ export const ViewCollaboratorsModal: React.FC<Props> = ({
     try {
       const members = await collabAPI.getMembers(playlistId);
       setCollaborators(members);
+
+      // Fetch profiles for all collaborators + owner
+      const allUserIds = [
+        ownerId,
+        ...members.map(m => m.user_id)
+      ].filter((id, index, self) => self.indexOf(id) === index); // Remove duplicates
+
+      // Fetch profiles for users not already in userMap
+      const profilesToFetch = allUserIds.filter(id => !userMap.has(id));
+
+      if (profilesToFetch.length > 0) {
+        await Promise.all(
+          profilesToFetch.map(async (userId) => {
+            try {
+              const profile = await profileAPI.getPublicProfile(userId);
+              userMap.set(userId, {
+                username: profile.username || profile.display_name || `user${userId}`,
+                display_name: profile.display_name || profile.username || `User${userId}`,
+                avatar_url: profile.avatar_url,
+              });
+            } catch (error) {
+              console.error('Failed to fetch profile for user:', userId, error);
+              // Add fallback entry
+              userMap.set(userId, {
+                username: `user${userId}`,
+                display_name: `User${userId}`,
+              });
+            }
+          })
+        );
+      }
     } catch {
       setError("Failed to load collaborators");
     } finally {

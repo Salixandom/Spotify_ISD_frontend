@@ -755,10 +755,10 @@ export const HomePage: React.FC = () => {
                             : "Backend unavailable — showing curated placeholders for now."}*/}
                         {randomMessage}
                     </p>
-                    
-                        <div className="inline-flex items-center gap-2 mt-1 px-3 py-1.5 rounded-full text-xs border border-amber-300/35 bg-amber-300/12 text-amber-100 backdrop-blur-xl">
-                            <TrendingUp size={14} />
-                            Your Tunes are ready
+
+                        <div className="inline-flex items-center gap-2 mt-1 px-3 py-1.5 rounded-full text-xs border border-purple-300/35 bg-purple-300/12 text-purple-100 backdrop-blur-xl">
+                            <Sparkles size={14} />
+                            {newReleases.length > 0 ? `${newReleases.length} new releases` : `${trendingSongs.length} trending songs`}
                         </div>
                     
                 </header>

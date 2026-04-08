@@ -17,19 +17,15 @@ import {
     X,
     MoreHorizontal,
     ChevronRight as ChevronRightIcon,
-    Heart,
-    Radio,
     Mic2,
     Disc3,
-    FileText,
-    Share2,
-    Monitor,
-    Ban,
     ListPlus,
     Loader2,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { searchAPI } from "../../api/search";
+import { SearchTrackContextMenuModal } from "../modals/SearchTrackContextMenuModal";
+import toast from "react-hot-toast";
 
 export const Navbar: React.FC = () => {
     const navigate = useNavigate();
@@ -56,22 +52,89 @@ export const Navbar: React.FC = () => {
     const [isSearching, setIsSearching] = React.useState(false);
     const [openContextMenuId, setOpenContextMenuId] = React.useState<string | null>(null);
     const [contextMenuPos, setContextMenuPos] = React.useState({ top: 0, left: 0 });
-    const [showPlaylistSubmenu, setShowPlaylistSubmenu] = React.useState(false);
-    const [playlistSubmenuPos, setPlaylistSubmenuPos] = React.useState({ top: 0, left: 0 });
-    const [playlistSearch, setPlaylistSearch] = React.useState("");
+    const [userDisplayName, setUserDisplayName] = React.useState<string>("");
+    const [playlists, setPlaylists] = React.useState<any[]>([]);
+    const [songPlaylistIds, setSongPlaylistIds] = React.useState<Set<string>>(new Set());
+    const [isLoadingMemberships, setIsLoadingMemberships] = React.useState(false);
+    const [isLiked, setIsLiked] = React.useState(false);
     const [showArtistSubmenu, setShowArtistSubmenu] = React.useState(false);
     const [artistSubmenuPos, setArtistSubmenuPos] = React.useState({ top: 0, left: 0 });
-    const [userDisplayName, setUserDisplayName] = React.useState<string>("");
     const searchRef = React.useRef<HTMLDivElement>(null);
     const dropdownRef = React.useRef<HTMLDivElement>(null);
     const contextMenuRef = React.useRef<HTMLDivElement>(null);
-    const playlistSubmenuRef = React.useRef<HTMLDivElement>(null);
     const artistSubmenuRef = React.useRef<HTMLDivElement>(null);
 
-    const closeAllSubmenus = () => {
-        setShowPlaylistSubmenu(false);
-        setShowArtistSubmenu(false);
-    };
+    // Fetch user playlists from localStorage
+    const fetchUserPlaylists = React.useCallback(() => {
+        try {
+            const userData = localStorage.getItem("user");
+            if (!userData) return [];
+
+            const user = JSON.parse(userData);
+            const playlistsData = localStorage.getItem(`playlists_${user.id}`);
+            if (!playlistsData) return [];
+
+            const allPlaylists = JSON.parse(playlistsData);
+            return allPlaylists.filter((p: any) => p.owner_id === user.id || p.collaborative);
+        } catch (error) {
+            console.error("Failed to fetch playlists:", error);
+            return [];
+        }
+    }, []);
+
+    // Fetch which playlists a song is already in
+    const fetchSongPlaylistMemberships = React.useCallback(async (songId: string) => {
+        setIsLoadingMemberships(true);
+        try {
+            const userData = localStorage.getItem("user");
+            if (!userData) {
+                setSongPlaylistIds(new Set());
+                setIsLoadingMemberships(false);
+                return;
+            }
+
+            const user = JSON.parse(userData);
+            const membershipsData = localStorage.getItem(`playlist_memberships_${user.id}`);
+            if (!membershipsData) {
+                setSongPlaylistIds(new Set());
+                setIsLoadingMemberships(false);
+                return;
+            }
+
+            const memberships = JSON.parse(membershipsData);
+            const songMemberships = memberships[songId] || [];
+            setSongPlaylistIds(new Set(songMemberships));
+        } catch (error) {
+            console.error("Failed to fetch playlist memberships:", error);
+            setSongPlaylistIds(new Set());
+        } finally {
+            setIsLoadingMemberships(false);
+        }
+    }, []);
+
+    // Check if song is liked
+    const checkIfLiked = React.useCallback((songId: string) => {
+        try {
+            const userData = localStorage.getItem("user");
+            if (!userData) return false;
+
+            const user = JSON.parse(userData);
+            const likedSongsData = localStorage.getItem(`liked_songs_${user.id}`);
+            if (!likedSongsData) return false;
+
+            const likedSongs = JSON.parse(likedSongsData);
+            return likedSongs.some((song: any) => song.id === songId);
+        } catch (error) {
+            console.error("Failed to check if song is liked:", error);
+            return false;
+        }
+    }, []);
+
+    // Load playlists on mount
+    React.useEffect(() => {
+        const userPlaylists = fetchUserPlaylists();
+        setPlaylists(userPlaylists);
+    }, [fetchUserPlaylists]);
 
     const toArtistRouteId = (artistName: string) =>
         artistName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -84,14 +147,6 @@ export const Navbar: React.FC = () => {
         }
         return result.subtitle.split(", ").filter(Boolean);
     };
-
-    const HARDCODED_PLAYLISTS = [
-        { id: "p1", name: "Emraan mood" },
-        { id: "p2", name: "Banter Beats" },
-        { id: "p3", name: "Skibbididoo" },
-        { id: "p4", name: "Chill Vibes" },
-        { id: "p5", name: "Late Night Drive" },
-    ];
 
     // Load recent searches and user display name from localStorage on mount
     React.useEffect(() => {
@@ -472,7 +527,45 @@ export const Navbar: React.FC = () => {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        console.log("Save to Liked Songs:", result.title);
+                                                        if (result.type === "track") {
+                                                            // Extract song ID from result.id (format: song-{id})
+                                                            const songId = result.id.replace("song-", "");
+                                                            const liked = checkIfLiked(songId);
+
+                                                            try {
+                                                                const userData = localStorage.getItem("user");
+                                                                if (!userData) {
+                                                                    toast.error("Please login to like songs");
+                                                                    return;
+                                                                }
+
+                                                                const user = JSON.parse(userData);
+                                                                const likedSongsKey = `liked_songs_${user.id}`;
+                                                                let likedSongs = JSON.parse(localStorage.getItem(likedSongsKey) || "[]");
+
+                                                                if (liked) {
+                                                                    // Remove from liked
+                                                                    likedSongs = likedSongs.filter((s: any) => s.id !== songId);
+                                                                    localStorage.setItem(likedSongsKey, JSON.stringify(likedSongs));
+                                                                    toast.success("Removed from Liked Songs");
+                                                                } else {
+                                                                    // Add to liked
+                                                                    const songData = {
+                                                                        id: songId,
+                                                                        title: result.title,
+                                                                        artist: result.subtitle,
+                                                                        cover_url: result.imageUrl,
+                                                                        added_at: new Date().toISOString()
+                                                                    };
+                                                                    likedSongs.push(songData);
+                                                                    localStorage.setItem(likedSongsKey, JSON.stringify(likedSongs));
+                                                                    toast.success("Added to Liked Songs");
+                                                                }
+                                                            } catch (error) {
+                                                                console.error("Failed to toggle like:", error);
+                                                                toast.error("Failed to update Liked Songs");
+                                                            }
+                                                        }
                                                     }}
                                                     className="w-8 h-8 rounded-full border border-white/40 hover:border-white
                                                     flex items-center justify-center text-white/70 hover:text-white
@@ -492,6 +585,14 @@ export const Navbar: React.FC = () => {
                                                             top: rect.bottom + 6,
                                                             left: rect.right - 220,
                                                         });
+
+                                                        // If opening context menu for a track, fetch memberships and check if liked
+                                                        if (result.type === "track") {
+                                                            const songId = result.id.replace("song-", "");
+                                                            fetchSongPlaylistMemberships(songId);
+                                                            setIsLiked(checkIfLiked(songId));
+                                                        }
+
                                                         setOpenContextMenuId(
                                                             openContextMenuId === result.id ? null : result.id
                                                         );
@@ -616,77 +717,180 @@ export const Navbar: React.FC = () => {
                         document.body
                     )}
 
-                    {/* Context menu portal */}
-                    {openContextMenuId && createPortal(
-                        (() => {
-                            const activeResult = searchResults.find(r => r.id === openContextMenuId);
-                            const artists = activeResult ? getArtistsForResult(activeResult) : [];
+                    {/* Context menu for tracks - use SearchTrackContextMenuModal */}
+                    {openContextMenuId && (() => {
+                        const activeResult = searchResults.find(r => r.id === openContextMenuId);
+                        if (!activeResult) return null;
+
+                        // For tracks, use the full SearchTrackContextMenuModal
+                        if (activeResult.type === "track") {
+                            const songId = activeResult.id.replace("song-", "");
+                            const artists = getArtistsForResult(activeResult);
+
                             return (
-                                <div
-                                    ref={contextMenuRef}
-                                    className="fixed z-[999999] w-56 py-1
-                                    bg-white/5 backdrop-blur-xl rounded-lg
-                                    shadow-[0_8px_30px_rgba(0,0,0,0.50)]
-                                    border border-white/15 animate-in fade-in zoom-in-95 duration-100"
-                                    style={{ top: contextMenuPos.top, left: contextMenuPos.left }}
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onMouseLeave={closeAllSubmenus}
-                                >
-                                    {/* Add to playlist */}
-                                    <button
-                                        className="w-full flex items-center gap-3 px-3 py-2
-                                        text-sm text-white/80 hover:text-white hover:bg-white/10
-                                        transition-colors text-left"
-                                        onMouseEnter={(e) => {
-                                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                            setPlaylistSubmenuPos({ top: rect.top, left: rect.right + 4 });
-                                            setPlaylistSearch("");
-                                            setShowPlaylistSubmenu(true);
-                                            setShowArtistSubmenu(false);
-                                        }}
-                                    >
-                                        <span className="text-white/60 shrink-0"><ListPlus size={16} /></span>
-                                        <span className="flex-1">Add to playlist</span>
-                                        <ChevronRightIcon size={14} className="text-white/40" />
-                                    </button>
+                                <SearchTrackContextMenuModal
+                                    isOpen={!!openContextMenuId}
+                                    contextPos={contextMenuPos}
+                                    artists={artists}
+                                    playlists={playlists}
+                                    song={{
+                                        id: songId,
+                                        title: activeResult.title,
+                                        artist: activeResult.subtitle,
+                                        album: { name: "Unknown Album" }, // Search results don't include album info
+                                        imageUrl: activeResult.imageUrl
+                                    }}
+                                    songPlaylistIds={songPlaylistIds}
+                                    isLoadingMemberships={isLoadingMemberships}
+                                    onClose={() => {
+                                        setOpenContextMenuId(null);
+                                    }}
+                                    onArtistSelect={(artist) => {
+                                        setOpenContextMenuId(null);
+                                        navigate(`/artist/${toArtistRouteId(artist)}`);
+                                    }}
+                                    onAddToPlaylist={(song, playlistId) => {
+                                        try {
+                                            const userData = localStorage.getItem("user");
+                                            if (!userData) {
+                                                toast.error("Please login to add songs to playlists");
+                                                return;
+                                            }
 
-                                    <div className="my-1 mx-3 border-t border-white/10" />
+                                            const user = JSON.parse(userData);
 
-                                    {[
-                                        { icon: <Heart size={16} />, label: "Save to your Liked Songs" },
-                                        { icon: <Ban size={16} />, label: "Exclude from your taste profile" },
-                                        null,
-                                        { icon: <Radio size={16} />, label: "Go to song radio" },
-                                        { icon: <Disc3 size={16} />, label: "Go to album" },
-                                        { icon: <FileText size={16} />, label: "View credits" },
-                                        null,
-                                        { icon: <Share2 size={16} />, label: "Share", hasArrow: true },
-                                        { icon: <Monitor size={16} />, label: "Open in Desktop app" },
-                                    ].map((item, i) =>
-                                        item === null ? (
-                                            <div key={i} className="my-1 mx-3 border-t border-white/10" />
-                                        ) : (
-                                            <button
-                                                key={i}
-                                                onMouseEnter={closeAllSubmenus}
-                                                onClick={() => {
-                                                    setOpenContextMenuId(null);
-                                                    closeAllSubmenus();
-                                                }}
-                                                className="w-full flex items-center gap-3 px-3 py-2
-                                                text-sm text-white/80 hover:text-white hover:bg-white/10
-                                                transition-colors text-left"
-                                            >
-                                                <span className="text-white/60 shrink-0">{item.icon}</span>
-                                                <span className="flex-1">{item.label}</span>
-                                                {item.hasArrow && <ChevronRightIcon size={14} className="text-white/40" />}
-                                            </button>
-                                        )
-                                    )}
+                                            if (playlistId === undefined) {
+                                                // Create new playlist
+                                                const playlistName = prompt("Enter playlist name:");
+                                                if (!playlistName) return;
 
-                                    {/* Go to artist — between Go to album and View credits, with submenu */}
-                                    {artists.length > 0 && (
-                                        <>
+                                                const newPlaylist = {
+                                                    id: `playlist_${Date.now()}`,
+                                                    name: playlistName,
+                                                    owner_id: user.id,
+                                                    songs: [song],
+                                                    cover_image: song.imageUrl || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&h=200&fit=crop',
+                                                    created_at: new Date().toISOString()
+                                                };
+
+                                                const playlistsData = localStorage.getItem(`playlists_${user.id}`);
+                                                const allPlaylists = playlistsData ? JSON.parse(playlistsData) : [];
+                                                allPlaylists.push(newPlaylist);
+                                                localStorage.setItem(`playlists_${user.id}`, JSON.stringify(allPlaylists));
+
+                                                // Update memberships
+                                                const membershipsKey = `playlist_memberships_${user.id}`;
+                                                const memberships = JSON.parse(localStorage.getItem(membershipsKey) || "{}");
+                                                if (!memberships[song.id]) memberships[song.id] = [];
+                                                memberships[song.id].push(newPlaylist.id);
+                                                localStorage.setItem(membershipsKey, JSON.stringify(memberships));
+
+                                                toast.success(`Added to ${playlistName}`);
+                                            } else {
+                                                // Add to existing playlist
+                                                const playlistsData = localStorage.getItem(`playlists_${user.id}`);
+                                                const allPlaylists = playlistsData ? JSON.parse(playlistsData) : [];
+                                                const playlist = allPlaylists.find((p: any) => p.id === playlistId);
+
+                                                if (playlist) {
+                                                    if (!playlist.songs) playlist.songs = [];
+                                                    if (!playlist.songs.some((s: any) => s.id === song.id)) {
+                                                        playlist.songs.push(song);
+
+                                                        // Update memberships
+                                                        const membershipsKey = `playlist_memberships_${user.id}`;
+                                                        const memberships = JSON.parse(localStorage.getItem(membershipsKey) || "{}");
+                                                        if (!memberships[song.id]) memberships[song.id] = [];
+                                                        memberships[song.id].push(playlistId);
+                                                        localStorage.setItem(membershipsKey, JSON.stringify(memberships));
+
+                                                        localStorage.setItem(`playlists_${user.id}`, JSON.stringify(allPlaylists));
+                                                        toast.success(`Added to ${playlist.name}`);
+                                                    }
+                                                }
+                                            }
+
+                                            // Refresh playlists list
+                                            setPlaylists(fetchUserPlaylists());
+                                        } catch (error) {
+                                            console.error("Failed to add to playlist:", error);
+                                            toast.error("Failed to add to playlist");
+                                        }
+                                    }}
+                                    onToggleLike={(song) => {
+                                        try {
+                                            const userData = localStorage.getItem("user");
+                                            if (!userData) {
+                                                toast.error("Please login to like songs");
+                                                return;
+                                            }
+
+                                            const user = JSON.parse(userData);
+                                            const likedSongsKey = `liked_songs_${user.id}`;
+                                            let likedSongs = JSON.parse(localStorage.getItem(likedSongsKey) || "[]");
+
+                                            const likedIndex = likedSongs.findIndex((s: any) => s.id === song.id);
+                                            if (likedIndex >= 0) {
+                                                likedSongs.splice(likedIndex, 1);
+                                                localStorage.setItem(likedSongsKey, JSON.stringify(likedSongs));
+                                                toast.success("Removed from Liked Songs");
+                                            } else {
+                                                const songData = {
+                                                    id: song.id,
+                                                    title: song.title,
+                                                    artist: song.artist,
+                                                    cover_url: song.imageUrl,
+                                                    added_at: new Date().toISOString()
+                                                };
+                                                likedSongs.push(songData);
+                                                localStorage.setItem(likedSongsKey, JSON.stringify(likedSongs));
+                                                toast.success("Added to Liked Songs");
+                                            }
+
+                                            setIsLiked(!isLiked);
+                                        } catch (error) {
+                                            console.error("Failed to toggle like:", error);
+                                            toast.error("Failed to update Liked Songs");
+                                        }
+                                    }}
+                                    isLiked={isLiked}
+                                />
+                            );
+                        }
+
+                        // For albums/artists/playlists, show simpler context menu
+                        const artists = getArtistsForResult(activeResult);
+                        return (
+                            <div
+                                ref={contextMenuRef}
+                                className="fixed z-[999999] w-56 py-1
+                                bg-white/5 backdrop-blur-xl rounded-lg
+                                shadow-[0_8px_30px_rgba(0,0,0,0.50)]
+                                border border-white/15 animate-in fade-in zoom-in-95 duration-100"
+                                style={{ top: contextMenuPos.top, left: contextMenuPos.left }}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onMouseLeave={() => setOpenContextMenuId(null)}
+                            >
+                                {/* Type-specific options */}
+                                {activeResult.type === "album" && (
+                                    <>
+                                        <button
+                                            onMouseEnter={() => {}}
+                                            onClick={() => {
+                                                setOpenContextMenuId(null);
+                                                const toSlug = (name: string) => name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+                                                const slug = toSlug(activeResult.title);
+                                                navigate(`/album/${slug}`);
+                                            }}
+                                            className="w-full flex items-center gap-3 px-3 py-2 text-sm
+                                            text-white/80 hover:text-white hover:bg-white/10
+                                            transition-colors text-left"
+                                        >
+                                            <Disc3 size={16} className="text-white/60 shrink-0" />
+                                            <span className="flex-1">Go to album</span>
+                                        </button>
+
+                                        {artists.length > 0 && (
                                             <button
                                                 className="w-full flex items-center gap-3 px-3 py-2
                                                 text-sm text-white/80 hover:text-white hover:bg-white/10
@@ -695,104 +899,52 @@ export const Navbar: React.FC = () => {
                                                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                                     setArtistSubmenuPos({ top: rect.top, left: rect.right + 4 });
                                                     setShowArtistSubmenu(true);
-                                                    setShowPlaylistSubmenu(false);
                                                 }}
                                             >
-                                                <span className="text-white/60 shrink-0"><Mic2 size={16} /></span>
+                                                <Mic2 size={16} className="text-white/60 shrink-0" />
                                                 <span className="flex-1">Go to artist</span>
                                                 <ChevronRightIcon size={14} className="text-white/40" />
                                             </button>
-                                        </>
-                                    )}
-                                </div>
-                            );
-                        })(),
-                        document.body
-                    )}
+                                        )}
+                                    </>
+                                )}
 
-                    {/* Playlist submenu portal */}
-                    {showPlaylistSubmenu && openContextMenuId && createPortal(
-                        <div
-                            ref={playlistSubmenuRef}
-                            className="fixed z-[9999999] w-64 py-2
-                            bg-white/5 backdrop-blur-xl rounded-lg
-                            shadow-[0_8px_30px_rgba(0,0,0,0.50)]
-                            border border-white/15 animate-in fade-in slide-in-from-left-1 duration-150"
-                            style={{ top: playlistSubmenuPos.top, left: playlistSubmenuPos.left }}
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onMouseEnter={() => setShowPlaylistSubmenu(true)}
-                        >
-                            {/* Search bar */}
-                            <div className="px-2 pb-2">
-                                <div className="flex items-center gap-2 px-3 py-2
-                                    bg-white/10 border border-white/15 rounded-lg">
-                                    <Search size={14} className="text-white/50 shrink-0" />
-                                    <input
-                                        type="text"
-                                        value={playlistSearch}
-                                        onChange={(e) => setPlaylistSearch(e.target.value)}
-                                        placeholder="Find a playlist"
-                                        autoFocus
-                                        className="flex-1 bg-transparent outline-none text-sm
-                                        text-white placeholder:text-white/40"
-                                    />
-                                </div>
-                            </div>
+                                {activeResult.type === "artist" && (
+                                    <button
+                                        onMouseEnter={() => {}}
+                                        onClick={() => {
+                                            setOpenContextMenuId(null);
+                                            navigate(`/artist/${toArtistRouteId(activeResult.title)}`);
+                                        }}
+                                        className="w-full flex items-center gap-3 px-3 py-2 text-sm
+                                        text-white/80 hover:text-white hover:bg-white/10
+                                        transition-colors text-left"
+                                    >
+                                        <Mic2 size={16} className="text-white/60 shrink-0" />
+                                        <span className="flex-1">Go to artist</span>
+                                    </button>
+                                )}
 
-                            <div className="mx-3 mb-1 border-t border-white/10" />
-
-                            {/* New playlist */}
-                            <button
-                                onClick={() => {
-                                    console.log("Create new playlist");
-                                    setOpenContextMenuId(null);
-                                    setShowPlaylistSubmenu(false);
-                                }}
-                                className="w-full flex items-center gap-3 px-3 py-2
-                                text-sm text-white/80 hover:text-white hover:bg-white/10
-                                transition-colors text-left"
-                            >
-                                <span className="w-6 h-6 rounded-sm bg-white/15 border border-white/20
-                                    flex items-center justify-center shrink-0">
-                                    <Plus size={14} />
-                                </span>
-                                <span>New playlist</span>
-                            </button>
-
-                            <div className="mx-3 my-1 border-t border-white/10" />
-
-                            {/* Existing playlists filtered by search */}
-                            <div className="max-h-48 overflow-y-auto">
-                                {HARDCODED_PLAYLISTS
-                                    .filter(p => p.name.toLowerCase().includes(playlistSearch.toLowerCase()))
-                                    .map(playlist => (
-                                        <button
-                                            key={playlist.id}
-                                            onClick={() => {
-                                                console.log("Add to playlist:", playlist.name);
-                                                setOpenContextMenuId(null);
-                                                setShowPlaylistSubmenu(false);
-                                            }}
-                                            className="w-full flex items-center gap-3 px-3 py-2
-                                            text-sm text-white/80 hover:text-white hover:bg-white/10
-                                            transition-colors text-left"
-                                        >
-                                            {playlist.name}
-                                        </button>
-                                    ))
-                                }
-                                {HARDCODED_PLAYLISTS.filter(p =>
-                                    p.name.toLowerCase().includes(playlistSearch.toLowerCase())
-                                ).length === 0 && (
-                                    <div className="px-3 py-3 text-sm text-white/40 text-center">
-                                        No playlists found
-                                    </div>
+                                {activeResult.type === "playlist" && (
+                                    <button
+                                        onMouseEnter={() => {}}
+                                        onClick={() => {
+                                            setOpenContextMenuId(null);
+                                            runSearch(activeResult.title);
+                                        }}
+                                        className="w-full flex items-center gap-3 px-3 py-2 text-sm
+                                        text-white/80 hover:text-white hover:bg-white/10
+                                        transition-colors text-left"
+                                    >
+                                        <ListPlus size={16} className="text-white/60 shrink-0" />
+                                        <span className="flex-1">Open playlist</span>
+                                    </button>
                                 )}
                             </div>
-                        </div>,
-                        document.body
-                    )}
-                    {/* Artist submenu portal */}
+                        );
+                    })()}
+
+                    {/* Artist submenu portal for albums/artists/playlists */}
                     {showArtistSubmenu && openContextMenuId && createPortal(
                         (() => {
                             const activeResult = searchResults.find(r => r.id === openContextMenuId);
@@ -807,13 +959,14 @@ export const Navbar: React.FC = () => {
                                     style={{ top: artistSubmenuPos.top, left: artistSubmenuPos.left }}
                                     onMouseDown={(e) => e.stopPropagation()}
                                     onMouseEnter={() => setShowArtistSubmenu(true)}
+                                    onMouseLeave={() => setShowArtistSubmenu(false)}
                                 >
                                     {artists.map((artist, i) => (
                                         <button
                                             key={i}
                                             onClick={() => {
                                                 setOpenContextMenuId(null);
-                                                closeAllSubmenus();
+                                                setShowArtistSubmenu(false);
                                                 navigate(`/artist/${toArtistRouteId(artist)}`);
                                             }}
                                             className="w-full flex items-center px-4 py-2.5

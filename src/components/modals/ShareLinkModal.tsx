@@ -34,8 +34,9 @@ export const ShareLinkModal: React.FC<Props> = ({
       collabAPI
         .createShareLink(playlistId)
         .then((shareData) => {
-          // Use the share_url returned from backend
-          setLink(shareData.share_url);
+          // Construct share URL client-side to use current origin
+          const shareUrl = `${window.location.origin}/share/${shareData.token}`;
+          setLink(shareUrl);
         })
         .catch((err) => {
           console.error('Failed to generate share link:', err);

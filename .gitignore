@@ -31,3 +31,7 @@ dist-ssr
 
 # OMC (oh-my-claudecode) folder
 .omc/
+
+# docs
+/docs/*
+.vercel
