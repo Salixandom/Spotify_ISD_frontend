@@ -40,6 +40,7 @@ interface Props {
     onArtistSelect: (artist: string) => void;
     onAddToPlaylist?: (song: any, playlistId?: string) => void;
     onToggleLike?: (song: any) => void;
+    onGoToAlbum?: (albumName: string) => void;
     isLiked?: boolean;
 }
 
@@ -55,6 +56,7 @@ export const SearchTrackContextMenuModal: React.FC<Props> = ({
     onArtistSelect,
     onAddToPlaylist,
     onToggleLike,
+    onGoToAlbum,
     isLiked = false,
 }) => {
     const [showPlaylistSubmenu, setShowPlaylistSubmenu] = React.useState(false);
@@ -168,13 +170,22 @@ export const SearchTrackContextMenuModal: React.FC<Props> = ({
                     )}
 
                     {[
-                        { icon: Disc3, label: "Go to album" },
+                        { icon: Disc3, label: "Go to album", action: () => {
+                            if (onGoToAlbum && song) {
+                                onGoToAlbum(song.album?.name || 'Unknown Album');
+                            }
+                        } },
                         { icon: FileText, label: "View credits" },
                     ].map((item, i) => (
                         <button
                             key={i}
                             onMouseEnter={closeAllSubmenus}
-                            onClick={onClose}
+                            onClick={() => {
+                                if (item.action) {
+                                    item.action();
+                                }
+                                onClose();
+                            }}
                             className="w-full flex items-center gap-3 px-3 py-2 text-sm
                             text-white/80 hover:text-white hover:bg-white/10 transition-colors text-left"
                         >

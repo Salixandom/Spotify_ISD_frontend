@@ -109,6 +109,11 @@ export function getErrorMessage(error: unknown): string {
     }
   }
 
+  // Handle 401 Unauthorized errors specifically
+  if (axiosError.response?.status === 401) {
+    return 'Invalid username or password';
+  }
+
   // Network errors
   if (error instanceof Error) {
     if (error.message.includes('Network Error')) {

@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1775471015483,
+  "lastScanned": 1775590006807,
   "projectRoot": "/home/sakib/Projects/Spotify_ISD/Spotify_ISD_frontend",
   "techStack": {
     "languages": [
@@ -78,7 +78,7 @@
       "path": "dist",
       "purpose": "Distribution/build output",
       "fileCount": 3,
-      "lastAccessed": 1775471015423,
+      "lastAccessed": 1775590006751,
       "keyFiles": [
         "favicon.svg",
         "icons.svg",
@@ -89,7 +89,7 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 15,
-      "lastAccessed": 1775471015428,
+      "lastAccessed": 1775590006760,
       "keyFiles": [
         "AGENT-GUIDE.md",
         "API_RESPONSE_INTEGRATION.md",
@@ -102,7 +102,7 @@
       "path": "public",
       "purpose": "Public files",
       "fileCount": 2,
-      "lastAccessed": 1775471015450,
+      "lastAccessed": 1775590006783,
       "keyFiles": [
         "favicon.svg",
         "icons.svg"
@@ -112,7 +112,7 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 6,
-      "lastAccessed": 1775471015463,
+      "lastAccessed": 1775590006795,
       "keyFiles": [
         "App.css",
         "App.tsx",
@@ -125,18 +125,18 @@
       "path": "dist/assets",
       "purpose": "Static assets",
       "fileCount": 4,
-      "lastAccessed": 1775471015468,
+      "lastAccessed": 1775590006798,
       "keyFiles": [
         "favicon-C1nphcnE.svg",
-        "index-BW8YtYRX.js",
-        "index-bZDCQGZ3.css"
+        "index-BNVHIVhz.css",
+        "index-D9hHssL1.js"
       ]
     },
     "src/api": {
       "path": "src/api",
       "purpose": "API routes",
       "fileCount": 9,
-      "lastAccessed": 1775471015470,
+      "lastAccessed": 1775590006800,
       "keyFiles": [
         "auth.ts",
         "axios.ts",
@@ -147,7 +147,7 @@
       "path": "src/assets",
       "purpose": "Static assets",
       "fileCount": 4,
-      "lastAccessed": 1775471015470,
+      "lastAccessed": 1775590006801,
       "keyFiles": [
         "hero.png",
         "react.svg",
@@ -158,21 +158,21 @@
       "path": "src/components",
       "purpose": "UI components",
       "fileCount": 0,
-      "lastAccessed": 1775471015474,
+      "lastAccessed": 1775590006802,
       "keyFiles": []
     }
   },
   "hotPaths": [
     {
       "path": "src/pages/PlaylistPage.tsx",
-      "accessCount": 148,
-      "lastAccessed": 1775508277004,
+      "accessCount": 205,
+      "lastAccessed": 1775627153378,
       "type": "file"
     },
     {
       "path": "src/pages/ArtistPage.tsx",
-      "accessCount": 80,
-      "lastAccessed": 1775205639842,
+      "accessCount": 157,
+      "lastAccessed": 1775595050576,
       "type": "file"
     },
     {
@@ -182,9 +182,27 @@
       "type": "file"
     },
     {
+      "path": "src/pages/AlbumPage.tsx",
+      "accessCount": 52,
+      "lastAccessed": 1775595036805,
+      "type": "file"
+    },
+    {
       "path": "src/components/layout/BottomPlayer.tsx",
       "accessCount": 41,
       "lastAccessed": 1775587054757,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/TrackContextMenu.tsx",
+      "accessCount": 28,
+      "lastAccessed": 1775592738866,
+      "type": "file"
+    },
+    {
+      "path": "src/components/playback/TrackInfoPanel.tsx",
+      "accessCount": 25,
+      "lastAccessed": 1775594496874,
       "type": "file"
     },
     {
@@ -200,27 +218,33 @@
       "type": "file"
     },
     {
-      "path": "src/components/playback/TrackInfoPanel.tsx",
-      "accessCount": 14,
-      "lastAccessed": 1775506870090,
-      "type": "file"
-    },
-    {
-      "path": "src/components/modals/TrackContextMenu.tsx",
-      "accessCount": 14,
-      "lastAccessed": 1775507667580,
+      "path": "src/pages/SearchPage.tsx",
+      "accessCount": 16,
+      "lastAccessed": 1775591916872,
       "type": "file"
     },
     {
       "path": "src",
-      "accessCount": 10,
-      "lastAccessed": 1775582456456,
+      "accessCount": 15,
+      "lastAccessed": 1775626548892,
       "type": "directory"
     },
     {
+      "path": "src/components/modals/ViewCollaboratorsModal.tsx",
+      "accessCount": 13,
+      "lastAccessed": 1775589618675,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/HomePage.tsx",
+      "accessCount": 11,
+      "lastAccessed": 1775595201904,
+      "type": "file"
+    },
+    {
       "path": "src/types/index.ts",
-      "accessCount": 7,
-      "lastAccessed": 1775174900708,
+      "accessCount": 8,
+      "lastAccessed": 1775592712804,
       "type": "file"
     },
     {
@@ -230,10 +254,22 @@
       "type": "file"
     },
     {
-      "path": "src/components/modals/ViewCollaboratorsModal.tsx",
-      "accessCount": 7,
-      "lastAccessed": 1775471058769,
+      "path": "src/App.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1775591400808,
       "type": "file"
+    },
+    {
+      "path": "src/api/search.ts",
+      "accessCount": 6,
+      "lastAccessed": 1775594841156,
+      "type": "file"
+    },
+    {
+      "path": "src/pages",
+      "accessCount": 6,
+      "lastAccessed": 1775627161588,
+      "type": "directory"
     },
     {
       "path": "src/components/comments/PlaylistComments.tsx",
@@ -242,9 +278,15 @@
       "type": "file"
     },
     {
-      "path": "src/pages/SearchPage.tsx",
-      "accessCount": 4,
-      "lastAccessed": 1775173179777,
+      "path": "vercel.json",
+      "accessCount": 5,
+      "lastAccessed": 1775588735376,
+      "type": "file"
+    },
+    {
+      "path": "src/components/modals/SearchTrackContextMenuModal.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1775591872535,
       "type": "file"
     },
     {
@@ -266,6 +308,30 @@
       "type": "directory"
     },
     {
+      "path": "src/api/profile.ts",
+      "accessCount": 4,
+      "lastAccessed": 1775587436259,
+      "type": "file"
+    },
+    {
+      "path": ".env.local",
+      "accessCount": 4,
+      "lastAccessed": 1775588101083,
+      "type": "file"
+    },
+    {
+      "path": ".env.production",
+      "accessCount": 4,
+      "lastAccessed": 1775588111774,
+      "type": "file"
+    },
+    {
+      "path": "src/components/layout",
+      "accessCount": 4,
+      "lastAccessed": 1775592045146,
+      "type": "directory"
+    },
+    {
       "path": "src/api/collaboration.ts",
       "accessCount": 3,
       "lastAccessed": 1775174409187,
@@ -278,28 +344,10 @@
       "type": "file"
     },
     {
-      "path": "src/api/search.ts",
-      "accessCount": 3,
-      "lastAccessed": 1775175008467,
-      "type": "file"
-    },
-    {
-      "path": "src/pages/HomePage.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1775175014839,
-      "type": "file"
-    },
-    {
       "path": "src/components/CommentSection.tsx",
       "accessCount": 3,
       "lastAccessed": 1775212193994,
       "type": "file"
-    },
-    {
-      "path": "src/components/layout",
-      "accessCount": 3,
-      "lastAccessed": 1775212999537,
-      "type": "directory"
     },
     {
       "path": "src/pages/InvitePage.tsx",
@@ -308,21 +356,15 @@
       "type": "file"
     },
     {
-      "path": ".env.local",
-      "accessCount": 3,
-      "lastAccessed": 1775582699680,
-      "type": "file"
-    },
-    {
-      "path": "vercel.json",
-      "accessCount": 3,
-      "lastAccessed": 1775582699866,
-      "type": "file"
-    },
-    {
       "path": "src/store/playerStore.ts",
       "accessCount": 3,
       "lastAccessed": 1775586926859,
+      "type": "file"
+    },
+    {
+      "path": "src/api/tracks.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775594834766,
       "type": "file"
     },
     {
@@ -344,33 +386,27 @@
       "type": "file"
     },
     {
-      "path": "src/api/tracks.ts",
-      "accessCount": 2,
-      "lastAccessed": 1775506609301,
-      "type": "file"
-    },
-    {
       "path": "",
       "accessCount": 2,
       "lastAccessed": 1775506729713,
       "type": "directory"
     },
     {
-      "path": ".env.production",
-      "accessCount": 2,
-      "lastAccessed": 1775582573562,
-      "type": "file"
-    },
-    {
-      "path": "src/api/profile.ts",
-      "accessCount": 1,
-      "lastAccessed": 1775077121860,
-      "type": "file"
-    },
-    {
       "path": "src/components/modals/RemoveCollaboratorModal.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1775163897516,
+      "accessCount": 2,
+      "lastAccessed": 1775589506336,
+      "type": "file"
+    },
+    {
+      "path": "src/types",
+      "accessCount": 2,
+      "lastAccessed": 1775595016643,
+      "type": "directory"
+    },
+    {
+      "path": "src/components/modals/ShareLinkModal.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775626549714,
       "type": "file"
     },
     {
@@ -404,18 +440,6 @@
       "type": "file"
     },
     {
-      "path": "src/pages",
-      "accessCount": 1,
-      "lastAccessed": 1775252708495,
-      "type": "directory"
-    },
-    {
-      "path": "src/components/modals/ShareLinkModal.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1775469736178,
-      "type": "file"
-    },
-    {
       "path": ".env.example",
       "accessCount": 1,
       "lastAccessed": 1775582433891,
@@ -431,6 +455,12 @@
       "path": "src/api/axios.ts",
       "accessCount": 1,
       "lastAccessed": 1775582458590,
+      "type": "file"
+    },
+    {
+      "path": "src/api/auth.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775587417753,
       "type": "file"
     }
   ],

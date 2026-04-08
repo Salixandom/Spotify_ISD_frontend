@@ -75,6 +75,11 @@ const TrackInfoPanel: React.FC<TrackInfoPanelProps> = ({ audioMetrics }) => {
   const year = song.release_year || 'Unknown';
   const duration = song.duration_seconds;
 
+  const truncateText = (text: string, maxLength: number): string => {
+    if (text.length <= maxLength) return text;
+    return text.slice(0, maxLength) + '...';
+  };
+
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -103,6 +108,33 @@ const TrackInfoPanel: React.FC<TrackInfoPanelProps> = ({ audioMetrics }) => {
     } catch {
       // If search fails, fallback to search page
       navigate(`/search?q=${encodeURIComponent(getArtistName(song.artist))}`);
+    }
+  };
+
+  const handleAlbumClick = async () => {
+    if (!song.album) return;
+
+    try {
+      // Import searchAPI dynamically to avoid circular deps
+      const { searchAPI } = await import('../../api/search');
+      const albums = await searchAPI.searchAlbums(getArtistName(song.album));
+      if (albums.length > 0) {
+        const album = albums[0];
+        // Generate slug from album name (matching AlbumPage's slug format)
+        const slug = album.name
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+        // Navigate using slug instead of ID
+        navigate(`/album/${slug}`);
+      } else {
+        // If no album found, fallback to search page
+        navigate(`/search?q=${encodeURIComponent(getArtistName(song.album))}`);
+      }
+    } catch {
+      // If search fails, fallback to search page
+      navigate(`/search?q=${encodeURIComponent(getArtistName(song.album))}`);
     }
   };
 
@@ -210,7 +242,13 @@ const TrackInfoPanel: React.FC<TrackInfoPanelProps> = ({ audioMetrics }) => {
       <div className="grid grid-cols-2 gap-3 mb-5 text-sm">
         <div>
           <p className="text-white/50 mb-1">Album</p>
-          <p className="text-white truncate">{albumName}</p>
+          <button
+            onClick={handleAlbumClick}
+            className="text-white text-left hover:text-spotify-green hover:underline transition-colors cursor-pointer"
+            title={albumName}
+          >
+            {truncateText(albumName, 8)}
+          </button>
         </div>
         <div>
           <p className="text-white/50 mb-1">Year</p>

@@ -10,6 +10,7 @@ import { BrowsePage } from "./pages/BrowsePage";
 import { PlaylistPage } from "./pages/PlaylistPage";
 import { PlaylistsPage } from "./pages/PlaylistsPage";
 import { ArtistPage } from "./pages/ArtistPage";
+import { AlbumPage } from "./pages/AlbumPage";
 import { UserProfilePage } from "./pages/UserProfilePage";
 import { PlaybackPage } from "./pages/PlaybackPage";
 import { InvitePage } from "./pages/InvitePage";
@@ -72,6 +73,7 @@ const AppRoutes: React.FC = () => {
                 <Route path="playlist/:id" element={<PlaylistPage />} />
                 <Route path="playback" element={<PlaybackPage />} />
                 <Route path="artist/:id" element={<ArtistPage />} />
+                <Route path="album/:id" element={<AlbumPage />} />
                 <Route path="profile" element={<UserProfilePage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

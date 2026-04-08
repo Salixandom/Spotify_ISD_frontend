@@ -3,6 +3,7 @@ import { unwrapResponse } from '../utils/apiResponse';
 
 export interface UserProfileData {
   user_id: number;
+  username: string;
   display_name: string;
   bio: string;
   avatar_url: string;

@@ -275,6 +275,8 @@ export const PlaylistPage: React.FC = () => {
   const [likedSongTrackIdsMap, setLikedSongTrackIdsMap] = React.useState<Map<number, number>>(new Map()); // song_id -> track_id in Liked Songs
   const [userPlaylists, setUserPlaylists] = React.useState<{ id: string; name: string }[]>([]);
   const [userMap, setUserMap] = React.useState<Map<number, { id: number; username: string; display_name?: string; avatar_url?: string }>>(new Map());
+  const [songPlaylistIds, setSongPlaylistIds] = React.useState<Set<string>>(new Set());
+  const [isLoadingMemberships, setIsLoadingMemberships] = React.useState(false);
 
   // Collaborators state
   const [collaborators, setCollaborators] = React.useState<Collaborator[]>([]);
@@ -425,6 +427,48 @@ export const PlaylistPage: React.FC = () => {
     } catch (err) {
         console.error(err);
         toast.error("Failed to update Liked Songs");
+    }
+  };
+
+  const fetchSongPlaylistMemberships = async (songId: number) => {
+    setIsLoadingMemberships(true);
+    try {
+      const memberships = new Set<string>();
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        setSongPlaylistIds(memberships);
+        return;
+      }
+
+      const user = JSON.parse(userStr);
+      const playlistsResponse = await playlistAPI.getUserPlaylists(user.id, true);
+      let playlists: Playlist[] = [];
+      if (Array.isArray(playlistsResponse)) {
+        playlists = playlistsResponse as Playlist[];
+      } else if (playlistsResponse && typeof playlistsResponse === 'object' && 'playlists' in playlistsResponse) {
+        playlists = (playlistsResponse as Record<string, unknown>).playlists as Playlist[];
+      }
+
+      // Check each playlist for this song
+      await Promise.all(
+        playlists.map(async (playlist: Playlist) => {
+          try {
+            const tracks = await trackAPI.list(playlist.id);
+            if (Array.isArray(tracks) && tracks.some((t: PlaylistTrack) => t.song.id === songId)) {
+              memberships.add(String(playlist.id));
+            }
+          } catch (error) {
+            console.error(`Failed to check playlist ${playlist.id}:`, error);
+          }
+        })
+      );
+
+      setSongPlaylistIds(memberships);
+    } catch (error) {
+      console.error('Failed to fetch playlist memberships:', error);
+      setSongPlaylistIds(new Set());
+    } finally {
+      setIsLoadingMemberships(false);
     }
   };
 
@@ -1260,8 +1304,8 @@ export const PlaylistPage: React.FC = () => {
               <Play size={24} fill="currentColor" className="translate-x-px" />
             </button>
 
-            {/* Follow/Unfollow button - Only for followers */}
-            {userRole === 'follower' && (
+            {/* Follow/Unfollow button - Only for followers and public viewers (not owners/collaborators) */}
+            {(shareViewMode === 'follower' || shareViewMode === 'public') && (
             <button
               onClick={async () => {
                 const numericId = Number(playlist.id);
@@ -1909,10 +1953,11 @@ export const PlaylistPage: React.FC = () => {
                                   {likedTrackSongIds.has(track.song.id) ? <CheckCircle2 size={18} /> : <PlusCircle size={18} />}
                                 </button>
                                 <button
-                                  onClick={(e) => {
+                                  onClick={async (e) => {
                                     e.stopPropagation();
                                     const rect = e.currentTarget.getBoundingClientRect();
                                     setContextMenu({ isOpen: true, track, x: rect.left - 180, y: rect.bottom + 10 });
+                                    await fetchSongPlaylistMemberships(track.song.id);
                                   }}
                                   className="text-white/60 hover:text-white transition-colors flex items-center justify-center font-bold"
                                 >
@@ -2221,8 +2266,9 @@ export const PlaylistPage: React.FC = () => {
                     const playlistName = targetPlaylist?.name || 'playlist';
                     toast.success(`Added "${track.song.title}" to ${playlistName}`);
                 }
-            } catch {
-                toast.error("Failed to add to playlist");
+            } catch (err) {
+                const { getErrorMessage } = await import('../utils/apiResponse');
+                toast.error(getErrorMessage(err));
             }
         }}
         onRemoveFromPlaylist={playlist && playlist.id ? async (track) => {
@@ -2237,6 +2283,8 @@ export const PlaylistPage: React.FC = () => {
         menuRef={contextMenuRef}
         playlists={userPlaylists}
         currentPlaylistId={playlist.id}
+        songPlaylistIds={songPlaylistIds}
+        isLoadingMemberships={isLoadingMemberships}
         onGoToArtist={async (artistName) => {
           try {
             const artists = await searchAPI.searchArtists(artistName);
@@ -2258,6 +2306,12 @@ export const PlaylistPage: React.FC = () => {
             // If search fails, fallback to search page
             navigate(`/search?q=${encodeURIComponent(artistName)}`);
           }
+        }}
+        onGoToAlbum={(albumName) => {
+          const toSlug = (name: string) =>
+            name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          const slug = toSlug(albumName);
+          navigate(`/album/${slug}`);
         }}
       />
     </div>

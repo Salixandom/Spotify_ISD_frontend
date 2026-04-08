@@ -12,6 +12,7 @@ import {
   Search as SearchIcon,
   Check,
   ListPlus,
+  Loader2,
 } from "lucide-react";
 import type { PlaylistTrack } from "../../types";
 import { getArtistName } from "../../utils/trackHelpers";
@@ -34,7 +35,10 @@ interface TrackContextMenuProps {
   menuRef?: React.RefObject<HTMLDivElement | null>;
   playlists?: PlaylistOption[];
   currentPlaylistId?: string;
+  songPlaylistIds?: Set<string>;
+  isLoadingMemberships?: boolean;
   onGoToArtist?: (artistName: string) => void;
+  onGoToAlbum?: (albumName: string) => void;
 }
 
 export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({
@@ -50,7 +54,10 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({
   menuRef,
   playlists = [],
   currentPlaylistId,
+  songPlaylistIds = new Set(),
+  isLoadingMemberships = false,
   onGoToArtist,
+  onGoToAlbum,
 }) => {
   const [showPlaylistSubmenu, setShowPlaylistSubmenu] = React.useState(false);
   const [showArtistSubmenu, setShowArtistSubmenu] = React.useState(false);
@@ -193,7 +200,12 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({
         {/* Go to album */}
         <button
           onMouseEnter={closeAllSubmenus}
-          onClick={onClose}
+          onClick={() => {
+            if (onGoToAlbum && track?.song?.album) {
+              onGoToAlbum(track.song.album.name);
+            }
+            onClose();
+          }}
           className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors text-left"
         >
           <Music2 size={16} className="text-white/60 shrink-0" />
@@ -250,32 +262,58 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({
           <div className="mx-3 my-1 border-t border-white/10" />
 
           <div className="max-h-48 overflow-y-auto">
-            {filteredPlaylists.slice(0, 10).map((playlist) => {
-              const isCurrent = playlist.id === currentPlaylistId;
-              return (
-                <button
-                  key={playlist.id}
-                  onClick={() => {
-                    if (!isCurrent) {
-                      onAddToPlaylist(track, playlist.id);
-                      onClose();
-                    }
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors text-left ${
-                    isCurrent
-                      ? "text-white/40 cursor-default"
-                      : "text-white/80 hover:text-white hover:bg-white/10 cursor-pointer"
-                  }`}
-                >
-                  <span className="truncate flex-1">{playlist.name}</span>
-                  {isCurrent && <Check size={14} className="text-spotify-green shrink-0 ml-2" />}
-                </button>
-              );
-            })}
-            {filteredPlaylists.length === 0 && (
-              <div className="px-3 py-3 text-sm text-white/40 text-center">
-                No playlists found
+            {isLoadingMemberships ? (
+              <div className="px-3 py-4 flex items-center justify-center">
+                <Loader2 size={16} className="animate-spin text-spotify-green" />
+                <span className="ml-2 text-sm text-white/60">Checking playlists...</span>
               </div>
+            ) : (
+              <>
+                {filteredPlaylists
+                  .filter((playlist) => {
+                    // Filter out "Liked Songs" and apply search
+                    const isLikedSongs = playlist.name === "Liked Songs";
+                    const matchesSearch = playlist.name.toLowerCase().includes(playlistSearch.toLowerCase());
+                    return !isLikedSongs && matchesSearch;
+                  })
+                  .slice(0, 10)
+                  .map((playlist) => {
+                    const isAlreadyInPlaylist = songPlaylistIds.has(playlist.id);
+                    const isCurrent = playlist.id === currentPlaylistId;
+                    const isDisabled = isAlreadyInPlaylist || isCurrent;
+
+                    return (
+                      <button
+                        key={playlist.id}
+                        onClick={() => {
+                          if (!isDisabled) {
+                            onAddToPlaylist(track, playlist.id);
+                            onClose();
+                          }
+                        }}
+                        disabled={isDisabled}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors text-left ${
+                          isDisabled
+                            ? "text-white/40 cursor-default"
+                            : "text-white/80 hover:text-white hover:bg-white/10 cursor-pointer"
+                        }`}
+                      >
+                        <span className="truncate flex-1">{playlist.name}</span>
+                        {(isAlreadyInPlaylist || isCurrent) && <Check size={14} className="text-spotify-green shrink-0 ml-2" />}
+                      </button>
+                    );
+                  })}
+
+                {filteredPlaylists.filter((playlist) => {
+                  const isLikedSongs = playlist.name === "Liked Songs";
+                  const matchesSearch = playlist.name.toLowerCase().includes(playlistSearch.toLowerCase());
+                  return !isLikedSongs && matchesSearch;
+                }).length === 0 && (
+                  <div className="px-3 py-3 text-sm text-white/40 text-center">
+                    No playlists found
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
